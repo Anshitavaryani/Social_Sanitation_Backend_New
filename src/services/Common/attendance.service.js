@@ -22,115 +22,9 @@ const moment = require("moment");
 const { getDatabase } = require("firebase-admin/database");
 
 // attendce apis
-// const clockIn = async (reqBody, headers,files) => {
 // 	try {
-// 		const { user } = reqBody;
-// 		const { role_id } = headers;
-
-// 		console.log(reqBody,"reqBody")
-
-// 		const nowUTC = new Date();
-// 		const nowEST = moment
-// 			.tz(nowUTC, "America/New_York")
-// 			.format("YYYY-MM-DD HH:mm:ss");
-
-// 		// Get today's start and end time
-// 		const todayStart = new Date();
-// 		todayStart.setHours(0, 0, 0, 0);
-
-// 		const todayEnd = new Date();
-// 		todayEnd.setHours(23, 59, 59, 999);
-
-// 		console.log(nowUTC,nowEST,todayStart,todayEnd,"hllooo")
-
-// 		const todaysBookings = await Booking.findAll({
-// 			where: {
-// 				is_active: true,
-// 				date: { [Op.between]: [todayStart, todayEnd] },
-// 			},
-// 			include: [
-// 				{
-// 					model: BookingAssignment,
-// 					as: "booking_employee_details",
-// 					where: { employee_id: user.id }, // Employee assignment check
-// 				},
-// 			],
-// 		});
-
-// 		if (!todaysBookings || todaysBookings.length === 0) {
-// 			throw new ApiError(
-// 				httpStatus.BAD_REQUEST,
-// 				"You do not have any assigned task for today, so you cannot clock in."
-// 			);
-// 		}
-
-// 		// Check if user has already clocked in today
-// 		const existingClockIn = await Attendance.findOne({
-// 			where: {
-// 				user_id: user.id,
-// 				role_id,
-// 				clock_out: null,
-// 				// clock_in: { [Op.between]: [todayStart, todayEnd] }, // Checks today's clock-in
-// 			},
-// 		});
-
-// 		if (existingClockIn) {
-// 			throw new ApiError(
-// 				httpStatus.BAD_REQUEST,
-// 				"Already clocked in for today."
-// 			);
-// 		}
-
-// 		// If logout image is required but not provided
-// 		if (user.logout_image_required === true) {
-// 			const hasImage =
-// 				files &&
-// 				Object.keys(files).length !== 0 &&
-// 				files.images &&
-// 				files.images.length !== 0;
-
-// 			if (!hasImage) {
-// 				throw new ApiError(
-// 					httpStatus.BAD_REQUEST,
-// 					"Clock-in image is required but not provided."
-// 				);
-// 			}
-// 		}
-
-// 		// Create a new clock-in entry
-// 		const newClockIn = await Attendance.create({
-// 			user_id: user.id,
-// 			role_id,
-// 			clock_in: new Date(),
-// 			clock_in_est: nowEST,
-// 			clock_out: null,
-// 			total_hours: 0,
-// 		});
-
-// 		// Handle optional clock-out image
-// 		if (
-// 			files &&
-// 			Object.keys(files).length !== 0 &&
-// 			files.images &&
-// 			files.images.length !== 0
-// 		) {
-// 			const image = files.images[0];
-// 			newClockIn.clock_in_image_uri = `${image.filename}`;
-// 			newClockIn.clock_in_image_name = image.originalname; // optional
-// 			newClockIn.clock_in_image_size = image.size; // optional
-// 		}
-
-// 		await newClockIn.save();
-
-// 		return newClockIn;
 
 // 	} catch (error) {
-// 		throw new ApiError(
-// 			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-// 			error.message || "An unexpected error occurred."
-// 		);
-// 	}
-// };
 
 const clockIn = async (reqBody, headers, files) => {
 	try {
@@ -376,9 +270,6 @@ const applyBreak = async (reqBody, headers) => {
 		const { role_id } = headers;
 
 		// Optional: re-enable if you want to restrict allowed durations
-		// if (![15, 30, 45, 60, 90].includes(duration)) {
-		// 	throw new ApiError(400, "Invalid break duration.");
-		// }
 
 		// Use current UTC time as break start
 		const nowUTC = new Date();
@@ -534,294 +425,21 @@ const checkClockInStatus = async (reqBody, headers) => {
 	}
 };
 
-// const clockOut = async (reqBody, headers, files) => {
+// 	try {
+
+// 	} catch (error) {
 
 // 	try {
 
-// 		const { user } = reqBody;
-// 		const { role_id } = headers;
-
-// 		// Find the latest active clock-in record
-// 		const attendance = await Attendance.findOne({
-// 			where: {
-// 				user_id: user.id,
-// 				role_id,
-// 				clock_out: null,
-// 				is_on_leave: false,
-// 			},
-// 			order: [["created_at", "DESC"]],
-// 		});
-
-// 		if (!attendance) {
-// 			throw new ApiError(httpStatus.BAD_REQUEST, "No active clock-in found.");
-// 		}
-
-// 		// Ensure clock-in time exists
-// 		if (!attendance.clock_in) {
-// 			throw new ApiError(httpStatus.BAD_REQUEST, "Clock-in time is missing.");
-// 		}
-
-// 		// If logout image is required but not provided
-// 		if (user.logout_image_required === true) {
-// 			const hasImage =
-// 				files &&
-// 				Object.keys(files).length !== 0 &&
-// 				files.images &&
-// 				files.images.length !== 0;
-
-// 			if (!hasImage) {
-// 				throw new ApiError(
-// 					httpStatus.BAD_REQUEST,
-// 					"Clock-out image is required but not provided."
-// 				);
-// 			}
-// 		}
-
-// 		const nowUTC = new Date();
-// 		const nowEST = moment
-// 			.tz(nowUTC, "America/New_York")
-// 			.format("YYYY-MM-DD HH:mm:ss");
-
-// 		// Update clock-out time
-// 		attendance.clock_out = nowUTC;
-// 		attendance.clock_out_est = nowEST;
-
-// 		// Calculate total working hours in hours and minutes format
-// 		const clockInTime = new Date(attendance.clock_in);
-// 		const clockOutTime = new Date(attendance.clock_out);
-
-// 		if (isNaN(clockInTime) || isNaN(clockOutTime)) {
-// 			throw new ApiError(
-// 				httpStatus.INTERNAL_SERVER_ERROR,
-// 				"Invalid clock-in or clock-out time."
-// 			);
-// 		}
-
-// 		const diffInMinutes = Math.floor(
-// 			(clockOutTime - clockInTime) / (1000 * 60)
-// 		); // Convert ms to minutes
-// 		const hours = Math.floor(diffInMinutes / 60);
-// 		const minutes = diffInMinutes % 60;
-// 		attendance.total_hours = `${hours} hours ${minutes} minutes`;
-
-// 		// Handle optional clock-out image
-// 		if (
-// 			files &&
-// 			Object.keys(files).length !== 0 &&
-// 			files.images &&
-// 			files.images.length !== 0
-// 		) {
-// 			const image = files.images[0];
-// 			attendance.clock_out_image_uri = `${image.filename}`;
-// 			attendance.clock_out_image_name = image.originalname; // optional
-// 			attendance.clock_out_image_size = image.size; // optional
-// 		}
-
-// 		await attendance.save();
-// 		console.log(`Clock-out saved: ${attendance.total_hours}`);
 // 	} catch (error) {
-// 		console.error("Clock-out error:", error);
-// 		throw new ApiError(
-// 			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-// 			error.message || "An unexpected error occurred."
-// 		);
-// 	}
-// };
 
-// const applyBreak = async (reqBody, headers) => {
 // 	try {
-// 		const { user, duration, break_start_lat, break_start_lng } = reqBody;
-// 		const { role_id } = headers;
 
-// 		// if (![15, 30, 45, 60, 90].includes(duration)) {
-// 		// 	throw new ApiError(400, "Invalid break duration.");
-// 		// }
-
-// 		const nowUTC = new Date();
-// 		const nowEST = moment
-// 			.tz(nowUTC, "America/New_York")
-// 			.format("YYYY-MM-DD HH:mm:ss");
-// 		const breakEndUTC = new Date(nowUTC.getTime() + duration * 60000);
-// 		const breakEndEST = moment
-// 			.tz(breakEndUTC, "America/New_York")
-// 			.format("YYYY-MM-DD HH:mm:ss");
-
-// 		// Check today's attendance using UTC clock_in
-// 		const todayStart = new Date(
-// 			Date.UTC(
-// 				nowUTC.getUTCFullYear(),
-// 				nowUTC.getUTCMonth(),
-// 				nowUTC.getUTCDate(),
-// 				0,
-// 				0,
-// 				0
-// 			)
-// 		);
-// 		const todayEnd = new Date(
-// 			Date.UTC(
-// 				nowUTC.getUTCFullYear(),
-// 				nowUTC.getUTCMonth(),
-// 				nowUTC.getUTCDate(),
-// 				23,
-// 				59,
-// 				59,
-// 				999
-// 			)
-// 		);
-// 		console.log(todayStart, todayEnd, "data");
-
-// 		const attendance = await Attendance.findOne({
-// 			where: {
-// 				user_id: user.id,
-// 				role_id: role_id,
-// 				clock_in: { [Op.between]: [todayStart, todayEnd] },
-// 			},
-// 		});
-// 		console.log(attendance, "attendance");
-
-// 		if (!attendance) {
-// 			throw new ApiError(400, "You must clock in before taking a break.");
-// 		}
-
-// 		// Check for existing active break
-// 		const activeBreak = await Break.findOne({
-// 			where: {
-// 				user_id: user.id,
-// 				attendance_id: attendance.id,
-// 				status: "active",
-// 			},
-// 		});
-
-// 		if (activeBreak) {
-// 			throw new ApiError(400, "You already have an active break.");
-// 		}
-
-// 		const newBreak = await Break.create({
-// 			user_id: user.id,
-// 			role_id,
-// 			attendance_id: attendance.id,
-// 			break_start: nowUTC,
-// 			break_start_est: nowEST,
-// 			break_end: breakEndUTC,
-// 			break_end_est: breakEndEST,
-// 			duration_minutes: duration,
-// 			status: "active",
-// 			break_start_lng: break_start_lng || null,
-// 			break_start_lat: break_start_lat || null,
-// 		});
-
-// 		return newBreak;
 // 	} catch (error) {
-// 		throw new ApiError(
-// 			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-// 			error.message || "An unexpected error occurred."
-// 		);
-// 	}
-// };
 
-// const checkIfOnBreak = async (reqBody, headers) => {
 // 	try {
-// 		const { user } = reqBody;
-// 		const { role_id } = headers;
 
-// 		const todayStart = new Date();
-// 		todayStart.setHours(0, 0, 0, 0);
-
-// 		const todayEnd = new Date();
-// 		todayEnd.setHours(23, 59, 59, 999);
-
-// 		// Find today's attendance
-// 		const attendance = await Attendance.findOne({
-// 			where: {
-// 				user_id: user.id,
-// 				role_id,
-// 				clock_in: { [Op.between]: [todayStart, todayEnd] },
-// 			},
-// 		});
-
-// 		if (!attendance) {
-// 			return { onBreak: false };
-// 		}
-
-// 		// Check for active break
-// 		const activeBreak = await Break.findOne({
-// 			where: {
-// 				user_id: user.id,
-// 				attendance_id: attendance.id,
-// 				status: "active",
-// 			},
-// 			attributes: [
-// 				"id",
-// 				"break_start",
-// 				"break_start_est",
-// 				"break_end",
-// 				"break_end_est",
-// 				"duration_minutes",
-// 			],
-// 		});
-
-// 		if (activeBreak) {
-// 			return {
-// 				onBreak: true,
-// 				breakDetails: {
-// 					id: activeBreak.id,
-// 					break_start: activeBreak.break_start,
-// 					break_start_est: activeBreak.break_start_est,
-// 					break_end: activeBreak.break_end,
-// 					break_end_est: activeBreak.break_end_est,
-// 					duration_minutes: activeBreak.duration_minutes,
-// 				},
-// 			};
-// 		}
-
-// 		return { onBreak: false };
 // 	} catch (error) {
-// 		throw new ApiError(
-// 			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-// 			error.message || "Error checking break status."
-// 		);
-// 	}
-// };
-
-// const checkClockInStatus = async (reqBody, headers) => {
-// 	try {
-// 		const { user } = reqBody;
-// 		const { role_id } = headers;
-
-// 		// Get today's date in EST
-// 		const estNow = new Date(
-// 			new Date().toLocaleString("en-US", { timeZone: "America/New_York" })
-// 		);
-// 		const estStart = new Date(estNow);
-// 		estStart.setHours(0, 0, 0, 0);
-
-// 		const estEnd = new Date(estNow);
-// 		estEnd.setHours(23, 59, 59, 999);
-
-// 		// Query using clock_in_est (which is already in EST)
-// 		const attendance = await Attendance.findOne({
-// 			where: {
-// 				user_id: user.id,
-// 				role_id,
-// 				clock_in_est: {
-// 					[Op.between]: [estStart, estEnd],
-// 				},
-// 				clock_out_est: null,
-// 			},
-// 		});
-
-// 		if (attendance) {
-// 			return { isClockedIn: true, clockInTime: attendance.clock_in_est };
-// 		}
-
-// 		return { isClockedIn: false };
-// 	} catch (error) {
-// 		throw new ApiError(
-// 			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-// 			error.message || "An unexpected error occurred."
-// 		);
-// 	}
-// };
 
 const getAttendance = async (reqBody, headers) => {
 	try {
@@ -1444,47 +1062,8 @@ const getAllAttendance = async (reqBody) => {
 			};
 		}
 
-		// const attendanceMap = {};
-
-		// users.forEach((user) => {
-		// 	attendanceMap[user.id] = {
-		// 		user_id: user.id,
-		// 		user_name: user.user_profile?.name || "",
-		// 		role_id: user.role_id,
-		// 		date: dateKey,
-		// 		status: "ABSENT",
-		// 		clock_in: null,
-		// 		clock_out: null,
-		// 		total_hours: null,
-		// 		clock_in_location: null,
-		// 		clock_out_location: null,
-		// 	};
-		// });
-
 		// attendanceRecords.forEach((rec) => {
-		// 	const user = users.find((u) => u.id === rec.user_id);
-		// 	if (!attendanceMap[rec.user_id]) return;
 
-		// 	if (rec.clock_in) {
-		// 		attendanceMap[rec.user_id] = {
-		// 			user_id: rec.user_id,
-		// 			user_name: user?.user_profile?.name || "",
-		// 			role_id: user?.role_id || null,
-		// 			date: dateKey,
-		// 			status: "PRESENT",
-		// 			clock_in: rec.clock_in_est,
-		// 			clock_out: rec.clock_out_est,
-		// 			total_hours: rec.total_hours || "0",
-		// 			clock_in_location: {
-		// 				lat: rec.clock_in_lat || null,
-		// 				lng: rec.clock_in_lng || null,
-		// 			},
-		// 			clock_out_location: {
-		// 				lat: rec.clock_out_lat || null,
-		// 				lng: rec.clock_out_lng || null,
-		// 			},
-		// 		};
-		// 	}
 		// });
 
 		return Object.values(attendanceMap).sort((a, b) =>
@@ -1560,292 +1139,28 @@ const getAttendanceStatusWithBooking = async ({
 	return "PENDING";
 };
 
-// const getAllAttendance = async (reqBody) => {
 // 	try {
-// 		const { date, month, year } = reqBody;
 
-// 		const today = new Date();
-
-// 		let selectedDate;
-// 		let selectedMonth;
-// 		let selectedYear;
-
-// 		// Determine date/month/year
-// 		if (month) {
-// 			if (!year) {
-// 				throw new ApiError(
-// 					httpStatus.BAD_REQUEST,
-// 					"Year is required when month is provided."
-// 				);
-// 			}
-// 			selectedMonth = parseInt(month);
-// 			selectedYear = parseInt(year);
-
-// 			if (
-// 				isNaN(selectedMonth) ||
-// 				isNaN(selectedYear) ||
-// 				selectedMonth < 1 ||
-// 				selectedMonth > 12
-// 			) {
-// 				throw new ApiError(httpStatus.BAD_REQUEST, "Invalid month or year.");
-// 			}
-
-// 			selectedDate = new Date(selectedYear, selectedMonth - 1, 1);
 // 		} else if (date) {
-// 			selectedDate = new Date(date);
-// 			selectedMonth = selectedDate.getMonth() + 1;
-// 			selectedYear = selectedDate.getFullYear();
 // 		} else {
-// 			selectedDate = new Date(today.getFullYear(), today.getMonth(), 1);
-// 			selectedMonth = today.getMonth() + 1;
-// 			selectedYear = today.getFullYear();
-// 		}
-
-// 		selectedDate.setHours(0, 0, 0, 0);
-// 		const dateKey = selectedDate.toISOString().split("T")[0];
-// 		const monthIndex = selectedMonth - 1;
-
-// 		const getDaysInMonth = (year, month) => {
-// 			return new Date(year, month + 1, 0).getDate();
-// 		};
-
-// 		const daysInMonth = getDaysInMonth(selectedYear, monthIndex);
-// 		const monthDates = Array.from({ length: daysInMonth }, (_, i) => {
-// 			const d = new Date(selectedYear, monthIndex, i + 1);
-// 			return d.toISOString().split("T")[0];
-// 		});
-
-// 		const users = await User.findAll({
-// 			where: { is_active: true, role_id: [7, 8, 9] },
-// 			include: [
-// 				{
-// 					model: Profile,
-// 					as: "user_profile",
-// 					attributes: ["name"],
-// 				},
-// 			],
-// 			attributes: ["id", "email", "role_id"],
-// 		});
-
-// 		// If month is passed, return monthly attendance
-// 		if (month || (!month && !date)) {
-// 			const allAttendance = await Attendance.findAll({
-// 				where: {
-// 					is_active: true,
-// 					[Op.or]: [
-// 						Sequelize.where(
-// 							Sequelize.fn(
-// 								"DATE_FORMAT",
-// 								Sequelize.col("clock_in_est"),
-// 								"%Y-%m"
-// 							),
-// 							`${selectedYear}-${(monthIndex + 1).toString().padStart(2, "0")}`
-// 						),
-// 						Sequelize.where(
-// 							Sequelize.fn(
-// 								"DATE_FORMAT",
-// 								Sequelize.col("leave_date_est"),
-// 								"%Y-%m"
-// 							),
-// 							`${selectedYear}-${(monthIndex + 1).toString().padStart(2, "0")}`
-// 						),
-// 					],
-// 				},
-// 			});
 
 // 			const result = users.map((user) => {
-// 				const name = user.user_profile?.name || "";
-// 				const roleId = user.role_id;
 
 // 				const attendanceArray = monthDates.map((day) => {
-// 					const dayRec = allAttendance.find(
-// 						(att) =>
-// 							att.user_id === user.id &&
-// 							(new Date(att.clock_in_est).toISOString().startsWith(day) ||
-// 								new Date(att.leave_date_est)?.toISOString()?.startsWith(day))
-// 					);
 
-// 					const todayDateOnly = today.toISOString().split("T")[0];
-
-// 					if (!dayRec) {
-// 						if (day > todayDateOnly) {
-// 							return {
-// 								date: day,
-// 								status: "--", // Future date
-// 								clock_in: null,
-// 								clock_out: null,
-// 								total_hours: null,
-// 								leave_reason: null,
-// 								clock_in_image_uri: null,
-// 								clock_out_image_uri: null,
-// 							};
-// 						}
-
-// 						return {
-// 							date: day,
-// 							status: "ABSENT",
-// 							clock_in: null,
-// 							clock_out: null,
-// 							total_hours: null,
-// 							leave_reason: null,
-// 						};
-// 					}
-
-// 					if (dayRec.clock_in) {
-// 						return {
-// 							date: day,
-// 							status: "PRESENT",
-// 							clock_in: dayRec.clock_in_est,
-// 							clock_out: dayRec.clock_out_est,
-// 							total_hours: dayRec.total_hours || "0",
-// 							leave_reason: null,
-// 							clock_out_image_uri: dayRec.clock_out_image_uri || null,
-// 							clock_in_image_uri: dayRec.clock_in_image_uri || null,
-// 						};
-// 					} else if (dayRec.is_on_leave) {
-// 						return {
-// 							date: day,
-// 							status:
-// 								dayRec.leave_status === "PENDING"
-// 									? "APPLIED LEAVE"
-// 									: "ON LEAVE",
-// 							clock_in: null,
-// 							clock_out: null,
-// 							total_hours: null,
-// 							leave_reason: dayRec.leave_reason || "No reason provided",
-// 							clock_out_image_uri: null,
-// 							clock_in_image_uri: null,
-// 						};
-// 					}
-
-// 					return {
-// 						date: day,
-// 						status: "ABSENT",
-// 						clock_in: null,
-// 						clock_out: null,
-// 						total_hours: null,
-// 						leave_reason: null,
-// 						clock_out_image_uri: null,
-// 						clock_in_image_uri: null,
-// 					};
 // 				});
 
-// 				return {
-// 					user_name: name,
-// 					role_id: roleId,
-// 					monthly_attendance: attendanceArray,
-// 				};
 // 			});
 
-// 			// Sort by user_name ascending
-// 			const sortedResult = result.sort((a, b) =>
-// 				a.user_name.localeCompare(b.user_name)
-// 			);
-// 			return sortedResult;
-// 		}
-
-// 		// Daily attendance
-// 		const presentRecords = await Attendance.findAll({
-// 			where: {
-// 				is_active: true,
-// 				clock_in: { [Op.ne]: null },
-// 				[Op.and]: Sequelize.where(
-// 					Sequelize.fn("DATE", Sequelize.col("clock_in_est")),
-// 					dateKey
-// 				),
-// 			},
-// 		});
-
-// 		const leaveRecords = await Attendance.findAll({
-// 			where: {
-// 				is_active: true,
-// 				is_on_leave: true,
-// 				[Op.and]: Sequelize.where(
-// 					Sequelize.fn("DATE", Sequelize.col("leave_date_est")),
-// 					dateKey
-// 				),
-// 			},
-// 		});
-
-// 		const attendanceMap = {};
-
 // 		users.forEach((user) => {
-// 			const userName = user.user_profile?.name || "";
-// 			const roleId = user.role_id;
 
-// 			attendanceMap[user.id] = {
-// 				user_id: user.id,
-// 				user_name: userName,
-// 				role_id: roleId,
-// 				date: dateKey,
-// 				status: "ABSENT",
-// 				clock_in: null,
-// 				clock_out: null,
-// 				total_hours: null,
-// 				leave_reason: null,
-// 				clock_out_image_uri: null,
-// 				clock_in_image_uri: null,
-// 			};
-// 		});
-
-// 		presentRecords.forEach((rec) => {
-// 			const user = users.find((u) => u.id === rec.user_id);
-// 			if (attendanceMap[rec.user_id]) {
-// 				attendanceMap[rec.user_id] = {
-// 					user_id: rec.user_id,
-// 					user_name: user?.user_profile?.name || "",
-// 					role_id: user?.role_id || null,
-// 					date: dateKey,
-// 					status: "PRESENT",
-// 					clock_in: rec.clock_in_est,
-// 					clock_out: rec.clock_out_est,
-// 					clock_out_image_uri: rec.clock_out_image_uri || null,
-// 					clock_in_image_uri: rec.clock_in_image_uri || null,
-// 					total_hours: rec.total_hours || "0",
-// 					leave_reason: null,
-// 				};
-// 			}
 // 		});
 
 // 		leaveRecords.forEach((rec) => {
-// 			const user = users.find((u) => u.id === rec.user_id);
-// 			if (
-// 				attendanceMap[rec.user_id] &&
-// 				attendanceMap[rec.user_id].status === "ABSENT"
-// 			) {
-// 				const leaveStatus =
-// 					rec.leave_status === "PENDING" ? "APPLIED LEAVE" : "ON LEAVE";
 
-// 				attendanceMap[rec.user_id] = {
-// 					user_id: rec.user_id,
-// 					user_name: user?.user_profile?.name || "",
-// 					role_id: user?.role_id || null,
-// 					date: dateKey,
-// 					status: leaveStatus,
-// 					clock_in: null,
-// 					clock_out: null,
-// 					total_hours: null,
-// 					leave_reason: rec.leave_reason || "No reason provided",
-// 					clock_out_image_uri: null,
-// 					clock_in_image_uri: null,
-// 				};
-// 			}
 // 		});
 
-// 		const finalResult = Object.values(attendanceMap);
-// 		const sortedFinalResult = finalResult.sort((a, b) =>
-// 			a.user_name.localeCompare(b.user_name)
-// 		);
-
-// 		return sortedFinalResult;
 // 	} catch (error) {
-// 		console.error("Attendance Fetch Error:", error);
-// 		throw new ApiError(
-// 			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-// 			error.message
-// 		);
-// 	}
-// };
 
 const getTodayAttendanceStats = async (reqBody) => {
 	try {
@@ -2154,135 +1469,15 @@ const autoClockOutEmployees = async () => {
 	}
 };
 
-// const autoClockOutEmployees = async () => {
 // 	try {
-// 		const now = moment().tz("America/New_York");
-// 		const todayNY = now.format("YYYY-MM-DD");
-
-// 		const startOfDayNY_UTC = moment
-// 			.tz(`${todayNY} 00:00`, "America/New_York")
-// 			.utc()
-// 			.toDate();
-// 		const endOfDayNY_UTC = moment
-// 			.tz(`${todayNY} 23:59:59`, "America/New_York")
-// 			.utc()
-// 			.toDate();
-// 		console.log(
-// 			startOfDayNY_UTC,
-// 			endOfDayNY_UTC,
-// 			"startOfDayNY_UTC and endOfDayNY_UTC"
-// 		);
-
-// 		const autoClockOutUTC = moment
-// 			.tz(`${todayNY} 00:00`, "America/New_York")
-// 			.add(1, "day")
-// 			.utc()
-// 			.toDate();
-
-// 		// const autoClockOutUTC = moment
-// 		// 	.tz(`${todayNY} 23:59:59`, "America/New_York") // OR
-// 		// 	.add(0, "day")
-// 		// 	.utc()
-// 		// 	.toDate();
-
-// 		console.log(autoClockOutUTC, "autoClockOutUTC");
-
-// 		const incomplete = await Attendance.findAll({
-// 			where: {
-// 				is_on_leave: false,
-// 				clock_out: null,
-// 				clock_in: {
-// 					[Op.between]: [startOfDayNY_UTC, endOfDayNY_UTC],
-// 				},
-// 			},
-// 			include: [
-// 				{
-// 					model: User,
-// 					as: "attendence_user",
-// 					attributes: ["id", "email"],
-// 					include: [
-// 						{
-// 							model: Profile,
-// 							as: "user_profile",
-// 							attributes: ["name"],
-// 						},
-// 						{
-// 							model: Role, // assuming role model is associated
-// 							as: "user_role",
-// 							attributes: ["id"],
-// 						},
-// 					],
-// 				},
-// 			],
-// 		});
-// 		console.log(incomplete, "incomplete");
-
-// 		if (!incomplete.length) {
-// 			console.log("✅ No pending clock-outs found.");
-// 			return;
-// 		}
-
-// 		const employeesWithoutClockOut = [];
 
 // 		await Promise.all(
 // 			incomplete.map(async (record) => {
-// 				const clockIn = new Date(record.clock_in);
-// 				const diffMs = autoClockOutUTC - clockIn;
 
-// 				const diffMins = Math.floor(diffMs / 60000);
-// 				const hours = Math.floor(diffMins / 60);
-// 				const minutes = diffMins % 60;
-// 				const total_hours = `${hours} hours ${minutes} minutes`;
-
-// 				const clock_out_est = moment(autoClockOutUTC)
-// 					.tz("America/New_York")
-// 					.format("YYYY-MM-DD HH:mm:ss");
-
-// 				await record.update({
-// 					clock_out: autoClockOutUTC,
-// 					clock_out_est: clock_out_est,
-// 					clock_out_lat: null,
-// 					clock_out_lng: null,
-// 					total_hours,
-// 				});
-
-// 				// collect for email
-// 				const emp = record.attendence_user;
-// 				const name = emp?.user_profile?.name || "N/A";
-// 				const roleId = emp?.user_role?.id;
-
-// 				const getRoleName = (roleId) => {
-// 					switch (roleId) {
-// 						case 7:
-// 							return "Supervisor";
-// 						case 8:
-// 							return "Quality Inspector";
-// 						case 9:
-// 							return "Janitor";
-// 						case 11:
-// 							return "Housekeeper";
-// 						default:
-// 							return "Team Member";
-// 					}
-// 				};
-
-// 				employeesWithoutClockOut.push(`${name} – ${getRoleName(roleId)}`);
 // 			})
 // 		);
 
-// 		console.log(
-// 			`✅ Auto clocked-out ${incomplete.length} employees at ${autoClockOutUTC}`
-// 		);
-
-// 		// 🔔 Send Email
-// 		await sendAutoClockOutEmail({
-// 			date: todayNY,
-// 			employees: employeesWithoutClockOut,
-// 		});
 // 	} catch (error) {
-// 		console.error("❌ Auto clock-out failed:", error);
-// 	}
-// };
 
 const syncClockInData = async () => {
 	try {
@@ -2323,9 +1518,6 @@ const syncClockInData = async () => {
 					clock_in: {
 						[Op.not]: null,
 					},
-					// clock_in: {
-					// 	[Op.between]: [startOfDay, endOfDay],
-					// },
 				},
 				order: [["created_at", "DESC"]],
 			});
@@ -2450,20 +1642,12 @@ const autoCompleteExpiredBreaks = async () => {
 				console.log(`⚠️ No location data found for user ${userId}`);
 			}
 
-			//   let latestLocation = null;
-			//   if (userLocations) {
-			//     const keys = Object.keys(userLocations);
-			//     const lastKey = keys[keys.length - 1];
-			//     latestLocation = userLocations[lastKey];
-			//   }
-
 			await b.update({
 				status: "completed",
 				break_end_lat: userLocations?.latitude ?? null,
 				break_end_lng: userLocations?.longitude ?? null,
 			});
 
-			//   console.log(`✅ Completed break ID ${b.id} with lat/lng → ${latestLocation?.latitude}, ${latestLocation?.longitude}`);
 		}
 
 		console.log(`✅ Breaks auto-completed: ${activeBreaks.length}`);
@@ -2482,7 +1666,6 @@ const getAllBreaks = async (reqBody) => {
 			: moment.tz("America/New_York");
 
 		const dayStartEST = selectedDateEST.clone().startOf("day");
-		const dayEndEST = selectedDateEST.clone().endOf("day");
 
 		const dayKey = dayStartEST.format("YYYY-MM-DD");
 
@@ -2592,17 +1775,6 @@ const manualClockInOut = async (reqBody) => {
 			totalHours = `${hours} hours ${minutes} minutes`;
 		}
 
-		// Define start/end of day in UTC for search
-		const startOfDayUTC = moment
-			.tz(date, "America/New_York")
-			.utc()
-			.startOf("day")
-			.toDate();
-		const endOfDayUTC = moment
-			.tz(date, "America/New_York")
-			.utc()
-			.endOf("day")
-			.toDate();
 
 		// Find existing record
 		let record = await Attendance.findOne({

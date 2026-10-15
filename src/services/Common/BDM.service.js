@@ -99,7 +99,6 @@ const deleteBDM = async (body) => {
 		await Promise.all(
 			users.map(async (user) => {
 				// Send email notification to user
-				// await sendUserDeletionEmail(user.email);
 
 				// Delete the user
 				await user.destroy();

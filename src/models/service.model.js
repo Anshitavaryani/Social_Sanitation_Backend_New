@@ -21,30 +21,6 @@ Service.init(
       type: DataTypes.TEXT,
       allowNull: true,
     },
-    // name_in_es: {
-    //   type: DataTypes.STRING(50),
-    //   allowNull: true,
-    // },
-    // abbreviation_in_es: {
-    //   type: DataTypes.STRING(50),
-    //   allowNull: true,
-    // },
-    // description_in_es: {
-    //   type: DataTypes.TEXT,
-    //   allowNull: true,
-    // },
-    // name_in_en: {
-    //   type: DataTypes.STRING(50),
-    //   allowNull: true,
-    // },
-    // abbreviation_in_en: {
-    //   type: DataTypes.STRING(50),
-    //   allowNull: true,
-    // },
-    // description_in_en: {
-    //   type: DataTypes.TEXT,
-    //   allowNull: true,
-    // },
     price: {
      type: DataTypes.DECIMAL(10, 3),
       allowNull: true,

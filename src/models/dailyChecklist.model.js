@@ -14,9 +14,6 @@ DailyChecklist.init(
 		heading_id: {
 			type: DataTypes.BIGINT.UNSIGNED,
 			allowNull: false,
-			// references: { model: "daily_checklist_headings", key: "id" },
-			// onDelete: "CASCADE",
-			// onUpdate: "CASCADE",
 		},
 		task: {
 			type: DataTypes.STRING,

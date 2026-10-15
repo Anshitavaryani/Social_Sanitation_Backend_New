@@ -248,13 +248,10 @@ const handleDocusignWebhook = async (req, res) => {
       where: { docusign_envelope_id: envelopeId },
     });
 
-    let documentType = "estimate";
-
     if (!document) {
       document = await ContractAgreement.findOne({
         where: { docusign_envelope_id: envelopeId },
       });
-      documentType = "contract";
     }
 
     if (document) {
@@ -270,17 +267,6 @@ const handleDocusignWebhook = async (req, res) => {
         signed_file_name: signedFileName,
         file_url: signedPublicUrl,
       });
-
-      // try {
-      //   await sendEmailWithAttachment({
-      //     to: document.client_email,
-      //     signedFileName,
-      //     savePath,
-      //     documentType,
-      //   });
-      // } catch (error) {
-      //   console.error("Email sending failed:", error);
-      // }
 
       handled = true;
     }

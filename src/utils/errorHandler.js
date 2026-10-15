@@ -1,20 +1,31 @@
 const ApiError = require('./ApiError');
 const { status: httpStatus } = require('http-status');
+const logger = require('../config/logger');
+
+const isHttpErrorCode = (code) => Number.isInteger(code) && code >= 400 && code <= 599;
 
 const errorHandler = (err, req, res, next) => {
-    next(err)
+    if (res.headersSent) {
+        return next(err);
+    }
+
     if (err instanceof ApiError) {
-        
-        return res.status(err.statusCode).json(
+        const statusCode = isHttpErrorCode(err.statusCode) ? err.statusCode : httpStatus.INTERNAL_SERVER_ERROR;
+        res.status(statusCode).json(
             {
                 success: false,
-                status: err.statusCode,
+                status: statusCode,
                 message: err.message,
                 data: '',
             }
         );
+        // logged after responding: the logger's error format rewrites err.message to the stack
+        if (statusCode >= 500) {
+            logger.error(err);
+        }
+        return;
     } else {
-        return res.status(httpStatus.INTERNAL_SERVER_ERROR).json(
+        res.status(httpStatus.INTERNAL_SERVER_ERROR).json(
             {
                 success: false,
                 status: httpStatus.INTERNAL_SERVER_ERROR,
@@ -22,6 +33,8 @@ const errorHandler = (err, req, res, next) => {
                 data: '',
             }
         );
+        logger.error(err);
+        return;
     }
 };
 

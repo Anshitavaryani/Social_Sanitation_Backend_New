@@ -14,16 +14,6 @@ const postReviewAndRating = async (reqBody) => {
 		}
 
 			// Check if the user has a valid booking for the service
-			// const bookingExists = await Booking.findOne({
-			// 	where: {
-			// 		user_id: user.id,
-			// 		service_id: reqBody.service_id,
-			// 		booking_status: "SUCCESS",
-			// 	},
-			// });
-			// if (!bookingExists) {
-			// 	throw new ApiError(httpStatus.FORBIDDEN, "You must book this service to leave a review");
-			// }
 	
 
 		const newReviewObj = {
@@ -205,8 +195,6 @@ const getReviewsAndRatings = async (reqBody) => {
 			};
 		});
 
-		// Check if the user has provided a rating
-		const userRatingProvided = modifiedResult.some(review => review.user_id === user.id);
 
 		return {
 			success: true,

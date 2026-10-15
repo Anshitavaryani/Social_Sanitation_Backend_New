@@ -5,14 +5,7 @@ const ApiError = require("../../utils/ApiError");
 const { getDatabase, ServerValue } = require("firebase-admin/database");
 const { sendPushNotification, getUserActiveFCMTokens } = require("./notification.service");
 const { User, Admin, Profile, UserAttachment, BDMUser } = require("../../models");
-const { getStorage, ref, getDownloadURL, uploadBytes } = require("firebase/storage");
-
-const { initializeApp } = require("firebase/app");
-const config = require("../../config/firebaseConfig");
-
-initializeApp(config.firebaseConfig);
-
-const storage = getStorage();
+const { uploadFileToFirebase } = require("../../config/firebaseStorage");
 
 const sendMessage = async (body, files, headers) => {
 	try {
@@ -92,13 +85,11 @@ async function uploadImages(files) {
 
 	for (const file of imageArray) {
 		try {
-			const response = await fetch(
-				`https://node.socialsanitation.com:3000/images/${file.filename}`
+			const downloadURL = await uploadFileToFirebase(
+				file.path,
+				`files/images/${file.filename}`,
+				file.mimetype
 			);
-			const blob = await response.blob();
-			const storageRef = ref(storage, `files/images/${file.filename}`);
-			const snapshot = await uploadBytes(storageRef, blob);
-			const downloadURL = await getDownloadURL(snapshot.ref);
 			console.log("downloadUrl ===> ", downloadURL);
 			imageUrls.push(downloadURL);
 		} catch (error) {
@@ -108,27 +99,6 @@ async function uploadImages(files) {
 
 	return imageUrls;
 }
-
-// async function uploadImages(files) {
-//     const imageUrls = [];
-// 	console.log("iles.images",files.images)
-//     for (const file of files.images) {
-
-//         try {
-//             const response = await fetch(`https://node.socialsanitation.com:3000/images/${file.filename}`);
-//             const blob = await response.blob();
-//             const storageRef = ref(storage, `files/images/${file.filename}`);
-//             const snapshot = await uploadBytes(storageRef, blob);
-//             const downloadURL = await getDownloadURL(snapshot.ref);
-//             console.log("downloadUrl ===> ", downloadURL);
-//             imageUrls.push(downloadURL);
-//         } catch (error) {
-//             console.error('Error uploading image:', error);
-//         }
-//     }
-
-//     return imageUrls;
-// }
 
 const getUserMessages = async (body) => {
 	try {
@@ -222,7 +192,6 @@ const markAsRead = async (userId, receiverUserId, chatType) => {
 		// Update each message to mark it as read
 		userMessagesSnapshot.forEach((childSnapshot) => {
 			const messageKey = childSnapshot.key;
-			const messageData = childSnapshot.val();
 
 			// Update the message's read property to true
 			userMessagesRef.child(messageKey).update({ read: true });
@@ -480,99 +449,19 @@ const getUserChatList = async (body) => {
 
 
 
-// const getUserChatList = async (body) => {
 // 	try {
-// 		const { user, chat_type } = body;
-
-// 		let chatType;
-// 		if (chat_type === "user") {
-// 			chatType = "USER_ADMIN_CHAT";
-// 		} else if (chat_type === "employee") {
-// 			chatType = "EMPLOYEE_ADMIN_CHAT";
-// 		} else {
-// 			throw new ApiError(httpStatus.BAD_REQUEST, "Invalid User Type");
-// 		}
-
-// 		const chatRoomRef = admin
-// 			.database()
-// 			.ref(`${chatType}/messages/ADMIN_${user.id}`);
-// 		let list = [];
-
-// 		const snapshot = await chatRoomRef.once("value");
 
 // 		snapshot.forEach((userSnapshot) => {
-// 			const userId = userSnapshot.key.split("_")[1];
-// 			const userMessages = userSnapshot.val();
-// 			const lastMessage = Object.values(userMessages).pop();
-// 			const unseenCount = Object.values(userMessages).filter(
-// 				(msg) => !msg.read
-// 			).length;
 
-// 			let displayMessage = "";
-// 			if (lastMessage.imageUrls && lastMessage.imageUrls.length > 0) {
-// 				displayMessage = `${lastMessage.imageUrls.length} attachment(s)`;
-// 			} else {
-// 				displayMessage = lastMessage.message;
-// 			}
-
-// 			list.push({
-// 				lastMessageTime: lastMessage.timestamp,
-// 				unseenCount,
-// 				displayMessage,
-// 				userId,
-// 			});
 // 		});
-
-// 		list.sort((a, b) => b.lastMessageTime - a.lastMessageTime);
 
 // 		const userDocsPromises = list.map(async (chat) => {
 // 			try {
-// 				const userDoc = await User.findOne({
-// 					where: { is_active: true, id: chat.userId },
-// 					attributes: ["id", "role_id"],
-// 					include: [
-// 						{
-// 							model: Profile,
-// 							as: "user_profile",
-// 							attributes: ["id", "name"],
-// 						},
-// 						{
-// 							model: UserAttachment,
-// 							as: "user_attachments",
-// 							attributes: ["id", "file_name", "file_uri"],
-// 							order: [["id", "desc"]],
-// 							limit: 1,
-// 						},
-// 					],
-// 				});
 
-// 				if (userDoc) {
-// 					userDoc.dataValues.lastMessageTime = chat.lastMessageTime;
-// 					userDoc.dataValues.unseenCount = chat.unseenCount;
-// 					userDoc.dataValues.displayMessage = chat.displayMessage;
-// 					userDoc.dataValues.type = chat.type;
-
-// 					return userDoc;
-// 				}
-
-// 				return null;
 // 			} catch (error) {
-// 				throw new ApiError(
-// 					httpStatus.INTERNAL_SERVER_ERROR,
-// 					error.message || "Internal Server Error"
-// 				);
-// 			}
 // 		});
 
-// 		const result = await Promise.all(userDocsPromises);
-// 		return result.filter((userDoc) => userDoc !== null);
 // 	} catch (error) {
-// 		throw new ApiError(
-// 			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-// 			error.message || "Internal Server Error"
-// 		);
-// 	}
-// };
 
 const getLastMessage = async (body, params) => {
 	try {

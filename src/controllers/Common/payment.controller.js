@@ -55,12 +55,6 @@ const getPaymentStatus = async (req, res) => {
     }
 
     // If payment is successful → mark quote as PAID
-    // if (payment.payment_status === "SUCCESS" && payment.quote_id) {
-    //   await ServiceQuote.update(
-    //     { payment_status: "PAID" },
-    //     { where: { id: payment.quote_id } }
-    //   );
-    // }
 
     return res.status(200).json({
       success: true,

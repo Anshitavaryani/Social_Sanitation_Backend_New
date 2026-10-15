@@ -9,11 +9,6 @@ const sendPushNotification = async (notificationObj, registrationTokens, sound =
     throw new Error("Registration tokens must be a non-empty array");
   }
   console.log("objectregistrationTokens1111",registrationTokens.length)
-  const notification_options = {
-    priority: "high",
-    timeToLive: 60 * 60 * 24,
-  };
-
   const message = {
     notification: {
       ...notificationObj,
@@ -34,7 +29,6 @@ const sendPushNotification = async (notificationObj, registrationTokens, sound =
       },
     },
   };
-  const options = notification_options;
 
   console.log("registrationTokens",registrationTokens)
 

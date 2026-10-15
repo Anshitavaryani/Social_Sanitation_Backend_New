@@ -14,24 +14,10 @@ BDMUser.init(
         bdm_id: {
 			type: DataTypes.BIGINT.UNSIGNED,
 			allowNull: true,
-			// defaultValue: null,
-			// onDelete: "CASCADE",
-			// onUpdate: "CASCADE",
-			// references: {
-			// 	model: "users",
-			// 	key: "id",
-			// },
 		},
 		user_id: {
 			type: DataTypes.BIGINT.UNSIGNED,
 			allowNull: true,
-			// defaultValue: null,
-			// onDelete: "CASCADE",
-			// onUpdate: "CASCADE",
-			// references: {
-			// 	model: "users",
-			// 	key: "id",
-			// },
 		},
 		is_active: {
 			type: DataTypes.BOOLEAN,

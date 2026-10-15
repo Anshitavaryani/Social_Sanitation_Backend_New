@@ -1,6 +1,7 @@
 /** @format */
 
 const puppeteer = require("puppeteer-core");
+const config = require("./config");
 const fs = require("fs");
 const path = require("path");
 const moment = require("moment");
@@ -638,7 +639,7 @@ const generateQuotePDF = async (data) => {
   const browser = await puppeteer.launch({
     headless: true,
     executablePath:
-      "/root/.cache/puppeteer/chrome/linux-136.0.7103.92/chrome-linux64/chrome",
+      config.PUPPETEER_EXECUTABLE_PATH,
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
   });
 
@@ -1975,7 +1976,7 @@ const generatePDF = async (
   const browser = await puppeteer.launch({
     headless: true,
     executablePath:
-      "/root/.cache/puppeteer/chrome/linux-136.0.7103.92/chrome-linux64/chrome",
+      config.PUPPETEER_EXECUTABLE_PATH,
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
   });
 
@@ -3321,7 +3322,7 @@ ${
   const browser = await puppeteer.launch({
     headless: true,
     executablePath:
-      "/root/.cache/puppeteer/chrome/linux-136.0.7103.92/chrome-linux64/chrome",
+      config.PUPPETEER_EXECUTABLE_PATH,
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
   });
 
@@ -3387,82 +3388,9 @@ const getInvoiceLayoutConfig = (itemCount) => {
   };
 };
 
-// const generateInvoicePDF = async (data) => {
-//   const {
-//     invoice_ref_no,
-//     service_start,
-//     service_end,
-//     invoice_date,
-//     billing_date,
-//     due_date,
-//     to_company_name,
-//     address_1,
-//     address_2,
-//     items,
-//     total_due,
-//     signature,
-//     payment_link,
-//   } = data;
-
-//   /* ===== FORMAT DATES ===== */
-
-//   const formattedServiceStart = service_start
-//     ? moment(service_start, "YYYY-MM-DD").format("MM-DD-YYYY")
-//     : "";
-
-//   const formattedServiceEnd = service_end
-//     ? moment(service_end, "YYYY-MM-DD").format("MM-DD-YYYY")
-//     : "";
-
-//   const formattedInvoiceDate = invoice_date
-//     ? moment(invoice_date, "YYYY-MM-DD").format("MM-DD-YYYY")
-//     : "";
-
-//   const formattedBillingDate = billing_date
-//     ? moment(billing_date, "YYYY-MM-DD").format("MM-DD-YYYY")
-//     : "";
-
-//   const formattedDueDate = due_date
-//     ? moment(due_date, "YYYY-MM-DD").format("MM-DD-YYYY")
-//     : "";
-
-//   const formatAmount = (value) => {
-//     const num = Number(value || 0);
-
-//     if (!Number.isFinite(num)) {
-//       return "0";
-//     }
-
-//     return num.toFixed(6).replace(/\.?0+$/, "");
-//   };
-
-//   const measurementHeader = "Sqft / Hour";
-
 //   const calculatedTotal = items.reduce((sum, item) => {
-//     const unit_price = Number(item.unit_price || 0);
-//     const quantity = Number(item.quantity || 1);
 
-//     let multiplier = 1;
-
-//     if (item.calculation_type === "hour") {
-//       const hour = Number(item.hour || 0);
-//       multiplier = hour || 1;
-//     } else if (item.calculation_type === "sqft") {
-//       const sqft = Number(item.sqft || 0);
-//       multiplier = sqft || 1;
-//     }
-
-//     return sum + quantity * unit_price * multiplier;
 //   }, 0);
-
-//   /*
-//    * cfg drives ALL spacing/sizing tiers based on item count so the
-//    * invoice always fits a single A4 page, same design either way.
-//    * 1-5 items  = original design, untouched
-//    * 6-8 items  = mildly compact
-//    * 9+ items   = compact + tighter margins to still fit one page
-//    */
-//   const cfg = getInvoiceLayoutConfig(items.length);
 
 //   const htmlContent = `
 // <!doctype html>
@@ -3474,22 +3402,17 @@ const getInvoiceLayoutConfig = (itemCount) => {
 // 		<style>
 // 			body {
 // 				font-family: Arial, sans-serif;
-// 				margin: 0;
 // 				padding: ${cfg.bodyPadding};
 // 				color: #000;
-// 			}
 
 // 			.header {
-// 				display: flex;
 // 				justify-content: space-between;
 // 				align-items: center;
 // 				border-bottom: 2px solid #444;
 // 				padding-bottom: 10px;
-// 			}
 
 // 			.logo {
 // 				width: 120px;
-// 			}
 
 // 			.title {
 // 				background-color: #495057;
@@ -3498,33 +3421,25 @@ const getInvoiceLayoutConfig = (itemCount) => {
 // 				font-size: 22px;
 // 				font-weight: bold;
 // 				text-align: right;
-// 			}
 
 // 			.meta-info {
-//   display: block;
-// }
 
 // .addresses {
-//   display: flex;
 //   justify-content: space-between;
-// }
 
 // 			.meta-info div,
 // 			.addresses div {
 // 				width: 48%;
 // 				font-size: 14px;
-// 			}
 
 // 			.meta-info p,
 // 			.addresses p {
 // 				margin: 4px 0;
-// 			}
 
 // 			table {
 // 				width: 100%;
 // 				border-collapse: collapse;
 // 				margin: ${cfg.tableMargin};
-// 			}
 
 // 			th,
 // 			td {
@@ -3533,59 +3448,44 @@ const getInvoiceLayoutConfig = (itemCount) => {
 // 				text-align: left;
 // 				font-size: ${cfg.tableFontSize};
 // 				line-height: 1.2;
-// 			}
 
 // 			th {
 // 				background-color: #f0f0f0;
-// 			}
 
 // 			.total {
 // 				text-align: right;
 // 				font-size: 16px;
 // 				font-weight: bold;
 // 				margin-top: ${cfg.totalMarginTop};
-// 			}
 
 // 			.signature-section {
-// 				display: flex;
 // 				justify-content: space-between;
 // 				margin-top: ${cfg.signatureMarginTop};
 // 				font-size: 14px;
-// 			}
 
 // 			.signature-section .date,
 // 			.signature-section .signature {
 // 				width: 48%;
-// 			}
 
 // 			.signature-section .signature img {
 // 				margin-top: 5px;
 // 				width: 120px;
-// 				height: auto;
-// 			}
 
 // 			.signature-section .signature p {
 // 				margin-top: 10px;
 // 				line-height: 1.2;
 // 				white-space: pre-line;
-// 			}
 
 // 			.payment-link {
 // 				margin-top: ${cfg.paymentMarginTop};
 // 				text-align: center;
 // 				font-size: 12px;
-// 			}
 
 // 			.payment-link p {
-// 				margin: 0;
-// 			}
 
 // 			.payment-link span {
-// 				display: inline-block;
-// 				/* min-width: 250px; */
 // 				border-bottom: 1px solid #000;
 // 				padding-bottom: 2px;
-// 			}
 
 // 			.terms {
 // 				margin-top: ${cfg.termsMarginTop};
@@ -3593,7 +3493,6 @@ const getInvoiceLayoutConfig = (itemCount) => {
 // 				line-height: ${cfg.termsLineHeight};
 // 				text-align: justify;
 // 				padding: 0 30px;
-// 			}
 
 // 			.footer {
 // 				margin-top: ${cfg.footerMarginTop};
@@ -3601,7 +3500,6 @@ const getInvoiceLayoutConfig = (itemCount) => {
 // 				text-align: center;
 // 				border-top: 1px solid #000;
 // 				padding-top: 5px;
-// 			}
 // 		</style>
 // 	</head>
 
@@ -3609,7 +3507,6 @@ const getInvoiceLayoutConfig = (itemCount) => {
 // 		<div class="header">
 // 			<img
 // 				class="logo"
-// 				src="https://socialsanitation.com/wp-content/uploads/2022/12/New-Logo.jpg"
 // 			/>
 // 			<div class="title">INVOICE</div>
 // 		</div>
@@ -3671,31 +3568,7 @@ const getInvoiceLayoutConfig = (itemCount) => {
 // 			<tbody>
 // 				${items
 //           .map((item) => {
-//             const unit_price = Number(item.unit_price || 0);
-//             const quantity = Number(item.quantity || 1);
 
-//             let measurement = "N/A";
-//             let multiplier = 1;
-
-//             if (item.calculation_type === "hour") {
-//               measurement = Number(item.hour || 0);
-//               multiplier = measurement;
-//             } else if (item.calculation_type === "sqft") {
-//               measurement = Number(item.sqft || 0);
-//               multiplier = measurement;
-//             }
-
-//             const amount = quantity * unit_price * multiplier;
-
-//             return `
-// <tr>
-//   <td>${item.description}</td>
-//   <td>${item.frequency || "-"}</td>
-//   <td>${quantity}</td>
-//   <td>${measurement}</td>
-//  <td>$${formatAmount(amount)}</td>
-// </tr>
-// `;
 //           })
 //           .join("")}
 // 			</tbody>
@@ -3706,7 +3579,6 @@ const getInvoiceLayoutConfig = (itemCount) => {
 // 		<div
 // 			class="signature-section"
 // 			style="
-// 				display: flex;
 // 				justify-content: space-between;
 // 				align-items: flex-end;
 // 				font-size: 14px;
@@ -3717,17 +3589,11 @@ const getInvoiceLayoutConfig = (itemCount) => {
 // 			<div class="date" style="width: 48%; text-align: left">
 // 				<p style="margin: 0; font-size: 12px; font-weight: bold">
 // 					${
-//             invoice_date
-//               ? moment(invoice_date, "YYYY-MM-DD").format("MMMM DD, YYYY")
-//               : "Month-Day-Year"
-//           }
 // 				</p>
 // 				<div
-// 					style="border-top: 1px solid #000; width: 220px; margin: 5px 0 0 0"
 // 				></div>
 // 				<p
 // 					style="
-// 						margin: 0;
 // 						font-size: 12px;
 // 						font-weight: bold;
 // 						text-align: center;
@@ -3741,17 +3607,7 @@ const getInvoiceLayoutConfig = (itemCount) => {
 // 			<!-- Signature -->
 // 			<div class="signature" style="width: 48%; text-align: left">
 // 				${
-//           signature
-//             ? `<img
-// 					src="${signature}"
-// 					alt="Signature"
-// 					crossorigin="anonymous"
-// 					style="width: 120px; height: auto; margin-bottom: 5px"
-// 				/>`
-//             : `<div style="height: 60px"></div>`
-//         }
 // 				<div
-// 					style="border-top: 1px solid #000; width: 280px; margin-top: 5px"
 // 				></div>
 // 				<p
 // 					style="
@@ -3768,27 +3624,11 @@ const getInvoiceLayoutConfig = (itemCount) => {
 
 // 		<div
 // 			class="payment-link"
-// 			style="text-align: center; font-size: 12px"
 // 		>
 // 			<p style="margin: 0">
 // 				<strong>Square Payment Link:</strong>
 // 				<span>
 // 					${
-//             payment_link
-//               ? `<a
-// 						href="${payment_link}"
-// 						target="_blank"
-// 						style="
-// 							word-break: break-all;
-// 							color: #0066cc;
-// 							text-decoration: underline;
-// 							font-size: 11px;
-// 						"
-// 					>
-// 						${payment_link} </a
-// 					>`
-//               : `<span style="color: #999">(No payment link available)</span>`
-//           }
 // 				</span>
 // 			</p>
 // 		</div>
@@ -3814,56 +3654,6 @@ const getInvoiceLayoutConfig = (itemCount) => {
 // 	</body>
 // </html>
 // `;
-
-//   const pdfDir = path.resolve(__dirname, "../../public/uploads/docs");
-//   const pdfPath = path.join(pdfDir, `invoice-${invoice_ref_no}.pdf`);
-
-//   if (!fs.existsSync(pdfDir)) {
-//     fs.mkdirSync(pdfDir, { recursive: true });
-//   }
-
-//   const browser = await puppeteer.launch({
-//     headless: true,
-//     executablePath:
-//       "/root/.cache/puppeteer/chrome/linux-136.0.7103.92/chrome-linux64/chrome",
-//     args: ["--no-sandbox", "--disable-setuid-sandbox"],
-//   });
-
-//   const page = await browser.newPage();
-
-//   await page.setContent(htmlContent);
-
-//   await page.evaluateHandle("document.fonts.ready");
-
-//   await page.evaluate(async () => {
-//     const images = Array.from(document.images);
-//     await Promise.all(
-//       images.map((img) => {
-//         if (img.complete) return;
-//         return new Promise((resolve) => {
-//           img.addEventListener("load", resolve);
-//           img.addEventListener("error", resolve);
-//         });
-//       }),
-//     );
-//   });
-
-//   await page.pdf({
-//     path: pdfPath,
-//     format: "A4",
-//     printBackground: true,
-//     margin: {
-//       top: "20px",
-//       bottom: "20px",
-//       left: "20px",
-//       right: "20px",
-//     },
-//   });
-
-//   await browser.close();
-
-//   return pdfPath;
-// };
 
 const generateInvoicePDF = async (data) => {
   const {
@@ -4397,7 +4187,7 @@ const generateInvoicePDF = async (data) => {
   const browser = await puppeteer.launch({
     headless: true,
     executablePath:
-      "/root/.cache/puppeteer/chrome/linux-136.0.7103.92/chrome-linux64/chrome",
+      config.PUPPETEER_EXECUTABLE_PATH,
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
   });
 
@@ -4791,7 +4581,7 @@ const generateServiceRequestPDF = async (data) => {
   const browser = await puppeteer.launch({
     headless: true,
     executablePath:
-      "/root/.cache/puppeteer/chrome/linux-136.0.7103.92/chrome-linux64/chrome",
+      config.PUPPETEER_EXECUTABLE_PATH,
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
   });
 

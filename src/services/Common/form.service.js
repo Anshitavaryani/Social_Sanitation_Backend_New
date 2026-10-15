@@ -114,12 +114,6 @@ const submitForm = async (reqBody, files) => {
     });
 
     // 🧾 **Generate PDF with form data**
-    // const pdfPath = await generatePDF(
-    // 	formData,
-    // 	signatureBase64Url,
-    // 	driverLicenseNumber,
-    // 	signatureCompanyBase64Url
-    // );
 
     // 📧 **Send Email with the PDF to user**
     await sendFormEmailWithPDF(userEmail, pdfPath);

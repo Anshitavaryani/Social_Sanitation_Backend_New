@@ -14,7 +14,6 @@ router.put('/updateUserProfile', [userAuthMiddleware.verifyAuthJWTToken], userOp
 router.post('/addNewAddress',[userAuthMiddleware.verifyAuthJWTToken], userOpController.addNewAddress);
 router.put('/editAddress', userOpController.editAddress);
 router.post('/deleteAddress/:id',[userAuthMiddleware.verifyAuthJWTToken], userOpController.deleteAddress);
-// router.post('/syncWithCalendar',[userAuthMiddleware.verifyAuthJWTToken], userOpController.syncWithCalendar);
 router.get('/getAllUserAddress',[userAuthMiddleware.verifyAuthJWTToken], userOpController.getAllUserAddress);
 router.get('/getUserAddressById/:id', userOpController.getUserAddressById);
 

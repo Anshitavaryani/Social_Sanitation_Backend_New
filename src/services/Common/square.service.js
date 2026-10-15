@@ -12,8 +12,6 @@ async function generateSquarePaymentLink({
   try {
     const squareAmount = Math.max(0.01, Number(amount));
     const squareAmountCents = Math.round(squareAmount * 100);
-    const GOOGLE_REVIEW_URL =
-      "https://www.google.com/maps/place/Social+Sanitation+Commercial+Cleaning+Solutions/@27.992063,-82.4542805,11z/data=!4m8!3m7!1s0x4156d0c052b2979d:0x139d4ac2d6cd7062!8m2!3d27.992063!4d-82.4542805!9m1!1b1!16s%2Fg%2F11vk4lwv2y?entry=ttu&g_ep=EgoyMDI1MTEyMy4xIKXMDSoASAFQAw%3D%3D";
     const body = {
       idempotency_key: uuidv4(),
 

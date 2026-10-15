@@ -7,21 +7,7 @@ const { User, Profile, Admin } = require("../../models");
 const fs = require("fs");
 const path = require("path");
 
-const { getApps, initializeApp, getApp } = require("firebase/app");
-const {
-  getStorage,
-  ref,
-  uploadBytes,
-  getDownloadURL,
-} = require("firebase/storage");
-
-const firebaseConfig = require("../../config/firebaseConfig");
-
-const firebaseApp = getApps().length
-  ? getApp()
-  : initializeApp(firebaseConfig.firebaseConfig);
-
-const storage = getStorage(firebaseApp);
+const { uploadFileToFirebase } = require("../../config/firebaseStorage");
 
 const ALLOWED_USER_ROLES = [6, 7, 8, 9, 10, 11];
 const ALLOWED_ADMIN_ROLES = [1, 3, 5];
@@ -218,17 +204,10 @@ const uploadGroupAttachments = async (files = {}) => {
         );
       }
 
-      const fileBuffer = await fs.promises.readFile(file.path);
       const storagePath = `team-chat/${Date.now()}-${Math.random().toString(36).slice(2)}-${path.basename(file.filename)}`;
 
-      const storageRef = ref(storage, storagePath);
-
       try {
-        const snapshot = await uploadBytes(storageRef, fileBuffer, {
-          contentType: mimeType,
-        });
-
-        const url = await getDownloadURL(snapshot.ref);
+        const url = await uploadFileToFirebase(file.path, storagePath, mimeType);
 
         attachments.push({
           url,
@@ -578,10 +557,6 @@ const getGroupParticipants = async (groupId) => {
 
     // Require membership verification for Teams only.
     // Preserve existing participant lookup behavior for legacy groups.
-    // if (group.isTeam === true) {
-    //   const user = getAuthenticatedUser(reqBody);
-    //   await assertTeamMember(groupRef, user);
-    // }
 
     const members = group.members || {};
     const participants = [];

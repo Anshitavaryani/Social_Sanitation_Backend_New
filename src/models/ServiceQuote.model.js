@@ -52,14 +52,6 @@ ServiceQuote.init(
       type: DataTypes.DECIMAL(15, 6),
       allowNull: false,
     },
-    // tip: {
-    // 	type: DataTypes.DECIMAL(10, 2),
-    // 	allowNull: false,
-    // },
-    // final_amount: {
-    // 	type: DataTypes.DECIMAL(10, 2),
-    // 	allowNull: false,
-    // },
     signature: {
       type: DataTypes.TEXT,
       allowNull: true,

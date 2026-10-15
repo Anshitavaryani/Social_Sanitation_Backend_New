@@ -5,7 +5,7 @@ const responseWrapper = require('../../config/responseWrapper');
 
 const createFaq = catchAsync(async (req, res) => {
 
-    const faq = await faqService.createFaq(req.body);
+    await faqService.createFaq(req.body);
     return responseWrapper(res, '', 'New FAQ Created Successfully.', httpStatus.CREATED);
 });
 

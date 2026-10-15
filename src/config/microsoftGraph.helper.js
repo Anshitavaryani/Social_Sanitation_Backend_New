@@ -76,31 +76,6 @@ async function sendMailViaGraph({
 }
 
 
-// async function sendMailViaGraph({ to, subject, html, attachments = [] }) {
-//   const graphClient = await getGraphClient();
-
-//   const graphAttachments = attachments.map((filePath) => ({
-//     "@odata.type": "#microsoft.graph.fileAttachment",
-//     name: path.basename(filePath),
-//     contentBytes: fs.readFileSync(filePath).toString("base64"),
-//   }));
-
-//   await graphClient
-//     .api(`/users/${process.env.AZURE_SENDER_EMAIL}/sendMail`)
-//     .post({
-//       message: {
-//         subject,
-//         body: {
-//           contentType: "HTML",
-//           content: html,
-//         },
-//         toRecipients: [{ emailAddress: { address: to } }],
-//         attachments: graphAttachments,
-//       },
-//       saveToSentItems: true,
-//     });
-// }
-
 async function sendMailViaGraphWithSender({
 	from,
 	to,

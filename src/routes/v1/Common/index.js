@@ -11,7 +11,6 @@ const paymentRoute = require("./payment.route");
 const serviceRoute = require("./service.route");
 const bookingRoute = require("./booking.route");
 const contentRoute = require("./content.route");
-const calendarRoute = require("./calendar.route");
 const reviewRoute = require("./review.route");
 const BDMRoute = require("./BDM.route");
 const attendanceRoute = require("./attendance.route");
@@ -71,10 +70,6 @@ const commonRoutes = [
 	{
 		path: "/content",
 		route: contentRoute,
-	},
-	{
-		path: "/calendar",
-		route: calendarRoute,
 	},
 	{
 		path: "/rating",

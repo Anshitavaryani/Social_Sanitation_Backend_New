@@ -193,17 +193,8 @@ const addNewAddress = async (reqBody, headers) => {
 		const { role_id } = headers;
 
 		// Combine address fields
-		// const addressFields = [
-		// 	reqBody.address,
-		// 	reqBody.country_id,
-		// 	reqBody.state_id,
-		// 	reqBody.city_id,
-		// ];
 
 		// Filter out empty fields and join with commas
-		// const fullAddress = addressFields
-		// 	.filter((field) => field && field.trim())
-		// 	.join(", ");
 
 		// Create user address object
 		const userAddressObj = {
@@ -297,7 +288,6 @@ const deleteAddress = async (reqBody, id) => {
 		}
 
 		// Delete all bookings and their calendar events
-		// await deleteBookingAndCalendarEvents(id);
 
 		// Finally, delete the address itself
 		await addressDoc.destroy();
@@ -309,98 +299,11 @@ const deleteAddress = async (reqBody, id) => {
 	}
 };
 
-// const deleteBookingAndCalendarEvents = async (addressId) => {
 // 	try {
-// 		// Fetch all bookings associated with the address
-// 		const bookings = await Booking.findAll({
-// 			where: { address_id: addressId },
-// 		});
 
-// 		if (!bookings.length) {
-// 			throw new ApiError(
-// 				httpStatus.BAD_REQUEST,
-// 				"No bookings found for this address"
-// 			);
-// 		}
-
-// 		// Fetch user details for notifications or calendar events
-// 		const fetchUserIdsByRole = async (roleIds) => {
-// 			const userAuthDocs = await UserOAuth.findAll({
-// 				where: { role_id: roleIds, is_active: true },
-// 				attributes: ["user_id", "refresh_token"],
-// 			});
-// 			return userAuthDocs.map((doc) => ({
-// 				userId: doc.user_id,
-// 				refreshToken: doc.refresh_token,
-// 			}));
-// 		};
-
-// 		const bookingUser = await fetchUserIdsByRole([6]);
-// 		const serviceProviderUsers = await fetchUserIdsByRole([7]);
-// 		const adminUsers = await fetchUserIdsByRole([1, 2, 3]);
-// 		const allUsers = [...bookingUser, ...serviceProviderUsers, ...adminUsers];
-
-// 		// Iterate through the bookings
-// 		for (const booking of bookings) {
-// 			// Collect event IDs for calendar deletion
-// 			const eventIds = booking.calendar_event_id
-// 				? booking.calendar_event_id.split(",")
-// 				: [];
-
-// 			if (!eventIds.length) {
-// 				console.log(`No calendar events found for booking ID: ${booking.id}`);
 // 				continue;
-// 			}
 
-// 			console.log(`Processing booking ID: ${booking.id}`);
-// 			console.log("Event IDs to delete:", eventIds);
-
-// 			// Delete calendar events for each user
-// 			for (const { userId, refreshToken } of allUsers) {
-// 				for (const eventId of eventIds) {
-// 					await deleteEventFromCalendar(userId, refreshToken, eventId);
-// 				}
-// 			}
-
-// 			// Delete the booking itself
-// 			await booking.destroy();
-// 			console.log(
-// 				`Deleted booking and its calendar events for booking ID: ${booking.id}`
-// 			);
-// 		}
 // 	} catch (error) {
-// 		console.error(`Error deleting bookings for address ${addressId}:`, error);
-// 		throw new ApiError(
-// 			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-// 			error.message
-// 		);
-// 	}
-// };
-
-// const deleteEventFromCalendar = async (userId, refreshToken, eventId) => {
-// 	console.log(userId, "userId");
-// 	console.log(refreshToken, "refreshToken");
-// 	console.log(eventId, "eventId");
-
-// 	// return refreshToken
-
-// 	if (!eventId) {
-// 		console.log(`Skipping null or empty event ID for user ${userId}`);
-// 		return;
-// 	}
-// 	console.log(
-// 		`Attempting to delete event ${eventId} for user ${userId} with refresh token ${refreshToken}`
-// 	);
-// 	try {
-// 		await deleteCalendarEvent(eventId, refreshToken);
-// 		console.log(`Event ${eventId} successfully deleted for user ${userId}`);
-// 	} catch (error) {
-// 		console.error(
-// 			`Failed to delete event ${eventId} for user ${userId}. Error: ${error.message}`
-// 		);
-// 		console.error(error); // Log the full error object
-// 	}
-// };
 
 const getAllUserAddress = async (reqBody) => {
 	try {
@@ -562,8 +465,6 @@ const createUserConsent = async (body, req = {}) => {
 			consent_sms: consent_sms || false,
 
 			// optional audit fields (future-safe)
-			// ip_address: req.ip,
-			// consent_timestamp: new Date(),
 		});
 
 		return data;

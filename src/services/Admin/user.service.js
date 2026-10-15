@@ -585,48 +585,15 @@ const deleteUser = async (body) => {
   }
 };
 
-// const deleteUser = async (body) => {
 // 	try {
-// 		// Validate user_id
-// 		if (!Array.isArray(body.user_id) || body.user_id.length === 0) {
-// 			throw new ApiError(httpStatus.BAD_REQUEST, "Invalid user_id");
-// 		}
-
-// 		// Ensure all IDs are trimmed and filtered
-// 		const userIds = body.user_id.map((id) => String(id).trim()).filter(Boolean);
-
-// 		if (userIds.length === 0) {
-// 			throw new ApiError(httpStatus.BAD_REQUEST, "No valid user IDs provided");
-// 		}
-
-// 		// Find all users with the given IDs
-// 		const users = await User.findAll({
-// 			where: {
-// 				id: userIds,
-// 			},
-// 		});
-
-// 		if (users.length === 0) {
-// 			throw new ApiError(httpStatus.NOT_FOUND, "No users found");
-// 		}
 
 // 		// Send email notifications and delete users
 // 		await Promise.all(
 // 			users.map(async (user) => {
-// 				// Send email notification to user
-// 				// await sendUserDeletionEmail(user.email);
 
-// 				// Delete the user
-// 				await user.destroy();
 // 			})
 // 		);
 // 	} catch (error) {
-// 		throw new ApiError(
-// 			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-// 			error.message
-// 		);
-// 	}
-// };
 
 const calculateDistanceInMiles = (lat1, lon1, lat2, lon2) => {
   const toRad = (value) => (value * Math.PI) / 180;
@@ -2578,160 +2545,13 @@ const getClientChecklistByUserId = async (id) => {
   }
 };
 
-// const adminEditUser = async (reqBody, id) => {
 // 	try {
-// 		const { name, checklist } = reqBody;
 
-// 		// ✅ Find user
-// 		const user = await User.findByPk(id);
-// 		if (!user) {
-// 			throw new ApiError(httpStatus.NOT_FOUND, "User not found");
-// 		}
-
-// 		// ✅ Update profile
-// 		const profile = await Profile.findOne({ where: { user_id: id } });
-// 		if (profile) {
-// 			await profile.update({ name });
-// 		}
-
-// 		let checklistEntry;
-
-// 		if (checklist) {
-// 			const {
-// 				estimated_sqft,
-// 				service_days,
-// 				address,
-// 				state_id,
-// 				city_id,
-// 				address_lat,
-// 				address_long,
-// 				details = [],
-// 			} = checklist;
-
-// 			// ✅ Find existing checklist or create if not found
-// 			checklistEntry = await ClientChecklist.findOne({
-// 				where: { user_id: id },
-// 			});
-
-// 			if (checklistEntry) {
-// 				await checklistEntry.update({
-// 					estimated_sqft,
-// 					service_days,
-// 					address,
-// 					state_id,
-// 					city_id,
-// 					address_lat,
-// 					address_long,
-// 				});
-// 			} else {
-// 				checklistEntry = await ClientChecklist.create({
-// 					user_id: id,
-// 					estimated_sqft,
-// 					service_days,
-// 					address,
-// 					state_id,
-// 					city_id,
-// 					address_lat,
-// 					address_long,
-// 				});
-// 			}
-
-// 			// ✅ Handle details (Update existing or Create new)
-// 			if (Array.isArray(details) && details.length > 0) {
-// 				const existingDetails = await ClientChecklistDetail.findAll({
-// 					where: { checklist_id: checklistEntry.id },
-// 				});
-
-// 				for (const detail of details) {
-// 					const existing = existingDetails.find(
-// 						(ed) => ed.service_area === detail.service_area
-// 					);
-
-// 					if (existing) {
-// 						await existing.update({
-// 							num_desks_trash_cans: detail.num_desks_trash_cans,
-// 							flooring_type: detail.flooring_type,
-// 							special_requests: detail.special_requests,
-// 						});
-// 					} else {
-// 						await ClientChecklistDetail.create({
-// 							checklist_id: checklistEntry.id,
-// 							service_area: detail.service_area,
-// 							num_desks_trash_cans: detail.num_desks_trash_cans,
-// 							flooring_type: detail.flooring_type,
-// 							special_requests: detail.special_requests,
-// 						});
-// 					}
-// 				}
-// 			}
-// 		}
-
-// 		return { user, profile, checklist: checklistEntry };
 // 	} catch (error) {
-// 		console.error("Error in adminEditUser:", error);
-// 		throw new ApiError(
-// 			httpStatus.INTERNAL_SERVER_ERROR,
-// 			error.message || "Internal Server Error"
-// 		);
-// 	}
-// };
 
-// const adminAddUser = async (reqBody) => {
 // 	try {
-// 		const { name, email, role_id } = reqBody;
-// 		console.log(reqBody, "reqBody");
 
-// 		const existingUser = await User.findOne({ where: { email } });
-// 		if (existingUser) {
-// 			throw new ApiError(httpStatus.BAD_REQUEST, "Email already exists");
-// 		}
-
-// 		let salt = bcrypt.genSaltSync(10);
-// 		const password = Math.random().toString(36).substring(2, 12);
-
-// 		const userObj = {
-// 			email,
-// 			password: bcrypt.hashSync(password, salt),
-// 			role_id: role_id,
-// 			// role_id: "6",
-// 			status: "ACCEPTED",
-// 		};
-
-// 		console.log(userObj, "User Object");
-// 		const user = await User.create(userObj);
-
-// 		const profileObj = {
-// 			email,
-// 			name,
-// 			user_id: user.id,
-// 		};
-
-// 		console.log(profileObj, "Profile Object");
-// 		const userProfile = await Profile.create(profileObj);
-// 		if (!userProfile) {
-// 			throw new ApiError(
-// 				httpStatus.INTERNAL_SERVER_ERROR,
-// 				"Failed to create profile"
-// 			);
-// 		}
-
-// 		let isSend = await sendUserCredentials(email, password);
-// 		if (!isSend) {
-// 			throw new ApiError(
-// 				httpStatus.INTERNAL_SERVER_ERROR,
-// 				"Unable to send credentials"
-// 			);
-// 		}
-
-// 		return userProfile;
 // 	} catch (error) {
-// 		console.error("Error in adminAddUser:", error);
-// 		throw new ApiError(
-// 			httpStatus.INTERNAL_SERVER_ERROR,
-// 			error.message || "Internal Server Error"
-// 		);
-// 	}
-// };
 
 const getUserCount = async () => {
   const userCount = await User.count({
@@ -3462,7 +3282,6 @@ const handleTwilioSmsStatus = async (data) => {
   console.log("Status:", MessageStatus);
 
   // Optional: update DB here
-  // await SmsLog.update({ status: MessageStatus }, { where: { sid: MessageSid } });
 
   return true;
 };
@@ -5027,13 +4846,6 @@ const getLiveWorkingEmployees = async (reqBody) => {
     }
 
     // ✅ Convert to EST (IMPORTANT)
-    const now = new Date();
-    const nowEST = new Date(
-      now.toLocaleString("en-US", {
-        timeZone: "America/New_York",
-      }),
-    );
-
     const startOfDay = new Date(`${date}T00:00:00`);
     const endOfDay = new Date(`${date}T23:59:59`);
 

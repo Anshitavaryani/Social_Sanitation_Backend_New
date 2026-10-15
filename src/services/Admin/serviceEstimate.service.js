@@ -309,8 +309,6 @@ const generateEstimatePDFService = async (reqBody) => {
       signerName: signerName,
     });
 
-    // return { signingUrl };
-
     const publicUrl = `https://node.socialsanitation.com/api/v1/docs/${fileName}`;
 
     const estimate = await ServiceEstimate.create({
@@ -699,12 +697,6 @@ const updateServiceEstimate = async (reqBody) => {
 
     const publicUrl = `https://node.socialsanitation.com/api/v1/docs/${fileName}`;
 
-    // await sendEstimateReviewEmail(
-    //   userDocs.email,
-    //   pdfPath,
-    //   userDocs.user_profile.name,
-    // );
-
     await estimate.update({
       client_company_name,
 
@@ -890,8 +882,6 @@ const generateContractAgreementService = async (reqBody) => {
       clientName: signerName,
     });
 
-    // await sendContractReviewEmail(userDocs.email, pdfPath, signerName);
-
     console.log(envelopeId, "envelopeId");
 
     const publicUrl = `https://node.socialsanitation.com/api/v1/docs/${fileName}`;
@@ -1064,8 +1054,6 @@ const updateContractAgreement = async (reqBody) => {
       clientEmail: userDocs.email,
       clientName: signerName,
     });
-
-    // await sendContractReviewEmail(userDocs.email, pdfPath, signerName);
 
     /* ================= UPDATE RECORD ================= */
 

@@ -32,10 +32,6 @@ UserAddress.init(
 				key: "id",
 			},
 		},
-		// full_address: {
-		//   type: DataTypes.TEXT,
-		//   allowNull: true,
-		// },
 		address_lat: {
 			type: DataTypes.STRING,
 			allowNull: true,

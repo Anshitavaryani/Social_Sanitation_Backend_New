@@ -11,6 +11,8 @@ const path = require("path");
 const app = express();
 
 app.set("trust proxy", 1);
+// Express 5 defaults to the "simple" query parser; keep nested query support (?a[b]=1)
+app.set("query parser", "extended");
 
 const config = require("./src/config/config.js");
 const routes = require("./src/routes/v1");
@@ -45,7 +47,12 @@ initializeApp({
     clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
     privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
   }),
-  databaseURL: "https://social-sanitation-default-rtdb.firebaseio.com",
+  databaseURL:
+    process.env.FIREBASE_DATABASE_URL ||
+    "https://social-sanitation-default-rtdb.firebaseio.com",
+  storageBucket:
+    process.env.FIREBASE_STORAGE_BUCKET ||
+    "social-sanitation.firebasestorage.app",
 });
 
 cron.schedule(
@@ -182,6 +189,13 @@ app.use(express.json({ limit: "25mb" }));
 // parse urlencoded request body
 app.use(express.urlencoded({ extended: true, limit: "25mb" }));
 
+// Express 5 leaves req.body undefined when there is no body; the auth
+// middlewares attach req.body.user on GET requests, so default it to {}
+app.use((req, res, next) => {
+  if (req.body === undefined) req.body = {};
+  next();
+});
+
 // gzip compression
 app.use(compression());
 
@@ -193,11 +207,6 @@ if (config.env !== "test") {
 app.use(express.static(PUBLIC_DIR));
 
 process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 1;
-
-// const v8 = require('v8');
-// const totalHeapSize = v8.getHeapStatistics().total_available_size;
-// const totalHeapSizeGb = (totalHeapSize / 1024 / 1024 / 1024).toFixed(2);
-// console.log('totalHeapSizeGb: ', totalHeapSizeGb);
 
 app.use(function (req, res, next) {
   res.setHeader("Access-Control-Allow-Origin", "*");

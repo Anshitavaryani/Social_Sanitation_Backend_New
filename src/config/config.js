@@ -12,7 +12,6 @@ const envVarsSchema = Joi.object()
 
         CENTRAL_MYSQL_HOST: Joi.string().required().description('Central Mysql Host'),
         CENTRAL_MYSQL_USER: Joi.string().required().description('Central Mysql User'),
-        ////CENTRAL_MYSQL_PASSWORD: Joi.string().required().description('Central Mysql Password'),
         CENTRAL_MYSQL_DB: Joi.string().required().description('Central Mysql DB'),
         CENTRAL_MYSQL_PORT: Joi.string().required().description('Central Port'),
 
@@ -36,6 +35,9 @@ const envVarsSchema = Joi.object()
         API_BASE_URL: Joi.string().description('Base url for apis'),
         ADMIN_BASE_URL: Joi.string().description('Base url for Admin apis'),
         DEFAULT_TIMEZONE: Joi.string().default('UTC').description('Default Timezone for application'),
+        PUPPETEER_EXECUTABLE_PATH: Joi.string()
+            .default('/root/.cache/puppeteer/chrome/linux-136.0.7103.92/chrome-linux64/chrome')
+            .description('Chrome binary used by puppeteer-core for PDF generation'),
 
         SUP_ADM_ROLE_ID: Joi.string(),
         ADM_ROLE_ID: Joi.string(),
@@ -99,6 +101,7 @@ module.exports = {
     API_BASE_URL: envVars.API_BASE_URL,
     ADMIN_BASE_URL: envVars.ADMIN_BASE_URL,
     DEFAULT_TIMEZONE: envVars.DEFAULT_TIMEZONE,
+    PUPPETEER_EXECUTABLE_PATH: envVars.PUPPETEER_EXECUTABLE_PATH,
     STORY_VALIDATION_TIME_SPAN_HOURS: envVars.STORY_VALIDATION_TIME_SPAN_HOURS,
     
 

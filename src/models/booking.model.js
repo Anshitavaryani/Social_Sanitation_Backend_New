@@ -183,19 +183,6 @@ Booking.init(
       allowNull: true,
     },
 
-    // recurring_every: {
-    // 	type: DataTypes.ENUM,
-    // 	allowNull: true,
-    // 	values: ["Daily", "Weekly", "Bi-Weekly", "Monthly", "Quarterly"],
-    // },
-    // occurence: {
-    // 	type: DataTypes.STRING,
-    // 	allowNull: true,
-    // },
-    // parent_booking_id:{
-    // 	type: DataTypes.INTEGER,
-    // 	defaultValue: true,
-    // },
     time_zone: {
       type: DataTypes.STRING(255),
       allowNull: true,

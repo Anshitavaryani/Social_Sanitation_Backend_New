@@ -12,7 +12,6 @@ const bookingService = require("./bookings.service");
 const aboutUsService = require("./aboutUs.service");
 const termsAndConditionsService = require("./termsAndConditions.service");
 const bannerService = require("./banner.service");
-const calendarService = require("./calendar.service");
 const chatService = require("./chat.service");
 const notificationService = require("./notification.service");
 const reviewService = require("./review.service");
@@ -48,7 +47,6 @@ module.exports = {
   aboutUsService,
   termsAndConditionsService,
   bannerService,
-  calendarService,
   chatService,
   notificationService,
   reviewService,

@@ -1,7 +1,7 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
-const { Client, Environment } = require("square");
+const { SquareClient, SquareEnvironment } = require("square");
 const { Payment, Booking, ServiceQuote, Invoice } = require("../../models");
 const catchAsync = require("../../utils/catchAsync");
 const ApiError = require("../../utils/ApiError");
@@ -10,11 +10,11 @@ const config = require("../../config/config");
 
 const squareEnvironment =
   config.SQUARE_ENVIRONMENT === "production"
-    ? Environment.Production
-    : Environment.Sandbox;
+    ? SquareEnvironment.Production
+    : SquareEnvironment.Sandbox;
 
-const client = new Client({
-  accessToken: config.SQUARE_ACCESS_TOKEN,
+const client = new SquareClient({
+  token: config.SQUARE_ACCESS_TOKEN,
   environment: squareEnvironment,
 });
 
@@ -54,7 +54,6 @@ const createCustomer = async (userDoc) => {
       note: `${config.app_name}#${userDoc.id}#${userDoc.role_id}#squareCustomer`,
     };
 
-    const { customersApi } = client;
     let customer = {};
 
     // Check if `square_customer_id` exists
@@ -62,8 +61,8 @@ const createCustomer = async (userDoc) => {
       console.log("Creating new Square customer...");
 
       // Create a new customer in Square
-      const response = await customersApi.createCustomer(customerObj);
-      customer = response.result.customer;
+      const response = await client.customers.create(customerObj);
+      customer = response.customer;
 
       // Save the new `square_customer_id` to the user document
       userDoc.square_customer_id = customer.id;
@@ -74,10 +73,10 @@ const createCustomer = async (userDoc) => {
       console.log("Retrieving existing Square customer...");
 
       // Retrieve existing customer information from Square
-      const response = await customersApi.retrieveCustomer(
-        userDoc.square_customer_id,
-      );
-      customer = response.result.customer;
+      const response = await client.customers.get({
+        customerId: userDoc.square_customer_id,
+      });
+      customer = response.customer;
 
       console.log("Existing Square customer retrieved:", customer);
     }
@@ -100,10 +99,6 @@ const createPayment = catchAsync(async (req, res) => {
     console.log(user, "user");
     console.log(req.body, "req.body");
 
-    const { paymentsApi } = client;
-
-    // const amount = 40;
-
     // Create customer using the provided user information
     const customer = await createCustomer(user);
 
@@ -111,7 +106,7 @@ const createPayment = catchAsync(async (req, res) => {
     const paymentObj = {
       idempotencyKey: `${Date.now()}-${Math.random()}`,
       amountMoney: {
-        amount: amount * 100,
+        amount: BigInt(Math.round(Number(amount) * 100)),
         currency: "USD",
       },
       sourceId,
@@ -122,8 +117,8 @@ const createPayment = catchAsync(async (req, res) => {
     console.log(paymentObj, "paymentObj");
 
     // Create payment through Square API
-    const paymentResponse = await paymentsApi.createPayment(paymentObj);
-    const paymentIntent = convertBigIntToString(paymentResponse.result.payment);
+    const paymentResponse = await client.payments.create(paymentObj);
+    const paymentIntent = convertBigIntToString(paymentResponse.payment);
     console.log(paymentIntent, "paymentIntent");
 
     // Prepare the payment record
@@ -195,10 +190,9 @@ const handlePaymentWebhook = catchAsync(async (req, res) => {
 
     if (paymentId && (!orderId || !paymentData.receipt_url)) {
       try {
-        const paymentResponse =
-          await client.paymentsApi.getPayment(paymentId);
+        const paymentResponse = await client.payments.get({ paymentId });
 
-        paymentResponseData = paymentResponse.result?.payment || null;
+        paymentResponseData = paymentResponse.payment || null;
 
         if (!orderId) {
           orderId =

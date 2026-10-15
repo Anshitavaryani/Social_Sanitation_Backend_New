@@ -29,7 +29,6 @@ if (config.env !== "test") {
     );
 }
 
-
 const sendEmailVerification = async (to, otp) => {
   try {
     await sendMailViaGraph({
@@ -65,7 +64,6 @@ const sendForgotPasswordOTP = async (to, otp) => {
     );
   }
 };
-
 
 const sendUserCredentials = async (to, password) => {
   try {
@@ -304,199 +302,12 @@ const sendEmailToAdmin = async (user, bookingDoc, serviceDoc) => {
 };
 
 // TODO:REMOVED THIS MAIL
-const sendEmailToUser = async (user, bookingDoc, serviceDoc) => {
-  try {
-    const subject = "Booking Confirmation - Social Sanitation App";
-
-    // Format date
-    const date = new Date(bookingDoc.date).toDateString();
-
-    // Format time to 12-hour
-    const formatTimeTo12Hour = (timeStr) => {
-      if (!timeStr) return "";
-      const [hour, minute] = timeStr.split(":");
-      const d = new Date();
-      d.setHours(hour, minute);
-      return d.toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      });
-    };
-
-    const formattedTime = formatTimeTo12Hour(bookingDoc.time);
-
-    const html = `
-			<p>Dear Client,</p>
-
-			<p>
-				Thank you for booking with <strong>Social Sanitation App</strong>!
-				Your booking details are as follows:
-			</p>
-
-			<p>
-				<strong>Booking Details</strong><br />
-				Service Name: ${serviceDoc.name}<br />
-				Date: ${date}<br />
-				Time: ${formattedTime}
-			</p>
-
-			<p>
-				We will get back to you shortly. If you have any questions,
-				please contact us at
-				<a href="mailto:socialsanitation@gmail.com">
-					socialsanitation@gmail.com
-				</a>.
-			</p>
-
-			<p>
-				Best regards,<br />
-				<strong>Social Sanitation App Team</strong>
-			</p>
-		`;
-
-    await sendMailViaGraph({
-      to: user.email,
-      subject,
-      html,
-    });
-
-    return true;
-  } catch (error) {
-    console.error("Error sending booking confirmation email:", error);
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      error.message || "Failed to send booking confirmation email",
-    );
-  }
-};
 
 // TODO:REMOVED THIS MAIL
-const sendPaymentSuccessEmail = async (user, amount, receiptUrl) => {
-  const subject = "Payment Successful - Social Sanitation";
-
-  const html = `
-		<p>Dear ${user.user_name || "Client"},</p>
-
-		<p>
-			🎉 Your payment has been <strong>successfully completed</strong>.
-		</p>
-
-		<p>
-			<strong>Amount Paid:</strong> $${amount}
-		</p>
-
-		${
-      receiptUrl
-        ? `
-		<p>
-			<strong>View Receipt:</strong><br/>
-			<a href="${receiptUrl}" target="_blank">
-				View Your Receipt
-			</a>
-		</p>`
-        : ""
-    }
-
-		<p>
-			Thank you for choosing <strong>Social Sanitation</strong>.
-		</p>
-
-		<p>
-			Best regards,<br/>
-			<strong>Social Sanitation Team</strong>
-		</p>
-	`;
-
-  await sendMailViaGraph({
-    to: user.email,
-    subject,
-    html,
-  });
-};
 
 // TODO:REMOVED THIS MAIL
-const sendRejectedBookingEmail = async (email) => {
-  try {
-    const subject = "Booking Rejected - Social Sanitation App";
-
-    const html = `
-			<p>Dear User,</p>
-
-			<p>
-				We regret to inform you that your booking with
-				<strong>Social Sanitation App</strong> has been rejected because it
-				was not confirmed in time.
-			</p>
-
-			<p>
-				We apologize for any inconvenience caused.
-			</p>
-
-			<p>
-				Best regards,<br />
-				<strong>Social Sanitation App Team</strong>
-			</p>
-		`;
-
-    await sendMailViaGraph({
-      to: email,
-      subject,
-      html,
-    });
-
-    return true;
-  } catch (error) {
-    console.error("Error sending rejected booking email:", error);
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      error.message || "Failed to send rejected booking email",
-    );
-  }
-};
 
 // TODO:REMOVED THIS MAIL
-const sendUserDeletionEmail = async (userEmail) => {
-  try {
-    await sendMailViaGraph({
-      to: userEmail,
-      subject: "Important: Account Deletion Notification",
-      html: `
-				<p>Dear User,</p>
-
-				<p>
-					We are reaching out to inform you that your account associated
-					with our system has been deleted by an administrator.
-				</p>
-
-				<p>
-					If you have any questions or believe this action was taken in
-					error, please contact our support team at
-					<a href="mailto:socialsanitation@gmail.com">
-						socialsanitation@gmail.com
-					</a>.
-				</p>
-
-				<p>
-					Thank you for your attention to this matter.
-				</p>
-
-				<p>
-					Warm regards,<br />
-					<strong>Social Sanitation App Team</strong>
-				</p>
-			`,
-    });
-
-    return true;
-  } catch (error) {
-    console.error("Error sending user deletion email:", error);
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      error.message || "Failed to send account deletion email",
-    );
-  }
-};
 
 const sendLeaveStatusEmail = async (userEmail, status) => {
   try {
@@ -966,86 +777,8 @@ const sendAutoClockOutEmail = async ({ date, employees }) => {
 };
 
 // TODO:REMOVED THIS MAIL
-const sendEmailWithAttachment = async ({
-  to,
-  signedFileName,
-  savePath,
-  documentType,
-}) => {
-  try {
-    let subject = "";
-    let html = "";
-
-    if (documentType === "contract") {
-      subject = "Signed Contract Agreement";
-      html = `
-        Your contract agreement has been successfully signed.
-        <br/><br/>
-        Please find the signed contract attached.
-      `;
-    } else {
-      subject = "Signed Service Estimate";
-      html = `
-        Your service estimate has been signed.
-        <br/><br/>
-        Please find the signed document attached.
-      `;
-    }
-
-    await sendMailViaGraph({
-      to,
-      subject,
-      html,
-      attachments: [savePath],
-    });
-
-    return true;
-  } catch (error) {
-    console.error("Email sending error:", error);
-
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      error.message || "Failed to send signed email",
-    );
-  }
-};
 
 // TODO:REMOVED THIS MAIL
-const sendContractReviewEmail = async (email, pdfPath, clientName) => {
-  try {
-    await sendMailViaGraph({
-      to: email,
-      subject: "Contract Agreement Ready for Signature",
-      html: `
-        <p>Hello ${clientName},</p>
-
-        <p>Your <strong>Contract Agreement</strong> has been prepared by Social Sanitation.</p>
-
-        <p>Please review the attached contract for your records.</p>
-
-        <p><strong>A separate DocuSign email has also been sent to you.</strong> Please open that email to review and electronically sign your contract.</p>
-
-        <p>If you do not see the DocuSign email, please check your Spam/Junk folder.</p>
-
-        <br/>
-
-        <p>Thank you,<br/>
-        <strong>Social Sanitation Commercial Cleaning Solutions</strong></p>
-      `,
-      attachments: [pdfPath],
-    });
-
-    return true;
-  } catch (error) {
-    console.error("Contract review email failed:", error);
-
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      error.message || "Failed to send contract review email",
-    );
-  }
-};
-
 
 const sendTwoWeekScheduleEmail = async ({ to, name, bookings }) => {
   try {
@@ -1159,9 +892,6 @@ module.exports = {
   sendUserCredentials,
   sendAdminCredentials,
   sendEmailToAdmin,
-  sendEmailToUser,
-  sendRejectedBookingEmail,
-  sendUserDeletionEmail,
   sendLeaveStatusEmail,
   sendEmailWithPDF,
   sendServiceRequestEmailWithPDF,
@@ -1173,10 +903,7 @@ module.exports = {
   sendAutoClockOutEmail,
   sendReviewEmailWithPDF,
   sendInvoiceEmailWithPDF,
-  sendEmailWithAttachment,
-  sendContractReviewEmail,
   sendTwoWeekScheduleEmail,
-  sendPaymentSuccessEmail,
   sendEmployeeEquipmentFormEmail,
   sendInspectionCompletedEmail,
 };

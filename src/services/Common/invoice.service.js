@@ -1506,142 +1506,32 @@ const deleteInvoice = async (invoiceId) => {
   }
 };
 
-// const TEST_MODE = true; // ⚠️ SET TO false BEFORE PRODUCTION
-
-// const sendInvoiceCron = async () => {
 //   try {
-//     const timezone = "America/New_York";
-
-//     const todayNY = moment().tz(timezone).format("YYYY-MM-DD");
-
-//     console.log("todayNY", todayNY);
 
 //     const invoices = await Invoice.findAll({
-//       where: {
 //         status: "ACTIVE",
 //         is_active: true,
 
-//         // ===== TEST MODE — REMOVE user_id FILTER BEFORE PRODUCTION =====
-//         ...(TEST_MODE ? { user_id: 1 } : {}),
-//         // =================================================================
-
-//         // scheduled_send_at: {
-//         //   [Op.lte]: new Date(),
-//         // },
-
-//         // In test mode we don't filter last_sent_at at all, so it
-//         // keeps picking the same invoice back up every run.
-//         ...(TEST_MODE ? {} : { last_sent_at: null }),
 //       },
 //     });
 
-//     console.log(`Invoices to process: ${invoices.length}`);
-
-//     for (const invoice of invoices) {
-//       /* ---------- PREVENT DUPLICATE SEND ---------- */
-
-//       if (
-//         !TEST_MODE &&
-//         invoice.last_sent_at &&
-//         moment(invoice.last_sent_at).isSame(moment(), "day")
-//       ) {
 //         continue;
-//       }
 
 //       /* ---------- FETCH ITEMS ---------- */
 
-//       const items = await InvoiceItem.findAll({
-//         where: {
-//           invoice_id: invoice.id,
-//         },
-//       });
-
 //       /* ---------- FETCH USER ---------- */
-
-//       const user = await User.findByPk(invoice.user_id, {
-//         include: [
-//           {
-//             model: Profile,
-//             as: "user_profile",
-//             attributes: ["name"],
-//           },
-//         ],
-//       });
 
 //       /* ---------- GENERATE PAYMENT LINK ---------- */
 
-//       const { paymentUrl } = await generateInvoicePaymentLink({
-//         amount: Number(invoice.total_due || 0),
-//         clientName: invoice.to_company_name,
-//         customerEmail: user?.email,
-//         user_id: invoice.user_id,
-//         invoice_id: invoice.id,
-//         invoiceRefNo: invoice.custom_ref_no || invoice.ref_no,
-//       });
-
 //       /* ---------- GENERATE PDF ---------- */
-
-//       const serviceParts = invoice.service_dates
-//         ? invoice.service_dates.split(" - ")
-//         : ["", ""];
-
-//       const pdfPath = await generateInvoicePDF({
-//         invoice_ref_no: invoice.custom_ref_no || invoice.ref_no,
-//         service_start: serviceParts[0],
-//         service_end: serviceParts[1],
-//         invoice_date: invoice.date,
-//         billing_date: invoice.billing_date,
-//         due_date: invoice.due_date,
-//         to_company_name: invoice.to_company_name,
-//         address_1: invoice.address_1,
-//         address_2: invoice.address_2,
-//         total_due: invoice.total_due,
-//         signature: invoice.signature,
-//         items,
-//         payment_link: paymentUrl,
-//       });
 
 //       /* ---------- UPDATE PDF + PAYMENT LINK ---------- */
 
-//       const fileName = pdfPath.split("/").pop();
-
-//       const publicUrl = `https://node.socialsanitation.com/api/v1/docs/${fileName}`;
-
-//       await invoice.update({
-//         pdf_url: publicUrl,
-//         payment_url: paymentUrl,
-//       });
-
 //       /* ---------- SEND EMAIL ---------- */
-
-//       if (user?.email) {
-//         const senderMap = {
-//           2: "m.williams@socialsanitation.com",
-//           5: "y.claudio@socialsanitation.com",
-//         };
-
-//         const senderEmail =
-//           senderMap[user.assigned_to] || process.env.AZURE_SENDER_EMAIL;
-
-//         await sendInvoiceEmailWithPDF(user, invoice, pdfPath, senderEmail);
-//       }
 
 //       /* ---------- MARK AS SENT ---------- */
 
-//       // Skip updating last_sent_at in test mode so the invoice
-//       // doesn't fall out of the query on the next run.
-//       if (!TEST_MODE) {
-//         await invoice.update({
-//           last_sent_at: new Date(),
-//         });
-//       }
-
-//       console.log(`Invoice ${invoice.ref_no} sent successfully.`);
-//     }
 //   } catch (error) {
-//     console.error("sendInvoiceCron error:", error);
-//   }
-// };
 
 const sendInvoiceCron = async () => {
   try {

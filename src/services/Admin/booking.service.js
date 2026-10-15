@@ -99,7 +99,6 @@ const getAllBookings = async (reqBody) => {
           },
         };
       } else if (period === "current_week") {
-        const startOfWeek = moment().startOf("isoWeek");
         const endOfWeek = moment().endOf("isoWeek");
         whereCondition = {
           booking_status: ["ACCEPTED"],
@@ -111,7 +110,6 @@ const getAllBookings = async (reqBody) => {
           },
         };
       } else if (period === "current_month") {
-        const startOfMonth = moment().startOf("month");
         const endOfMonth = moment().endOf("month");
         whereCondition = {
           booking_status: ["ACCEPTED"],
@@ -898,18 +896,6 @@ const updateBookingStatus = async (reqBody) => {
         });
       }
 
-      // await groupRef.set({
-      // 	name: `Booking #${booking_id} Group`,
-      // 	created_at: ServerValue.TIMESTAMP,
-      // 	members: Object.fromEntries([...allMembers].map((id) => [id, true])),
-      // 	messages: {},
-      // });
-      // await groupRef.child("messages").push({
-      // 	sender: "System",
-      // 	message: "Welcome to the group for this booking!",
-      // 	timestamp: ServerValue.TIMESTAMP,
-      // });
-
       const isRecurringBooking =
         is_recurring === true && bookingDoc.type === "Recurring Booking";
 
@@ -927,12 +913,6 @@ const updateBookingStatus = async (reqBody) => {
       }
 
       if (isRecurringBooking) {
-        // if (recurrence_end_type === "on_date" && !recurrence_end_value) {
-        // 	throw new ApiError(
-        // 		httpStatus.BAD_REQUEST,
-        // 		"Recurrence End Date is required when type is 'on_date'"
-        // 	);
-        // }
 
         const isRecurrenceInputMissing =
           recurring_every === undefined &&
@@ -1452,8 +1432,6 @@ const adminCreateBooking = async (reqBody, headers) => {
     }
 
     await sendEmailToAdmin(user, bookingDoc, serviceDoc);
-
-    // await sendEmailToUser(user, bookingDoc, serviceDoc);
 
     return {
       booking_id:
@@ -2135,8 +2113,6 @@ const sendAttendanceAlerts = async () => {
     console.log("📦 Bookings found:", bookings.length);
     console.log("📦 Bookings found:", bookings);
 
-    // console.log("Assignments:", booking.booking_employee_details);
-
     for (const booking of bookings) {
       console.log("🔹 Checking Booking:", booking.booking_name, booking.time);
 
@@ -2227,28 +2203,11 @@ const sendAttendanceAlerts = async () => {
         continue;
       }
 
-      //   const lateEmployees = employeesToNotify.filter(
-      //     (e) => e.status === "LATE",
-      //   );
-
       const absentEmployees = employeesToNotify.filter(
         (e) => e.status === "ABSENT",
       );
 
       console.log("🔴 Absent Employees:", absentEmployees.length);
-
-      //   if (lateEmployees.length && !booking.late_alert_sent) {
-      //     console.log("📧 Sending LATE email");
-
-      //     await sendGroupedAttendanceEmail({
-      //       booking,
-      //       employees: lateEmployees,
-      //       status: "LATE",
-      //       bookingAddress: booking.booking_address,
-      //     });
-
-      //     await booking.update({ late_alert_sent: true }); // move AFTER send
-      //   }
 
       if (absentEmployees.length && !booking.absent_alert_sent) {
         console.log("📧 Sending ABSENT email");
@@ -2414,9 +2373,6 @@ const getDayOverview = async (reqBody, res) => {
 
     const bookings = await Booking.findAll({
       where: {
-        // booking_status: {
-        // 	[Op.in]: ["ACCEPTED", "SUCCESS", "ONGOING"],
-        // },
 
         is_active: true,
         payment_status: "SUCCESS",
@@ -2426,7 +2382,6 @@ const getDayOverview = async (reqBody, res) => {
         },
         [Op.or]: [{ user_id: { [Op.ne]: null } }, { user_id: null }],
       },
-      // attributes: ["id", "booking_unique_id"],
       include: [
         {
           model: BookingAssignment,
@@ -2485,9 +2440,6 @@ const getDayOverview = async (reqBody, res) => {
       ],
       order: [["date", "ASC"]],
     });
-
-    // return bookings
-    // console.log(bookings, "bookings");
 
     const formattedData = [];
 
@@ -2557,8 +2509,6 @@ const getDayOverview = async (reqBody, res) => {
           };
         }),
       );
-
-      // console.log(employeesWithAttendance, "employeesWithAttendance");
 
       formattedData.push({
         booking_id: booking.id,
@@ -2716,8 +2666,6 @@ const getBookingOverviewById = async (id) => {
             "clock_out_lng",
           ],
         });
-
-        // console.log(attendance.id, "attendanceId");
 
         let breaks = [];
 
@@ -3094,7 +3042,6 @@ const getEmployeeDayOverview = async ({ date }) => {
         attributes: ["id", "clock_in_est", "clock_out_est", "total_hours"],
       });
 
-      // payroll (optional)
       const payroll = attendance
         ? await AttendancePayroll.findOne({
             where: { attendance_id: attendance.id },

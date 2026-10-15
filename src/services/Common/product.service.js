@@ -221,15 +221,6 @@ const updateRequestStatus = async (id, reqBody) => {
 
 		request.status = status;
 
-		// if (status === "Approved") {
-		// 	const product = await Product.findByPk(request.product_id);
-		// 	if (product) {
-		// 		await product.update({
-		// 			quantity: product.quantity + request.requested_quantity,
-		// 		});
-		// 	}
-		// }
-
 		await request.save();
 		return request;
 	} catch (error) {
@@ -295,7 +286,6 @@ const getAllRequests = async (reqBody) => {
 				{
 					model: Product,
 					as: "requested_product",
-					// attributes: ["id", "name"],
 				},
 				{
 					model: ProductRequestAttachment,

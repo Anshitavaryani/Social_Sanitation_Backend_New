@@ -20,25 +20,6 @@ const createBooking = async (reqBody, files, headers) => {
   try {
     const receiverUniqueFCMTokensArray = await getUserActiveFCMTokens(user);
 
-    // let fcmTokenDocs = await UserToken.findAll({
-    // 	where: {
-    // 		user_id: user.id,
-    // 		role_id: user.role_id,
-    // 		is_active: true,
-    // 		fcm_token: {
-    // 			[Op.ne]: null,
-    // 		},
-    // 	},
-    // 	attributes: ["fcm_token"],
-    // });
-    // if (!fcmTokenDocs) {
-    // 	throw new ApiError(httpStatus.BAD_REQUEST, "This Fcm doesn't exist");
-    // }
-
-    // const receiverUniqueFCMTokensSet = new Set(
-    // 	fcmTokenDocs.map((token) => token.fcm_token)
-    // );
-    // const receiverUniqueFCMTokensArray = Array.from(receiverUniqueFCMTokensSet);
     // Validate service_id
     const serviceDoc = await Service.findOne({
       where: { id: service_id },
@@ -140,8 +121,6 @@ const createBooking = async (reqBody, files, headers) => {
     await sendEmailToAdmin(user, bookingDoc, serviceDoc);
 
     
-    // await sendEmailToUser(user, bookingDoc, serviceDoc);
-
     return {
       booking_id: bookingDoc.id,
       // booking: bookingDoc,
@@ -193,11 +172,6 @@ const sendBookingNotification = async (user, receiverUniqueFCMTokensArray) => {
     title: "SERVICE BOOKED",
     body: "Your Service has been booked successfully",
     notification_types: notificationTypes.SERVICE_BOOKED,
-    // android: { // Specify android-specific properties
-    //     notification: {
-    //         clickAction: clickAction // Include click_action here
-    //     }
-    // }
   };
 
   condition: clickAction;
@@ -288,7 +262,6 @@ const getAllUserBooking = async (body, booking_status) => {
         {
           model: BookingAssignment,
           as: "booking_employee_details",
-          // where: { booking_id: true },
           required: false,
           include: [
             {
@@ -320,40 +293,6 @@ const getAllUserBooking = async (body, booking_status) => {
             },
           ],
         },
-        // {
-        // 	model: BookingAssignment,
-        // 	as: "booking_employee_details",
-        // 	required: false,
-        // 	include: [
-        // 		{
-        // 			model: User,
-        // 			as: "employee_profile",
-        // 			attributes: ["id", "email"],
-        // 			required: false,
-        // 			include: [
-        // 				{
-        // 					model: Profile,
-        // 					as: "user_profile",
-        // 					attributes: ["name", "user_id"],
-        // 				},
-        // 				{
-        // 					model: UserAttachment,
-        // 					as: "user_attachments",
-        // 					attributes: [
-        // 						"id",
-        // 						"title",
-        // 						"file_type",
-        // 						"file_name",
-        // 						"file_uri",
-        // 						"role_id",
-        // 					],
-        // 					order: [["id", "desc"]],
-        // 					limit: 1,
-        // 				},
-        // 			],
-        // 		},
-        // 	],
-        // },
         {
           model: UserAddress,
           as: "booking_address",
@@ -431,7 +370,6 @@ const getBookingById = async (id) => {
         {
           model: BookingAssignment,
           as: "booking_employee_details",
-          // where: { booking_id: true },
           required: false,
           include: [
             {
@@ -546,12 +484,6 @@ const updateBookingStatusByEmployee = async (reqBody) => {
       throw new ApiError(httpStatus.NOT_FOUND, "Booking Id not found");
     }
 
-    // const userDoc = await User.findByPk(bookingDoc.user_id);
-    // if (!userDoc) {
-    // 	throw new ApiError(httpStatus.BAD_REQUEST, "User not found");
-    // }
-
-    // console.log(userDoc, "userDoc");
     if (
       reqBody.booking_status &&
       typeof reqBody.booking_status !== "undefined" &&
@@ -562,13 +494,11 @@ const updateBookingStatusByEmployee = async (reqBody) => {
       // Set start_time if the booking_status is "ONGOING"
       if (reqBody.booking_status === "ONGOING") {
         bookingDoc["start_time"] = new Date();
-        // await sendStartedNotification(userDoc);
       }
 
       // Set end_time if the booking_status is "SUCCESS"
       if (reqBody.booking_status === "SUCCESS") {
         bookingDoc["end_time"] = new Date();
-        // await sendSuccessNotification(userDoc);
       }
     }
 
@@ -986,23 +916,6 @@ const getAllEmployeeBooking = async (body, booking_status) => {
         {
           model: GuestBookingAddress,
           as: "booking_non_client_address",
-          // include: [
-          // 	{
-          // 		model: Country,
-          // 		as: "non_client_user_country",
-          // 		attributes: ["id", "name", "iso3"],
-          // 	},
-          // 	{
-          // 		model: State,
-          // 		as: "non_client_user_state",
-          // 		attributes: ["id", "name", "country_id", "iso2"],
-          // 	},
-          // 	{
-          // 		model: City,
-          // 		as: "non_client_user_city",
-          // 		attributes: ["id", "name", "country_id", "state_id"],
-          // 	},
-          // ],
         },
         {
           model: Admin,
@@ -1051,25 +964,6 @@ const getAllEmployeeBooking = async (body, booking_status) => {
           },
           required: false,
         },
-        // {
-        // 	model: BookingAssignment,
-        // 	as: "booking_employee_details",
-        // 	attributes: ["employee_id", "role_id"],
-        // 	include: [
-        // 		{
-        // 			model: User,
-        // 			as: "employee_profile",
-        // 			attributes: ["id", "email"],
-        // 			include: [
-        // 				{
-        // 					model: Profile,
-        // 					as: "user_profile",
-        // 					attributes: ["name", "mobile"],
-        // 				},
-        // 			],
-        // 		},
-        // 	],
-        // },
       ],
 
       order: [["date", "DESC"]],

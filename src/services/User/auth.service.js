@@ -2,7 +2,7 @@
 
 const { status: httpStatus } = require("http-status");
 const bcrypt = require("bcryptjs");
-const randomize = require("randomatic");
+const { randomInt } = require("crypto");
 const moment = require("moment");
 
 const {
@@ -37,7 +37,7 @@ const sendOTP = async (body, headers) => {
 			where: { email: body?.email, type: body?.type, role_id: role_id },
 		});
 		if (existingOtp) await existingOtp.destroy({ force: true });
-		const generatedOTP = randomize("0", 4);
+		const generatedOTP = String(randomInt(0, 10 ** 4)).padStart(4, "0");
 		const otpObj = {
 			email: email,
 			code: generatedOTP,
@@ -120,7 +120,7 @@ const verifyOTP = async (email, otp, type, role_id) => {
 
 const register = async (body, files, headers) => {
 	try {
-		const { name, email, mobile, password, confirm_password } = body;
+		const { name, email, mobile, password } = body;
 		const { role_id } = headers;
 		let salt = bcrypt.genSaltSync(10);
 		const userObj = {
@@ -157,7 +157,7 @@ const register = async (body, files, headers) => {
 			},
 		});
 		if (existingOtp) await existingOtp.destroy({ force: true });
-		const generatedOTP = randomize("0", 4);
+		const generatedOTP = String(randomInt(0, 10 ** 4)).padStart(4, "0");
 		const otpObj = {
 			user_id: user.id,
 			email: email,
@@ -277,7 +277,7 @@ const login = async (reqBody, headers) => {
 
 const resetPassword = async (reqBody) => {
 	try {
-		const { old_password, new_password, confirm_password, user, tokenDoc } =
+		const { old_password, confirm_password, user, tokenDoc } =
 			reqBody;
 
 		const validPass = await bcrypt.compare(old_password, user?.password);
@@ -312,7 +312,7 @@ const resetPassword = async (reqBody) => {
 
 const forgotPassword = async (reqBody) => {
 	try {
-		const { email, password, confirm_password, token, user, otpDoc } = reqBody;
+		const { password, confirm_password, user, otpDoc } = reqBody;
 
 		if (password !== confirm_password) {
 			throw new ApiError(
@@ -384,7 +384,6 @@ const saveLoginTiming = async (user, token, reqBody, timezone) => {
 		};
 
 		const timingDetails = await userLoginTiming.create(obj);
-		// console.log('SQL Query:', timingDetails.get({ plain: true }));  // To see the query
 		return timingDetails;
 	} catch (error) {
 		throw new ApiError(

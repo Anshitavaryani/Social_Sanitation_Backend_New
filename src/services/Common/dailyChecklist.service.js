@@ -107,10 +107,6 @@ const getDailyChecklist = async () => {
 		});
 
 		// Transform response format
-		// const checklist = headings.map((heading) => ({
-		// 	heading: heading.title,
-		// 	tasks: heading.tasks.map((t) => t.task),
-		// }));
 
 		return headings;
 	} catch (error) {
@@ -513,74 +509,9 @@ const getJanitors = async (reqBody) => {
 	}
 };
 
-// const getDailyChecklistWithTodayStatus = async (reqBody) => {
 // 	try {
-// 		const { user } = reqBody;
 
-// 		// Calculate current week's Monday 12:00 AM EST to next Monday 12:00 AM EST
-// 		const nowEST = moment.tz("America/New_York");
-// 		const weekStart = nowEST
-// 			.clone()
-// 			.startOf("week")
-// 			.add(1, "day")
-// 			.startOf("day"); // Monday 12:00 AM
-// 		const weekEnd = weekStart.clone().add(7, "days"); // Next Monday 12:00 AM
-
-// 		const weekStartDate = weekStart.toDate();
-// 		const weekEndDate = weekEnd.toDate();
-
-// 		const headings = await DailyChecklistHeading.findAll({
-// 			include: [
-// 				{
-// 					model: DailyChecklist,
-// 					as: "daily_task",
-// 					attributes: ["id", "task"],
-// 					include: [
-// 						{
-// 							model: DailySupervisorChecklist,
-// 							as: "supervisor_checklist",
-// 							where: {
-// 								employee_id: user.id,
-// 								created_at: {
-// 									[Op.between]: [weekStartDate, weekEndDate],
-// 								},
-// 							},
-// 							required: false,
-// 							attributes: ["is_completed"],
-// 						},
-// 					],
-// 				},
-// 			],
-// 			order: [["id", "ASC"]],
-// 		});
-
-// 		const mainTitle = headings.length > 0 ? headings[0].main_title : null;
-
-// 		const formattedChecklist = headings.map((heading) => ({
-// 			heading: heading.title,
-// 			tasks: heading.daily_task.map((task) => ({
-// 				id: task.id,
-// 				task: task.task,
-// 				is_completed:
-// 					task.supervisor_checklist.length > 0 &&
-// 					task.supervisor_checklist[0].is_completed,
-// 			})),
-// 		}));
-
-// 		return {
-// 			success: true,
-// 			message: "Checklist for the current week fetched.",
-// 			main_title: mainTitle,
-// 			data: formattedChecklist,
-// 		};
 // 	} catch (error) {
-// 		console.error("Error fetching weekly checklist:", error);
-// 		throw new ApiError(
-// 			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-// 			error.message || "Internal server error"
-// 		);
-// 	}
-// };
 
 module.exports = {
 	createDailyChecklist,

@@ -1,6 +1,7 @@
 /** @format */
 
 const puppeteer = require("puppeteer-core");
+const config = require("./config");
 const axios = require("axios");
 
 const renderScopeTables = (sections) => {
@@ -2069,7 +2070,7 @@ const generateEstimatePDF = async (data, pdfPath) => {
   const browser = await puppeteer.launch({
     headless: true,
     executablePath:
-      "/root/.cache/puppeteer/chrome/linux-136.0.7103.92/chrome-linux64/chrome",
+      config.PUPPETEER_EXECUTABLE_PATH,
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
   });
 
@@ -3167,7 +3168,7 @@ const generateContractPDF = async (data, pdfPath) => {
   const browser = await puppeteer.launch({
     headless: true,
     executablePath:
-      "/root/.cache/puppeteer/chrome/linux-136.0.7103.92/chrome-linux64/chrome",
+      config.PUPPETEER_EXECUTABLE_PATH,
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
   });
 
@@ -3315,7 +3316,7 @@ const generateScopeOfWorkPdfBuffer = async ({
   const browser = await puppeteer.launch({
     headless: true,
     executablePath:
-      "/root/.cache/puppeteer/chrome/linux-136.0.7103.92/chrome-linux64/chrome",
+      config.PUPPETEER_EXECUTABLE_PATH,
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
   });
 

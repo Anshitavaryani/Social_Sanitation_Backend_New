@@ -30,7 +30,6 @@ const createTrendingVideo = async (reqBody) => {
 
 const getAllTrendingVideos = async (reqBody) => {
 	try {
-		const { user } = reqBody;
 		const contentDoc = await TrendingVideoAttachment.findAll({
 			where: { is_active: 1 },
 		});

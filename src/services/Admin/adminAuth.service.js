@@ -1,6 +1,6 @@
 const { status: httpStatus } = require("http-status");
 const bcrypt = require("bcryptjs");
-const randomize = require("randomatic");
+const { randomInt } = require("crypto");
 const jwt = require("jsonwebtoken");
 
 const { Admin, Role, UserOAuth } = require("../../models");
@@ -140,7 +140,7 @@ const sendOTP = async (email) => {
     if (!user) {
       throw new ApiError(httpStatus.NOT_FOUND, "Invalid Email");
     }
-    const generatedOTP = randomize("0", 6);
+    const generatedOTP = String(randomInt(0, 10 ** 6)).padStart(6, "0");
     await emailService.sendForgotPasswordOTP(email, generatedOTP);
 
     await Admin.update(

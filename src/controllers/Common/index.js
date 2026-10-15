@@ -11,7 +11,6 @@ const bookingController = require("./bookings.controller");
 const aboutUSController = require("./aboutUs.controller");
 const termsAndConditionsController = require("./termsAndConditions.controller");
 const bannerController = require("./banner.controller");
-const calendarController = require("./calendar.controller");
 const chatController = require("./chat.controller");
 const notificationController = require("./notification.controller");
 const reviewController = require("./review.controller");
@@ -45,7 +44,6 @@ module.exports = {
   aboutUSController,
   termsAndConditionsController,
   bannerController,
-  calendarController,
   chatController,
   notificationController,
   reviewController,

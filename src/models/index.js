@@ -317,15 +317,6 @@ async function initTableRelation() {
     as: "attachments_service",
   });
 
-  // Service.hasMany(ServiceChecklist, {
-  // 	foreignKey: "service_id",
-  // 	as: "service_checklist",
-  // });
-  // ServiceChecklist.belongsTo(Service, {
-  // 	foreignKey: "service_id",
-  // 	as: "checklist_service",
-  // });
-
   ServiceChecklistHeading.hasMany(ServiceChecklist, {
     foreignKey: "heading_id",
     as: "service_checklists",

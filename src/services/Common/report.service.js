@@ -130,7 +130,6 @@ const getAllReport = async () => {
 const getAllUserReport = async (reqBody, headers) => {
 	try {
 		const { user } = reqBody;
-		const { role_id } = headers;
 		let whereCondition = { is_active: true, reported_by: user.id };
 
 		// Fetch reports with the appropriate filters
