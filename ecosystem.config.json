@@ -1,0 +1,18 @@
+{
+  "apps": [
+    {
+      "name": "socialsanitation-backend",
+      "script": "index.js",
+      "cwd": "/var/www/socialsanitation/backend",
+      "exec_mode": "fork",
+      "instances": 1,
+      "autorestart": true,
+      "watch": false,
+      "time": true,
+      "max_memory_restart": "1G",
+      "env": {
+        "NODE_ENV": "production"
+      }
+    }
+  ]
+}

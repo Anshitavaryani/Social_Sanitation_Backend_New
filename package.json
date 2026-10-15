@@ -1,0 +1,80 @@
+{
+  "name": "social_sanitation_app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "engines": {
+    "node": ">=16.20.1"
+  },
+  "nodemonConfig": {
+    "ignore": [
+      "public/uploads/**/*.*"
+    ]
+  },
+  "scripts": {
+    "start": "pm2 start ecosystem.config.json --no-daemon",
+    "staging": "pm2 start ecosystem.staging-config.json --no-daemon",
+    "dev": "cross-env NODE_ENV=development nodemon --ext js,mjs,json,yaml index.js",
+    "auth": "cross-env NODE_ENV=development node src/config/createSuperAdmin.js",
+    "migrate": "cross-env NODE_ENV=development node src/config/migrateTable.js"
+  },
+  "author": "CA",
+  "license": "",
+  "dependencies": {
+    "@azure/msal-node": "^3.8.4",
+    "@firebase/storage": "^0.12.6",
+    "@google-cloud/local-auth": "^2.1.0",
+    "@microsoft/microsoft-graph-client": "^3.0.7",
+    "axios": "^1.4.0",
+    "bcryptjs": "^2.4.3",
+    "body-parser": "^1.20.1",
+    "compression": "^1.7.4",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "cross-env": "^7.0.3",
+    "csv-parse": "^7.0.3",
+    "docusign-esign": "^8.6.0",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "express-jwt": "^8.4.1",
+    "express-rate-limit": "^6.7.0",
+    "firebase": "^11.3.1",
+    "firebase-admin": "^13.0.2",
+    "googleapis": "^105.0.0",
+    "haversine": "^1.1.1",
+    "helmet": "^6.0.1",
+    "http-status": "^1.6.2",
+    "isomorphic-fetch": "^3.0.0",
+    "joi": "^17.7.1",
+    "jsonwebtoken": "^9.0.0",
+    "moment": "^2.29.4",
+    "moment-timezone": "^0.5.43",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.1.2",
+    "node-cron": "^3.0.2",
+    "nodemailer": "^6.9.1",
+    "passport": "^0.6.0",
+    "password-validator": "^5.3.0",
+    "pm2": "^5.3.0",
+    "puppeteer": "^24.8.2",
+    "puppeteer-core": "^24.8.2",
+    "qs": "^6.14.1",
+    "randomatic": "^3.1.1",
+    "resend": "^6.4.2",
+    "rootpath": "^0.1.2",
+    "sequelize": "^6.28.0",
+    "slugify": "^1.6.6",
+    "socket.io": "^4.7.2",
+    "square": "^32.0.0",
+    "stripe": "^12.17.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.0",
+    "twilio": "^5.11.2",
+    "uuid": "^9.0.1",
+    "winston": "^3.8.2"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22"
+  }
+}
