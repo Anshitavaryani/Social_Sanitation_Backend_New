@@ -1434,10 +1434,8 @@ const adminCreateBooking = async (reqBody, headers) => {
     await sendEmailToAdmin(user, bookingDoc, serviceDoc);
 
     return {
-      booking_id:
-        bookingDoc?.id !== -1
-          ? bookingDoc?.id
-          : recurringResult?.firstBookingId || null,
+      // id is still -1 only when no recurring booking could be created
+      booking_id: bookingDoc?.id !== -1 ? bookingDoc?.id : null,
       message: "Booking created successfully by admin",
     };
   } catch (error) {

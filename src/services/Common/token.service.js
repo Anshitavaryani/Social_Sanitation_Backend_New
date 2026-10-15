@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const { status: httpStatus } = require("http-status");
 const moment = require("moment");
 const config = require("../../config/config");
 
@@ -33,11 +34,20 @@ const generateToken = (
 
 const saveToken = async (token, userId, expires, type, role_id, fcm_token) => {
   try {
-    let sql = `INSERT INTO user_tokens (user_id, token_type, token, expired_at, created_at, updated_at, role_id, fcm_token) values (
-            '${userId}', '${type}', '${token}', '${expires}' , now(), now(), ${role_id}, '${fcm_token}')`;
+    // Values are bound as replacements: fcm_token comes straight from the login request body
+    const sql = `INSERT INTO user_tokens (user_id, token_type, token, expired_at, created_at, updated_at, role_id, fcm_token)
+            VALUES (:userId, :type, :token, :expires, now(), now(), :role_id, :fcm_token)`;
 
     let tokenDoc = await sequelize.query(sql, {
       type: QueryTypes.INSERT,
+      replacements: {
+        userId,
+        type,
+        token,
+        expires,
+        role_id: role_id ?? null,
+        fcm_token: fcm_token || null,
+      },
     });
     return tokenDoc;
   } catch (error) {

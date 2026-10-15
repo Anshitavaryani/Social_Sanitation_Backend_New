@@ -687,11 +687,6 @@ const getAttendanceByUserId = async (reqBody, id) => {
 	try {
 		const { filterType, start_date, end_date } = reqBody;
 
-		let whereCondition = {
-			user_id: id,
-			is_active: true,
-		};
-
 		let dateStart, dateEnd;
 
 		if (filterType === "TODAY") {

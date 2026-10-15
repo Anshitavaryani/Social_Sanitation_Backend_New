@@ -4,6 +4,7 @@ const { status: httpStatus } = require("http-status");
 const { Sequelize, Op } = require("sequelize");
 const moment = require("moment-timezone");
 const timezone = "America/New_York";
+const fs = require("fs");
 const path = require("path");
 const {
   ServiceQuote,
@@ -2893,6 +2894,8 @@ const getBusinessAnalytics = async ({ month }) => {
 
           unpaid_revenue: unpaidRevenue,
 
+          overdue_revenue: overdueRevenue,
+
           total_invoices: totalInvoices,
 
           total_quotes: totalQuotes,
@@ -2900,6 +2903,8 @@ const getBusinessAnalytics = async ({ month }) => {
           paid_invoices: paidInvoices,
 
           unpaid_invoices: unpaidInvoices,
+
+          overdue_invoices: overdueInvoices,
 
           paid_quotes: paidQuotes,
 

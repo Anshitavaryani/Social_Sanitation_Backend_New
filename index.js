@@ -35,11 +35,12 @@ const exitHandler = () => {
   }
 };
 
-// Unexpected error handler
-
-// Keep the API running on uncaught exceptions
+// After an uncaught exception the process state is undefined: stop accepting
+// requests and exit so pm2 (autorestart) brings up a clean process
 process.on("uncaughtException", (error) => {
   logger.error("Uncaught Exception:", error);
+  setTimeout(() => process.exit(1), 10000).unref();
+  server.close(() => process.exit(1));
 });
 
 // Keep the API running on unhandled promise rejections

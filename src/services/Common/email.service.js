@@ -65,9 +65,12 @@ const sendForgotPasswordOTP = async (to, otp) => {
   }
 };
 
-const sendUserCredentials = async (to, password) => {
+const sendUserCredentials = async (
+  to,
+  password,
+  supportEmail = "socialsanitation@gmail.com",
+) => {
   try {
-    const supportEmail = "socialsanitation@gmail.com";
     const iosLink =
       "https://apps.apple.com/in/app/social-sanitation-user/id6743349377";
     const androidLink =

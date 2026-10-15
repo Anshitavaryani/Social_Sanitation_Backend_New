@@ -110,7 +110,7 @@ const updateProductById = async (id, reqBody, files) => {
 				title: "Product Image",
 				file_type: "Image",
 				file_name: image.filename,
-				file_uri: `/uploads/${image.filename}`,
+				file_uri: "/images",
 				file_size: image.size,
 			}));
 			await ProductAttachment.bulkCreate(imageAttachments);

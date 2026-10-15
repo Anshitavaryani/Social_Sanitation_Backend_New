@@ -5,6 +5,7 @@ const logger = require('./logger.js');
 
 const sequelizeOptions = {
     host: config.databases.central.host,
+    port: Number(config.databases.central.port) || 3306,
     dialect: 'mysql',
     supportBigNumbers: true,
     collate: 'utf8mb4_unicode_ci',

@@ -16,7 +16,9 @@
     "staging": "pm2 start ecosystem.staging-config.json --no-daemon",
     "dev": "cross-env NODE_ENV=development nodemon --ext js,mjs,json,yaml index.js",
     "auth": "cross-env NODE_ENV=development node src/config/createSuperAdmin.js",
-    "migrate": "cross-env NODE_ENV=development node src/config/migrateTable.js"
+    "migrate": "cross-env NODE_ENV=development node src/config/migrateTable.js",
+    "lint": "eslint .",
+    "test": "node --test --test-timeout=120000 \"tests/**/*.test.js\""
   },
   "author": "CA",
   "license": "",
@@ -55,6 +57,8 @@
     "winston": "^3.19.0"
   },
   "devDependencies": {
+    "eslint": "^10.12.0",
+    "globals": "^17.13.0",
     "nodemon": "^3.1.14"
   },
   "overrides": {

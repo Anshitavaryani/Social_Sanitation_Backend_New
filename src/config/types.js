@@ -131,6 +131,5 @@ module.exports = {
   notificationTypes,
   leaveStatusTypes,
   reportTypes,
-  notificationTypes,
   quoteQuestionTypes,
 };

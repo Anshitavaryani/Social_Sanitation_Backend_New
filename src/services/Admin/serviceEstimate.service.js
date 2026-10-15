@@ -77,7 +77,6 @@ const generateEstimatePDFService = async (reqBody) => {
       city,
       state,
       zip,
-      bdm_id,
 
       contact_name,
       contact_phone,
@@ -86,7 +85,6 @@ const generateEstimatePDFService = async (reqBody) => {
 
       signed_date,
       frequency = "Bi-Weekly",
-      total_price = 0,
       signature,
     } = reqBody;
 
@@ -503,7 +501,6 @@ const updateServiceEstimate = async (reqBody) => {
       signed_date,
       frequency,
       signature,
-      scope_sections,
     } = reqBody;
 
     const estimate = await ServiceEstimate.findOne({
@@ -712,7 +709,6 @@ const updateServiceEstimate = async (reqBody) => {
       status: "pending_signature",
 
       signed_file_name: null,
-      client_company_name,
 
       address_line_1,
       address_line_2,
@@ -727,8 +723,6 @@ const updateServiceEstimate = async (reqBody) => {
 
       signed_date,
       frequency,
-
-      signature,
 
       scope_sections: currentScopeSections,
     });

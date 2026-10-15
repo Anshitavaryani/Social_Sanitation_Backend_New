@@ -372,7 +372,7 @@ const updateService = async (reqBody, files, id) => {
 				title: "Service Image",
 				file_type: "Image",
 				file_name: image.filename,
-				file_uri: `/uploads/${image.filename}`,
+				file_uri: "/images",
 				file_size: image.size,
 			}));
 			await ServiceAttachment.bulkCreate(imageAttachments);
@@ -392,9 +392,10 @@ const updateServicePrices = async (reqBody) => {
 		const { old_price, new_price } = reqBody;
 
 		if (!old_price || !new_price) {
-			return res
-				.status(400)
-				.json({ message: "Both old_price and new_price are required." });
+			throw new ApiError(
+				httpStatus.BAD_REQUEST,
+				"Both old_price and new_price are required."
+			);
 		}
 
 		const updatedCount = await Service.update(

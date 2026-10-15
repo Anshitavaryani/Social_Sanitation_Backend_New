@@ -7,6 +7,7 @@ const cors = require("cors");
 const compression = require("compression");
 const { status: httpStatus } = require("http-status");
 const cron = require("node-cron");
+const fs = require("fs");
 const path = require("path");
 const app = express();
 
@@ -24,6 +25,8 @@ const credentials = require("./src/middlewares/credentials.js");
 const ApiError = require("./src/utils/ApiError.js");
 const upload = require("./src/config/multer.js");
 const errorHandler = require("./src/utils/errorHandler.js");
+const responseWrapper = require("./src/config/responseWrapper.js");
+const { adminAuthMiddleware } = require("./src/middlewares");
 require("./src/models");
 const PUBLIC_DIR = path.resolve(__dirname, "./public");
 
@@ -115,7 +118,7 @@ cron.schedule(
   { timezone: "America/New_York" },
 );
 
-// Run every 5 minutes
+// Run every 10 minutes
 cron.schedule(
   "*/10 * * * *",
   async () => {
@@ -176,7 +179,11 @@ cron.schedule(
 cron.schedule(
   "* * * * *",
   async () => {
-    await sendDueBalancesCron();
+    try {
+      await sendDueBalancesCron();
+    } catch (err) {
+      console.error("sendDueBalancesCron failed:", err);
+    }
   },
   { timezone: "America/New_York" },
 );
@@ -245,38 +252,35 @@ app.use(
   routes,
 );
 
-app.get("/api/v1/logs", (req, res) => {
-  const currentDate = moment().format("YYYY-MM-DD");
-  const logFileName = `${currentDate}.log`;
-  const logFilePath = path.join(__dirname, "logs", logFileName);
-  fs.readFile(logFilePath, "utf8", (err, data) => {
-    if (err) {
-      return responseWrapper(res, [], "success");
-    } else {
-      const logs = data.split("\n");
-      return responseWrapper(res, logs, "success");
-    }
-  });
+// Admin-only access to the daily request logs written by src/config/morgan.js
+const LOG_DIR = path.join(__dirname, "logs");
+
+app.get("/api/v1/logs", adminAuthMiddleware.validateJWTtoken, async (req, res) => {
+  const logFilePath = path.join(LOG_DIR, `${moment().format("YYYY-MM-DD")}.log`);
+  try {
+    const data = await fs.promises.readFile(logFilePath, "utf8");
+    return responseWrapper(res, data.split("\n"), "success");
+  } catch (err) {
+    return responseWrapper(res, [], "success");
+  }
 });
 
-app.delete("/api/v1/logs", async (req, res) => {
-  const logDirectory = path.join(__dirname, "logs");
-  fs.readdir(logDirectory, async (err, files) => {
-    if (err) {
-      return responseWrapper(res, "", "Error reading log directory", 400);
-    } else {
-      files.forEach((file) => {
-        if (file.endsWith(".log")) {
-          fs.unlink(path.join(logDirectory, file), (err) => {
-            if (err) {
-              return responseWrapper(res, "", "Error deleting log file", 400);
-            }
-          });
-        }
-      });
-      return responseWrapper(res, "", "All log files deleted successfully");
-    }
-  });
+app.delete("/api/v1/logs", adminAuthMiddleware.validateJWTtoken, async (req, res) => {
+  let files;
+  try {
+    files = await fs.promises.readdir(LOG_DIR);
+  } catch (err) {
+    return responseWrapper(res, "", "Error reading log directory", 400);
+  }
+  const results = await Promise.allSettled(
+    files
+      .filter((file) => file.endsWith(".log"))
+      .map((file) => fs.promises.unlink(path.join(LOG_DIR, file))),
+  );
+  if (results.some((result) => result.status === "rejected")) {
+    return responseWrapper(res, "", "Error deleting log file", 400);
+  }
+  return responseWrapper(res, "", "All log files deleted successfully");
 });
 
 app.use("/api/v1/images", express.static(`${PUBLIC_DIR}/uploads/images`));

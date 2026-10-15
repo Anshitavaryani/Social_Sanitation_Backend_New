@@ -1132,6 +1132,168 @@ const EMPLOYEE_ROLE_IDS = [7, 8, 9, 10, 11];
 // Roles an employee can be assigned to a booking as (supervisor, QA, cleaner)
 const ASSIGNMENT_ROLE_IDS = [7, 8, 9];
 
+// Creates or updates a client's checklist and replaces its detail rows.
+// Shared by adminAddUser and adminEditUser.
+const saveClientChecklist = async ({ userId, checklist, client_type, transaction }) => {
+  const {
+    walkaround_minutes,
+    estimated_sqft,
+    service_days,
+
+    carpet_percentage = 0,
+    concrete_percentage = 0,
+    vct_lvt_percentage = 0,
+    tile_percentage = 0,
+
+    address,
+    country_id: checklistCountryId,
+    state_id,
+    city_id,
+    address_lat,
+    address_long,
+
+    details = [],
+  } = checklist;
+
+  // =======================================================
+  // FIND OR CREATE CHECKLIST
+  // =======================================================
+
+  let checklistEntry = await ClientChecklist.findOne({
+    where: {
+      user_id: userId,
+    },
+    transaction,
+  });
+
+  if (checklistEntry) {
+    await checklistEntry.update(
+      {
+        estimated_sqft,
+        walkaround_minutes,
+        service_days,
+
+        carpet_percentage,
+        concrete_percentage,
+        vct_lvt_percentage,
+        tile_percentage,
+
+        address,
+        // Was never read off `checklist` here at all, so a client's
+        // country could never actually be saved on this path.
+        country_id: checklistCountryId,
+        state_id,
+        city_id,
+        address_lat,
+        address_long,
+      },
+      {
+        transaction,
+      },
+    );
+  } else {
+    checklistEntry = await ClientChecklist.create(
+      {
+        user_id: userId,
+
+        estimated_sqft,
+        walkaround_minutes,
+        service_days,
+
+        carpet_percentage,
+        concrete_percentage,
+        vct_lvt_percentage,
+        tile_percentage,
+
+        address,
+        country_id: checklistCountryId,
+        state_id,
+        city_id,
+        address_lat,
+        address_long,
+      },
+      {
+        transaction,
+      },
+    );
+  }
+
+  // =======================================================
+  // CHECKLIST DETAILS
+  // =======================================================
+
+  let checklistDetails = Array.isArray(details) ? details : [];
+
+  if (checklistDetails.length === 0) {
+    const effectiveClientType =
+      client_type && client_type.trim() !== ""
+        ? client_type.toLowerCase()
+        : "commercial";
+
+    const defaultAreas = getDefaultChecklistDetails(effectiveClientType);
+
+    checklistDetails = defaultAreas.map((service_area) => ({
+      service_area,
+
+      num_desks_trash_cans: 0,
+
+      stalls: 0,
+
+      sinks: 0,
+
+      restrooms: 0,
+
+      flooring_type: null,
+
+      special_requests: "",
+    }));
+  }
+
+  // =======================================================
+  // DELETE OLD DETAILS
+  // =======================================================
+
+  await ClientChecklistDetail.destroy({
+    where: {
+      checklist_id: checklistEntry.id,
+    },
+    transaction,
+  });
+
+  // =======================================================
+  // CREATE NEW DETAILS
+  // =======================================================
+
+  await Promise.all(
+    checklistDetails.map((detail) =>
+      ClientChecklistDetail.create(
+        {
+          checklist_id: checklistEntry.id,
+
+          service_area: detail.service_area,
+
+          flooring_type: detail.flooring_type || null,
+
+          special_requests: detail.special_requests || "",
+
+          num_desks_trash_cans: Number(detail.num_desks_trash_cans || 0),
+
+          stalls: Number(detail.stalls || 0),
+
+          sinks: Number(detail.sinks || 0),
+
+          restrooms: Number(detail.restrooms || 0),
+        },
+        {
+          transaction,
+        },
+      ),
+    ),
+  );
+
+  return checklistEntry;
+};
+
 const adminAddUser = async (reqBody) => {
   try {
     const {
@@ -1367,17 +1529,15 @@ const adminAddUser = async (reqBody) => {
     }
 
     // ============================
-    // Existing client checklist
-    //
-    // NOTE: country_id should be read off `checklist` and saved onto
-    // ClientChecklist here too (same column adminEditUser now writes
-    // below) — this placeholder wasn't shown in full, so it isn't
-    // edited directly; mirror the pattern from adminEditUser's
-    // "CLIENT CHECKLIST" block when filling this in.
+    // Client checklist
     // ============================
 
     if (checklist && !isEmployee) {
-      // KEEP YOUR EXISTING CHECKLIST CODE HERE
+      await saveClientChecklist({
+        userId: user.id,
+        checklist,
+        client_type: finalClientType,
+      });
     }
 
     // ============================
@@ -1392,7 +1552,11 @@ const adminAddUser = async (reqBody) => {
       supportEmail = "reports@socialsanitation.com";
     }
 
-    const isSend = await sendUserCredentials(email, password);
+    const isSend = await sendUserCredentials(
+      email.trim().toLowerCase(),
+      password,
+      supportEmail,
+    );
 
     if (!isSend) {
       throw new ApiError(
@@ -2166,161 +2330,12 @@ const adminEditUser = async (reqBody, id) => {
     let checklistEntry;
 
     if (checklist && !isEmployee) {
-      const {
-        walkaround_minutes,
-        estimated_sqft,
-        service_days,
-
-        carpet_percentage = 0,
-        concrete_percentage = 0,
-        vct_lvt_percentage = 0,
-        tile_percentage = 0,
-
-        address,
-        country_id: checklistCountryId,
-        state_id,
-        city_id,
-        address_lat,
-        address_long,
-
-        details = [],
-      } = checklist;
-
-      // =======================================================
-      // FIND OR CREATE CHECKLIST
-      // =======================================================
-
-      checklistEntry = await ClientChecklist.findOne({
-        where: {
-          user_id: id,
-        },
+      checklistEntry = await saveClientChecklist({
+        userId: id,
+        checklist,
+        client_type,
         transaction,
       });
-
-      if (checklistEntry) {
-        await checklistEntry.update(
-          {
-            estimated_sqft,
-            walkaround_minutes,
-            service_days,
-
-            carpet_percentage,
-            concrete_percentage,
-            vct_lvt_percentage,
-            tile_percentage,
-
-            address,
-            // Was never read off `checklist` here at all, so a client's
-            // country could never actually be saved on this path.
-            country_id: checklistCountryId,
-            state_id,
-            city_id,
-            address_lat,
-            address_long,
-          },
-          {
-            transaction,
-          },
-        );
-      } else {
-        checklistEntry = await ClientChecklist.create(
-          {
-            user_id: id,
-
-            estimated_sqft,
-            walkaround_minutes,
-            service_days,
-
-            carpet_percentage,
-            concrete_percentage,
-            vct_lvt_percentage,
-            tile_percentage,
-
-            address,
-            country_id: checklistCountryId,
-            state_id,
-            city_id,
-            address_lat,
-            address_long,
-          },
-          {
-            transaction,
-          },
-        );
-      }
-
-      // =======================================================
-      // CHECKLIST DETAILS
-      // =======================================================
-
-      let checklistDetails = Array.isArray(details) ? details : [];
-
-      if (checklistDetails.length === 0) {
-        const effectiveClientType =
-          client_type && client_type.trim() !== ""
-            ? client_type.toLowerCase()
-            : "commercial";
-
-        const defaultAreas = getDefaultChecklistDetails(effectiveClientType);
-
-        checklistDetails = defaultAreas.map((service_area) => ({
-          service_area,
-
-          num_desks_trash_cans: 0,
-
-          stalls: 0,
-
-          sinks: 0,
-
-          restrooms: 0,
-
-          flooring_type: null,
-
-          special_requests: "",
-        }));
-      }
-
-      // =======================================================
-      // DELETE OLD DETAILS
-      // =======================================================
-
-      await ClientChecklistDetail.destroy({
-        where: {
-          checklist_id: checklistEntry.id,
-        },
-        transaction,
-      });
-
-      // =======================================================
-      // CREATE NEW DETAILS
-      // =======================================================
-
-      await Promise.all(
-        checklistDetails.map((detail) =>
-          ClientChecklistDetail.create(
-            {
-              checklist_id: checklistEntry.id,
-
-              service_area: detail.service_area,
-
-              flooring_type: detail.flooring_type || null,
-
-              special_requests: detail.special_requests || "",
-
-              num_desks_trash_cans: Number(detail.num_desks_trash_cans || 0),
-
-              stalls: Number(detail.stalls || 0),
-
-              sinks: Number(detail.sinks || 0),
-
-              restrooms: Number(detail.restrooms || 0),
-            },
-            {
-              transaction,
-            },
-          ),
-        ),
-      );
     }
 
     // =========================================================
@@ -2624,7 +2639,7 @@ const getServiceCount = async () => {
 };
 
 const getBookingCount = async () => {
-  const bookingCount = await BookingDetails.count({
+  const bookingCount = await Booking.count({
     where: {
       is_active: true,
     },
@@ -2633,7 +2648,7 @@ const getBookingCount = async () => {
 };
 
 const getPendingBookingCount = async () => {
-  const bookingCount = await BookingDetails.count({
+  const bookingCount = await Booking.count({
     where: {
       is_active: true,
       booking_status: ["PENDING", "ACCEPTED", "ONGOING"],
@@ -2643,7 +2658,7 @@ const getPendingBookingCount = async () => {
 };
 
 const getCompletedBookingCount = async () => {
-  const bookingCount = await BookingDetails.count({
+  const bookingCount = await Booking.count({
     where: {
       is_active: true,
       booking_status: ["SUCCESS"],
@@ -2653,7 +2668,7 @@ const getCompletedBookingCount = async () => {
 };
 
 const getDeletedBookingCount = async () => {
-  const bookingCount = await BookingDetails.count({
+  const bookingCount = await Booking.count({
     where: {
       is_active: true,
       booking_status: ["DELETED", "REJECTED"],
@@ -3332,7 +3347,7 @@ const deleteDraftQuote = async (id) => {
   });
 
   if (!quote) {
-    return res.status(404).json({ message: "Draft not found" });
+    throw new ApiError(httpStatus.NOT_FOUND, "Draft not found");
   }
 
   await QuoteItem.destroy({ where: { quote_id: id } });

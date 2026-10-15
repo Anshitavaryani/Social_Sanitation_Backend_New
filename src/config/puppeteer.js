@@ -60,7 +60,6 @@ const generateQuotePDF = async (data) => {
     address_1,
     address_2,
     items,
-    total_due,
     signature,
     date,
     square_payment_url,
@@ -93,7 +92,6 @@ const generateQuotePDF = async (data) => {
 
   const formattedServiceDates = formatDate(service_dates);
   const formattedDueDate = formatDate(due_date);
-  const formattedSignatureDate = formatDate(date);
 
   /* ================= TOTAL ================= */
 
@@ -1962,9 +1960,7 @@ const generatePDF = async (
 
 	`;
 
-  const pdfDir = path.resolve(
-    "/var/www/socialsanitation/backend/public/uploads/docs",
-  );
+  const pdfDir = path.resolve(__dirname, "../../public/uploads/docs");
   const pdfFileName = `hiring-form-${submissionId}-${Date.now()}.pdf`;
 
   const pdfPath = path.join(pdfDir, pdfFileName);
@@ -3308,9 +3304,7 @@ ${
 
 </html>`;
 
-  const pdfDir = path.resolve(
-    "/var/www/socialsanitation/backend/public/uploads/docs",
-  );
+  const pdfDir = path.resolve(__dirname, "../../public/uploads/docs");
 
   const pdfFileName = `hiring-form-${submissionId}-${Date.now()}.pdf`;
 
@@ -3668,7 +3662,6 @@ const generateInvoicePDF = async (data) => {
     address_1,
     address_2,
     items,
-    total_due,
     signature,
     payment_link,
     
@@ -3682,10 +3675,6 @@ const generateInvoicePDF = async (data) => {
 
   const formattedServiceEnd = service_end
     ? moment(service_end, "YYYY-MM-DD").format("MM/DD/YYYY")
-    : "";
-
-  const formattedInvoiceDate = invoice_date
-    ? moment(invoice_date, "YYYY-MM-DD").format("MM/DD/YYYY")
     : "";
 
   const formattedBillingDate = billing_date
@@ -4572,7 +4561,7 @@ const generateServiceRequestPDF = async (data) => {
 </html>
 `;
 
-  const PUBLIC_DIR = path.resolve(__dirname, "../../../public");
+  const PUBLIC_DIR = path.resolve(__dirname, "../../public");
   const pdfDir = path.join(PUBLIC_DIR, "uploads/docs");
 
   if (!fs.existsSync(pdfDir)) {

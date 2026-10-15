@@ -59,11 +59,6 @@ const generateEstimatePDF = async (data, pdfPath) => {
     zip,
     signature,
 
-    contact_name,
-    contact_phone,
-    contact_fax,
-    contact_email,
-
     signed_date,
     scopeSections = [],
     frequency = "Bi-Weekly",

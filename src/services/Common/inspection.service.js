@@ -1,3 +1,5 @@
+const fs = require("fs");
+const path = require("path");
 const { status: httpStatus } = require("http-status");
 const ApiError = require("../../utils/ApiError");
 const { Op } = require("sequelize");
@@ -20,6 +22,17 @@ const {
 } = require("../../models");
 const { getUserScope } = require("../Admin/serviceEstimate.service");
 const { sendInspectionCompletedEmail } = require("./email.service");
+
+const INSPECTION_IMAGES_DIR = path.resolve(__dirname, "../../../public/uploads/images");
+
+// Inspection images are stored as "/<filename>" in InspectionItemImage.image
+const deleteInspectionImageFile = (storedImage) => {
+  if (!storedImage) return;
+  const absolutePath = path.join(INSPECTION_IMAGES_DIR, path.basename(storedImage));
+  if (fs.existsSync(absolutePath)) {
+    fs.unlinkSync(absolutePath);
+  }
+};
 
 const createInspection = async (body) => {
   const { user, user_id, employee_id, inspection_date } = body;
@@ -747,43 +760,11 @@ const deleteInspection = async (body) => {
      * ==========================================
      * DELETE PHYSICAL IMAGE FILES
      * ==========================================
-     *
-     * IMPORTANT:
-     *
-     * Replace `image_path` below with the actual
-     * column name in InspectionItemImage which
-     * stores the server file path.
-     *
-     * Example:
-     *
-     * /public/uploads/inspections/abc.jpg
-     *
-     * or
-     *
-     * public/uploads/inspections/abc.jpg
-     * ==========================================
      */
 
     for (const image of images) {
       try {
-        if (!image.image_path) {
-          continue;
-        }
-
-        let filePath = image.image_path;
-
-        /*
-         * Remove leading slash so path.join
-         * doesn't ignore process.cwd()
-         */
-
-        filePath = filePath.replace(/^\/+/, "");
-
-        const absolutePath = path.join(process.cwd(), filePath);
-
-        if (fs.existsSync(absolutePath)) {
-          fs.unlinkSync(absolutePath);
-        }
+        deleteInspectionImageFile(image.image);
       } catch (fileError) {
         /*
          * Do not stop DB deletion if the physical
@@ -2329,7 +2310,7 @@ const deleteInspectionItemImage = async (body, imageId) => {
       include: [
         {
           model: InspectionItem,
-          as: "item", // adjust alias to match your actual association name
+          as: "item",
           required: true,
           include: [{ model: Inspection, as: "inspection", required: true }],
         },
@@ -2388,16 +2369,7 @@ const deleteInspectionItemImage = async (body, imageId) => {
     }
 
     try {
-      const filename = path.basename(image.image);
-      const absolutePath = path.resolve(
-        __dirname,
-        "../../public/uploads/images",
-        filename,
-      );
-
-      if (fs.existsSync(absolutePath)) {
-        fs.unlinkSync(absolutePath);
-      }
+      deleteInspectionImageFile(image.image);
     } catch (fileError) {
       console.error("Failed to delete image file:", fileError.message);
     }

@@ -178,7 +178,7 @@ const getReviewsAndRatings = async (reqBody) => {
 				},
 			],
 			order: [
-				[Sequelize.literal(`CASE WHEN ServiceReview.user_id = ${user.id} THEN 1 ELSE 2 END`), 'ASC'],
+				[Sequelize.literal(`CASE WHEN ServiceReview.user_id = ${Number(user.id)} THEN 1 ELSE 2 END`), 'ASC'],
 				["id", "DESC"]
 			],
 		});
