@@ -1,2 +1,22 @@
+cat > .gitignore <<'EOF'
+# Dependencies
 node_modules/
 package-lock.json
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Sensitive credentials
+private.key
+serviceAccoountKey.json
+serviceAccountKey.json
+
+# Uploaded files and logs
+public/uploads/
+logs/
+
+# macOS
+.DS_Store
+EOF
