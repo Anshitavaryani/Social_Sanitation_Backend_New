@@ -1,7 +1,5 @@
-cat > .gitignore <<'EOF'
 # Dependencies
 node_modules/
-package-lock.json
 
 # Environment variables
 .env
@@ -19,4 +17,6 @@ logs/
 
 # macOS
 .DS_Store
-EOF
+
+# VS Code SFTP configuration
+.vscode/sftp.json
