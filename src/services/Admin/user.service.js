@@ -1,50 +1,14 @@
 /** @format */
 
-const httpStatus = require("http-status");
+const { status: httpStatus } = require("http-status");
 const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
 const { Sequelize, Op } = require("sequelize");
 const path = require("path");
 const moment = require("moment");
 const fs = require("fs");
-const {
-  Admin,
-  User,
-  Profile,
-  OTP,
-  UserAttachment,
-  userLoginTiming,
-  Service,
-  Booking,
-  ServiceAttachment,
-  BookingAssignment,
-  UserAddress,
-  Payment,
-  ClientChecklistDetail,
-  ClientChecklist,
-  QuoteItem,
-  ServiceQuote,
-  Country,
-  State,
-  City,
-  ReviewLink,
-  Attendance,
-  Break,
-  UserToken,
-  UserOAuth,
-  Invoice,
-  FormSubmission,
-  FormSection,
-} = require("../../models");
+const { Admin, User, Profile, UserAttachment, userLoginTiming, Service, Booking, ServiceAttachment, BookingAssignment, UserAddress, Payment, ClientChecklistDetail, ClientChecklist, QuoteItem, ServiceQuote, Country, State, City, ReviewLink, Attendance, Break, UserToken, UserOAuth, Invoice, FormSubmission, FormSection } = require("../../models");
 const ApiError = require("../../utils/ApiError");
-const {
-  sendUserCredentials,
-  sendUserDeletionEmail,
-  sendEmailWithPDF,
-  sendReviewEmailWithPDF,
-  sendServiceRequestEmailWithPDF,
-  sendUpdatedUserCredentials,
-} = require("../Common/email.service");
+const { sendUserCredentials, sendEmailWithPDF, sendReviewEmailWithPDF, sendServiceRequestEmailWithPDF, sendUpdatedUserCredentials } = require("../Common/email.service");
 const {
   generateQuotePDF,
   generateServiceRequestPDF,
@@ -57,7 +21,6 @@ const sequelize = require("../../config/central.db");
 const sendSMS = require("../../config/sendSMS");
 const ServiceRequest = require("../../models/serviceRequest.model");
 const ServiceRequestQuoteItem = require("../../models/serviceRequestQuoteItem.model");
-const { getSigningUrl } = require("../Common/docusignSigning.service");
 const {
   createServiceRequestEnvelope,
 } = require("../Common/docusignEnvelope.service");

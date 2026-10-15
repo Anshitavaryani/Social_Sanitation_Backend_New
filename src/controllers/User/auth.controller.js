@@ -1,4 +1,4 @@
-const httpStatus = require('http-status');
+const { status: httpStatus } = require('http-status');
 
 const validatePassword = require('../../helpers/validatePassword');
 const catchAsync = require('../../utils/catchAsync');

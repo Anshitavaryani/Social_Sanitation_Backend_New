@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 
-const {adminAuthMiddleware} = require('../../../middlewares');
 const { adminBookingController } = require('../../../controllers/Admin');
 
 router.post('/getAllBookings',adminBookingController.getAllBookings);

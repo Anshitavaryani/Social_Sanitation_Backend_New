@@ -1,10 +1,9 @@
 /** @format */
 
-const httpStatus = require("http-status");
+const { status: httpStatus } = require("http-status");
 const { User, BDMUser, Admin, Profile, Booking } = require("../../models");
 const ApiError = require("../../utils/ApiError");
-const { sendUserDeletionEmail } = require("./email.service");
-const { Op,Sequelize } = require("sequelize");
+const { Op } = require("sequelize");
 
 const assignUser = async (reqBody) => {
 	const { bdm_id, user_id, remove_user_id } = reqBody;

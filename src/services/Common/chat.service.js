@@ -1,30 +1,14 @@
 /** @format */
 
-const httpStatus = require("http-status");
+const { status: httpStatus } = require("http-status");
 const ApiError = require("../../utils/ApiError");
-const { Sequelize, Op } = require("sequelize");
-const admin = require("firebase-admin");
+const { getDatabase, ServerValue } = require("firebase-admin/database");
 const { sendPushNotification, getUserActiveFCMTokens } = require("./notification.service");
-const {
-	User,
-	Admin,
-	Profile,
-	UserAttachment,
-	UserToken,
-	BDMUser,
-} = require("../../models");
-const {
-	getStorage,
-	ref,
-	uploadBytesResumable,
-	getDownloadURL,
-	uploadBytes,
-} = require("firebase/storage");
+const { User, Admin, Profile, UserAttachment, BDMUser } = require("../../models");
+const { getStorage, ref, getDownloadURL, uploadBytes } = require("firebase/storage");
 
 const { initializeApp } = require("firebase/app");
-const { getAnalytics } = require("firebase/analytics");
 const config = require("../../config/firebaseConfig");
-const fs = require("fs");
 
 initializeApp(config.firebaseConfig);
 
@@ -55,16 +39,14 @@ const sendMessage = async (body, files, headers) => {
 					: "EMPLOYEE_ADMIN_CHAT";
 		}
 
-		const timestamp = admin.database.ServerValue.TIMESTAMP;
+		const timestamp = ServerValue.TIMESTAMP;
 
 		// Create references for sender and receiver messages
-		const senderMessageRef = admin
-			.database()
+		const senderMessageRef = getDatabase()
 			.ref(
 				`${chatType}/messages/${user_type}_${user.id}/${receiverType}_${receiverUserId}`
 			);
-		const receiverMessageRef = admin
-			.database()
+		const receiverMessageRef = getDatabase()
 			.ref(
 				`${chatType}/messages/${receiverType}_${receiverUserId}/${user_type}_${user.id}`
 			);
@@ -161,8 +143,7 @@ const getUserMessages = async (body) => {
 		const startIndex = (fixedPage - 1) * fixedPageSize;
 
 		await markMessagesAsRead(user.id, userId, chatType);
-		const userMessagesSnapshot = await admin
-			.database()
+		const userMessagesSnapshot = await getDatabase()
 			.ref(`${chatType}/messages/ADMIN_${user.id}/USER_${userId}`)
 			.orderByChild("timestamp") // Sort by timestamp
 			.limitToLast(fixedPageSize + startIndex)
@@ -232,8 +213,7 @@ const markUserMessagesAsRead = async (body) => {
 
 const markAsRead = async (userId, receiverUserId, chatType) => {
 	try {
-		const userMessagesRef = admin
-			.database()
+		const userMessagesRef = getDatabase()
 			.ref(`${chatType}/messages/ADMIN_${userId}/USER_${receiverUserId}`);
 
 		// Fetch the messages
@@ -272,8 +252,7 @@ const getChatList = async (body) => {
 		}
 
 		// Correct Firebase ref for the user
-		const chatRoomRef = admin
-			.database()
+		const chatRoomRef = getDatabase()
 			.ref(`${chatType}/messages/${userType}_${user.id}`);
 
 		console.log(chatRoomRef, "chatRoomRef");
@@ -350,8 +329,7 @@ const getAdminMessages = async (body) => {
 		const chatType =
 			user.role_id === 6 ? "USER_ADMIN_CHAT" : "EMPLOYEE_ADMIN_CHAT";
 
-		const adminMessagesSnapshot = await admin
-			.database()
+		const adminMessagesSnapshot = await getDatabase()
 			.ref(`${chatType}/messages/ADMIN_${receiverUserId}/USER_${user.id}`)
 			.orderByChild("timestamp")
 			.once("value");
@@ -400,8 +378,7 @@ const getUserChatList = async (body) => {
 		const userIds = assignedUsers.map((u) => u.user_id);
 
 		// Step 2: Fetch chat snapshot from Firebase
-		const chatRoomRef = admin
-			.database()
+		const chatRoomRef = getDatabase()
 			.ref(`${chatType}/messages/ADMIN_${user.id}`);
 
 		const snapshot = await chatRoomRef.once("value");
@@ -617,8 +594,7 @@ const getLastMessage = async (body, params) => {
 		} else {
 			throw new ApiError(httpStatus.UNAUTHORIZED, "Unauthorized access.");
 		}
-		const adminMessagesSnapshot = await admin
-			.database()
+		const adminMessagesSnapshot = await getDatabase()
 			.ref(`${chatType}/messages/USER_${user.id}/ADMIN_${receiverUserId}/`)
 			.orderByChild("timestamp")
 			.limitToLast(1) // Limit to last message
@@ -672,8 +648,7 @@ const markAdminMessagesAsRead = async (body, param) => {
 
 const markMessagesAsRead = async (userId, receiverUserId, chatType) => {
 	try {
-		const userMessagesRef = admin
-			.database()
+		const userMessagesRef = getDatabase()
 			.ref(`${chatType}/messages/USER_${userId}/ADMIN_${receiverUserId}`);
 
 		// Fetch the messages

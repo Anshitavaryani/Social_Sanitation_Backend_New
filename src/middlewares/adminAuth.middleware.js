@@ -1,46 +1,15 @@
-const httpStatus = require('http-status');
+const { status: httpStatus } = require('http-status');
 const jwt = require('jsonwebtoken');
 
 
-const sequelize = require('../config/central.db');
-const { Admin, Role, Department, Category, Service } = require('../models');
 const validateEmail = require('../helpers/validateEmail');
 const catchAsync = require('../utils/catchAsync');
 const responseWrapper = require('../config/responseWrapper');
 
-const { roleService } = require('../services');
 const config = require('../config/config');
 const ApiError = require('../utils/ApiError');
 
 
-const validateCreateAdminBody = catchAsync(async (req, res, next) => {
-    try {
-        const { name, email, role_id } = req.body;
-        if (!name || !email ||  !role_id ) {
-            return responseWrapper(res, '', 'Please Enter Required Fields : [name || email_id || role_id ]', httpStatus.BAD_REQUEST);
-        };
-
-        // if (role_id === config.ADM) {
-        //     return responseWrapper(res, '', 'You are not authorized to create this role.', httpStatus.BAD_REQUEST);
-        // };
-
-        if (!validateEmail(email) || name.length === 0) {
-            return responseWrapper(res, '', 'Invalid Name or Email', httpStatus.BAD_REQUEST);
-        };
-
-        if (await Admin.isEmailTaken(email)) {
-            return responseWrapper(res, '', 'Email already taken', httpStatus.BAD_REQUEST);
-        };
-
-        const isValidRoleId = await roleService.findRoleById(parseInt(role_id));
-        if (!isValidRoleId) return responseWrapper(res, '', 'Invalid Role Id', httpStatus.BAD_REQUEST);
-
-        next()
-
-    } catch (error) {
-        throw new ApiError(error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR, error.message);
-    }
-});
 
 
 
@@ -102,8 +71,7 @@ const validateResetPassordBody = catchAsync(async (req, res, next) => {
 
 
 module.exports = {
-    validateCreateAdminBody,
-    validateLoginAdminBody,
-    validateJWTtoken,
-    validateResetPassordBody,
+  validateLoginAdminBody,
+  validateJWTtoken,
+  validateResetPassordBody,
 };

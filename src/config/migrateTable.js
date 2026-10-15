@@ -1,5 +1,4 @@
 const sequelize = require("./central.db");
-const initialSeedData = require('../seeders/execution');
 require('../models');
 
 const init = async () => {

@@ -1,6 +1,6 @@
 /** @format */
 
-const httpStatus = require("http-status");
+const { status: httpStatus } = require("http-status");
 const { Sequelize, Op } = require("sequelize");
 const moment = require("moment-timezone");
 const timezone = "America/New_York";
@@ -18,11 +18,7 @@ const {
 const { generateInvoicePDF } = require("../../config/puppeteer");
 const { sendInvoiceEmailWithPDF } = require("./email.service");
 const ApiError = require("../../utils/ApiError");
-const {
-  generateContractPaymentLink,
-  generateInvoicePaymentLink,
-  deleteSquarePaymentLink,
-} = require("./square.service");
+const { generateInvoicePaymentLink, deleteSquarePaymentLink } = require("./square.service");
 const sequelize = require("../../config/central.db");
 const { paymentStatusTypes } = require("../../config/types");
 const { parse } = require("csv-parse/sync");

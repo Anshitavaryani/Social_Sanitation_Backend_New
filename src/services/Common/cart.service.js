@@ -1,6 +1,6 @@
-const httpStatus = require("http-status");
+const { status: httpStatus } = require("http-status");
 
-const { Product, Order, ProductAttachment, Cart } = require("../../models");
+const { Product, ProductAttachment, Cart } = require("../../models");
 const ApiError = require("../../utils/ApiError");
 
 const addItemToCart = async (reqBody) => {

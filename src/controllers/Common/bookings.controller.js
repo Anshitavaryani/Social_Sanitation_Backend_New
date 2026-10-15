@@ -1,12 +1,10 @@
 /** @format */
 
-const httpStatus = require("http-status");
+const { status: httpStatus } = require("http-status");
 
 const catchAsync = require("../../utils/catchAsync");
 const { bookingService } = require("../../services/Common");
 const responseWrapper = require("../../config/responseWrapper");
-const pick = require("../../utils/pick");
-const { BookingDetails } = require("../../models");
 
 // ************************************USER API****************************************************
 const createBooking = catchAsync(async (req, res) => {

@@ -113,21 +113,6 @@ async function authorize(id, role_id, code) {
 	}
 }
 
-async function getAdminAuthorizationUrl(adminId) {
-	const oAuth2Client = new google.auth.OAuth2(
-		process.env.CLIENT_ID,
-		process.env.CLIENT_SECRET,
-		process.env.REDIRECT_URI
-	);
-
-	const authUrl = oAuth2Client.generateAuthUrl({
-		access_type: "offline",
-		scope: SCOPES,
-		state: adminId,
-	});
-
-	return authUrl;
-}
 
 async function adminAuthorize(adminId, code) {
 	try {
@@ -396,12 +381,11 @@ async function getValidateToken(body) {
 }
 
 module.exports = {
-	getAuthorizationUrl,
-	authorize,
-	listEvents,
-	createCalendarEvent,
-	getAdminAuthorizationUrl,
-	adminAuthorize,
-	deleteCalendarEvent,
-	getValidateToken,
+  getAuthorizationUrl,
+  authorize,
+  listEvents,
+  createCalendarEvent,
+  adminAuthorize,
+  deleteCalendarEvent,
+  getValidateToken,
 };

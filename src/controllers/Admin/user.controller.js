@@ -1,8 +1,7 @@
 /** @format */
 
-const httpStatus = require("http-status");
+const { status: httpStatus } = require("http-status");
 const catchAsync = require("../../utils/catchAsync");
-const ApiError = require("../../utils/ApiError");
 const { userService } = require("../../services");
 const responseWrapper = require("../../config/responseWrapper");
 

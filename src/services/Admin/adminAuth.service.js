@@ -1,15 +1,14 @@
-const httpStatus = require("http-status");
+const { status: httpStatus } = require("http-status");
 const bcrypt = require("bcryptjs");
 const randomize = require("randomatic");
 const jwt = require("jsonwebtoken");
 
-const { Admin, Role, Department, UserOAuth } = require("../../models");
+const { Admin, Role, UserOAuth } = require("../../models");
 const ApiError = require("../../utils/ApiError");
 const config = require("../../config/config");
 const { emailService } = require("../Common");
 const { otpTypes } = require("../../config/types");
 const { sendAdminCredentials } = require("../Common/email.service");
-const { clearLoginRecords } = require("./user.service");
 
 
 const createAdminUser = async (userBody) => {

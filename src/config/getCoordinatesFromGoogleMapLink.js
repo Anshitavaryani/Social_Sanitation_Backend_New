@@ -1,5 +1,4 @@
 const axios = require("axios");
-const url = require("url");
 
 const getCoordinatesFromGoogleMapLink = async (google_map_link, googleApiKey) => {
 	try {

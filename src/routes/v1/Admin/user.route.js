@@ -3,7 +3,6 @@ const router = express.Router();
 
 const {userController} = require('../../../controllers');
 const {adminAuthMiddleware} = require('../../../middlewares');
-const {roleMiddleware} = require('../../../middlewares')
 
 
 router.get('/getAllUsers',[adminAuthMiddleware.validateJWTtoken],userController.getAllUsers);

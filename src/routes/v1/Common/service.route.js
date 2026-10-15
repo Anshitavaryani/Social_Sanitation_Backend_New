@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 const { serviceController } = require('../../../controllers');
-const {adminAuthMiddleware, roleMiddleware} = require('../../../middlewares');
+const { adminAuthMiddleware } = require('../../../middlewares');
 
 router.post('/createService', serviceController.createService);
 router.get('/getAllServices', serviceController.getAllServices);

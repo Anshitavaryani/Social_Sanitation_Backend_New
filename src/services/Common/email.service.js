@@ -1,16 +1,14 @@
 /** @format */
-const httpStatus = require("http-status");
+const { status: httpStatus } = require("http-status");
 const nodemailer = require("nodemailer");
 const config = require("../../config/config");
 const logger = require("../../config/logger");
-const fs = require("fs");
 const moment = require("moment");
 const {
   forgotPasswordSendOTPFormat,
   emailVerificationFormat,
 } = require("../../../public/Email_Template");
 const ApiError = require("../../utils/ApiError");
-const path = require("path");
 const {
   sendMailViaGraph,
   sendMailViaGraphWithSender,
@@ -31,17 +29,6 @@ if (config.env !== "test") {
     );
 }
 
-const sendEmail = async (to, subject, text) => {
-  try {
-    const msg = { from: config.email.from, to, subject, text };
-    return await transport.sendMail(msg);
-  } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
-  }
-};
 
 const sendEmailVerification = async (to, otp) => {
   try {
@@ -79,39 +66,6 @@ const sendForgotPasswordOTP = async (to, otp) => {
   }
 };
 
-const sendResetPasswordConfirmationMail = async (to) => {
-  try {
-    await sendMailViaGraph({
-      to,
-      subject: "Successfully Changed Password",
-      html: `
-				<p>Dear User,</p>
-
-				<p>
-					Your password has been changed successfully.
-				</p>
-
-				<p>
-					If you did not request any password reset, you can safely
-					ignore this email.
-				</p>
-
-				<p>
-					Best regards,<br />
-					<strong>Social Sanitation Team</strong>
-				</p>
-			`,
-    });
-
-    return true;
-  } catch (error) {
-    console.error("Error sending reset password confirmation email:", error);
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      error.message || "Failed to send password change confirmation email",
-    );
-  }
-};
 
 const sendUserCredentials = async (to, password) => {
   try {
@@ -1092,36 +1046,6 @@ const sendContractReviewEmail = async (email, pdfPath, clientName) => {
   }
 };
 
-const sendAdminContractAlert = async ({ signingUrl }) => {
-  try {
-    const subject = "Action Required: Contract Signed by Client";
-
-    const html = `
-			Client has successfully signed the contract agreement.
-			<br/><br/>
-			Please review and complete your signature to finalize the contract.
-			<br/><br/>
-			<a href="${signingUrl}" target="_blank">
-				Click here to sign the contract
-			</a>
-		`;
-
-    await sendMailViaGraph({
-      to: "socialsanitation@gmail.com",
-      subject,
-      html,
-    });
-
-    return true;
-  } catch (error) {
-    console.error("Admin email error:", error);
-
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      error.message || "Failed to send admin alert",
-    );
-  }
-};
 
 const sendTwoWeekScheduleEmail = async ({ to, name, bookings }) => {
   try {
@@ -1230,7 +1154,6 @@ const sendInspectionCompletedEmail = async ({ to, name, inspection }) => {
 
 module.exports = {
   sendForgotPasswordOTP,
-  sendResetPasswordConfirmationMail,
   sendUpdatedUserCredentials,
   sendEmailVerification,
   sendUserCredentials,
@@ -1252,7 +1175,6 @@ module.exports = {
   sendInvoiceEmailWithPDF,
   sendEmailWithAttachment,
   sendContractReviewEmail,
-  sendAdminContractAlert,
   sendTwoWeekScheduleEmail,
   sendPaymentSuccessEmail,
   sendEmployeeEquipmentFormEmail,

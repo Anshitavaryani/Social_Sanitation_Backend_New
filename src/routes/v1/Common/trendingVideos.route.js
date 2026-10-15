@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 
 const { trendingVideosController } = require('../../../controllers');
-const { userAuthMiddleware } = require('../../../middlewares');
 
 router.post('/createTrendingVideo', trendingVideosController.createTrendingVideo);
 router.get('/getAllTrendingVideos' , trendingVideosController.getAllTrendingVideos);

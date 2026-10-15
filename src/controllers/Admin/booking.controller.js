@@ -1,6 +1,6 @@
 /** @format */
 
-const httpStatus = require("http-status");
+const { status: httpStatus } = require("http-status");
 const catchAsync = require("../../utils/catchAsync");
 const responseWrapper = require("../../config/responseWrapper");
 const { adminBookingService } = require("../../services");

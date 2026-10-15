@@ -1,10 +1,10 @@
 /** @format */
 
-const httpStatus = require("http-status");
+const { status: httpStatus } = require("http-status");
 
 const { ServiceChecklist, ServiceChecklistHeading } = require("../../models");
 const ApiError = require("../../utils/ApiError");
-const { Sequelize,Op } = require("sequelize");
+const { Op } = require("sequelize");
 
 const createServiceChecklist = async (reqBody) => {
 	try {

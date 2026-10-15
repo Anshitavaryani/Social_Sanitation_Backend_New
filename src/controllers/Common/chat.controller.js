@@ -1,9 +1,8 @@
-const httpStatus = require("http-status");
+const { status: httpStatus } = require("http-status");
 
 const catchAsync = require("../../utils/catchAsync");
 const { chatService } = require("../../services/Common");
 const responseWrapper = require("../../config/responseWrapper");
-const pick = require("../../utils/pick");
 
 const sendMessage = catchAsync(async (req, res) => {
   let response = await chatService.sendMessage(

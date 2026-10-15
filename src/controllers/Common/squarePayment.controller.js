@@ -1,23 +1,12 @@
 /** @format */
 
-const httpStatus = require("http-status");
-const moment = require("moment");
-const { Op } = require("sequelize");
+const { status: httpStatus } = require("http-status");
 const { Client, Environment } = require("square");
-const {
-  Payment,
-  Booking,
-  ServiceQuote,
-  User,
-  Invoice,
-} = require("../../models");
+const { Payment, Booking, ServiceQuote, Invoice } = require("../../models");
 const catchAsync = require("../../utils/catchAsync");
 const ApiError = require("../../utils/ApiError");
 const responseWrapper = require("../../config/responseWrapper");
 const config = require("../../config/config");
-const {
-  sendPaymentSuccessEmail,
-} = require("../../services/Common/email.service");
 
 const squareEnvironment =
   config.SQUARE_ENVIRONMENT === "production"

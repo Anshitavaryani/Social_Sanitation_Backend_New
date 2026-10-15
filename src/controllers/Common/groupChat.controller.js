@@ -1,11 +1,10 @@
 /** @format */
 
-const httpStatus = require("http-status");
+const { status: httpStatus } = require("http-status");
 
 const catchAsync = require("../../utils/catchAsync");
 const { groupChatService } = require("../../services/Common");
 const responseWrapper = require("../../config/responseWrapper");
-const pick = require("../../utils/pick");
 
 const sendGroupMessage = catchAsync(async (req, res) => {
   const response = await groupChatService.sendGroupMessage(req.body, req.files);

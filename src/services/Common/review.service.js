@@ -1,12 +1,5 @@
-const httpStatus = require("http-status");
-const {
-	User,
-	UserAttachment,
-	Profile,
-    Service,
-    ServiceReview,
-	Booking,
-} = require("../../models");
+const { status: httpStatus } = require("http-status");
+const { User, Profile, Service, ServiceReview } = require("../../models");
 const ApiError = require("../../utils/ApiError");
 const { Sequelize } = require("sequelize");
 

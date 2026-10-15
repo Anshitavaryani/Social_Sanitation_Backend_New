@@ -2,8 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 const { bookingController } = require('../../../controllers');
-const { userAuthMiddleware, roleMiddleware } = require('../../../middlewares');
-const {adminAuthMiddleware} = require('../../../middlewares');
+const { userAuthMiddleware } = require('../../../middlewares');
 
 
 //user apis

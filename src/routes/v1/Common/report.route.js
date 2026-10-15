@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 const { reportController } = require('../../../controllers');
-const { userAuthMiddleware, roleMiddleware } = require('../../../middlewares');
+const { userAuthMiddleware } = require('../../../middlewares');
 const {adminAuthMiddleware} = require('../../../middlewares');
 
 router.post('/reportBooking/:id', [userAuthMiddleware.verifyAuthJWTToken], reportController.reportBooking);

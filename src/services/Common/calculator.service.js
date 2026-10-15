@@ -1,5 +1,5 @@
-const httpStatus = require("http-status");
-const { Sequelize, Op } = require("sequelize");
+const { status: httpStatus } = require("http-status");
+const { Op } = require("sequelize");
 const ApiError = require("../../utils/ApiError");
 const {
   CostCalculation,

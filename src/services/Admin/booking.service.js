@@ -1,58 +1,17 @@
 /** @format */
 
-const httpStatus = require("http-status");
+const { status: httpStatus } = require("http-status");
 const moment = require("moment");
-const { v4: uuidv4 } = require("uuid");
+const { randomUUID: uuidv4 } = require("crypto");
 
-const {
-  Booking,
-  Service,
-  Profile,
-  User,
-  UserAttachment,
-  ServiceAttachment,
-  UserAddress,
-  BookingAssignment,
-  UserOAuth,
-  UserToken,
-  Payment,
-  Country,
-  State,
-  City,
-  BookingAttachment,
-  Notification,
-  BDMUser,
-  Admin,
-  Attendance,
-  GuestBookingAddress,
-  Break,
-  AttendancePayroll,
-} = require("../../models");
+const { Booking, Service, Profile, User, UserAttachment, ServiceAttachment, UserAddress, BookingAssignment, Country, State, City, BookingAttachment, BDMUser, Admin, Attendance, GuestBookingAddress, Break, AttendancePayroll } = require("../../models");
 const ApiError = require("../../utils/ApiError");
 const { Sequelize, Op } = require("sequelize");
-const {
-  createCalendarEvent,
-  deleteCalendarEvent,
-} = require("../Common/calendar.service");
 const config = require("../../config/config");
-const {
-  sendPushNotification,
-  getUserActiveFCMTokens,
-} = require("../Common/notification.service");
-const {
-  sendRejectedBookingEmail,
-  sendEmailToAdmin,
-  sendEmailToUser,
-  sendLateArrivalEmail,
-  sendClockOutDistanceEmail,
-  sendAttendanceEmail,
-  sendGroupedAttendanceEmail,
-  sendTwoWeekScheduleEmail,
-} = require("../Common/email.service");
+const { sendEmailToAdmin, sendClockOutDistanceEmail, sendGroupedAttendanceEmail, sendTwoWeekScheduleEmail } = require("../Common/email.service");
 const { generateBookingId } = require("../Common/bookings.service");
-const { notificationTypes } = require("../../config/types");
 const getCoordinatesFromGoogleMapLink = require("../../config/getCoordinatesFromGoogleMapLink");
-const admin = require("firebase-admin");
+const { getDatabase, ServerValue } = require("firebase-admin/database");
 
 const getAllBookings = async (reqBody) => {
   try {
@@ -430,120 +389,9 @@ const getBookingById = async (id) => {
   }
 };
 
-const sendBookingAcceptedNotification = async (
-  user,
-  roleWiseEmployees = { cleaners: [], supervisors: [], quality_inspectors: [] },
-) => {
-  try {
-    // Notify the user
-    const userNotification = {
-      title: "Booking Confirmed",
-      body: "Your booking has been accepted and the service team has been assigned.",
-      notification_types: notificationTypes.BOOKING_ACCEPTED,
-    };
 
-    const userTokens = await getUserActiveFCMTokens(user);
-    if (userTokens.length > 0) {
-      await sendPushNotification(userNotification, userTokens);
-    }
 
-    await Notification.create({
-      user_id: user.id,
-      role_id: 6,
-      title: userNotification.title,
-      notification: userNotification.body,
-      notification_types: userNotification.notification_types,
-      is_active: true,
-    });
 
-    // Notify Employees
-    const employeeNotification = {
-      title: "Booking Assigned",
-      body: "A new booking has been assigned to you.",
-      notification_types: notificationTypes.BOOKING_ACCEPTED,
-    };
-
-    for (const empId of roleWiseEmployees.cleaners || []) {
-      try {
-        await notifyEmployee(empId, 9, employeeNotification);
-      } catch (error) {
-        console.error(`Failed to notify cleaner: ${empId}`, error);
-      }
-    }
-
-    for (const empId of roleWiseEmployees.supervisors || []) {
-      try {
-        await notifyEmployee(empId, 7, employeeNotification);
-      } catch (error) {
-        console.error(`Failed to notify supervisor: ${empId}`, error);
-      }
-    }
-
-    for (const empId of roleWiseEmployees.quality_inspectors || []) {
-      try {
-        await notifyEmployee(empId, 8, employeeNotification);
-      } catch (error) {
-        console.error(`Failed to notify quality inspector: ${empId}`, error);
-      }
-    }
-  } catch (error) {
-    console.error("Error in sending booking accepted notification:", error);
-  }
-};
-
-const notifyEmployee = async (employeeId, roleId, notificationObj) => {
-  const employee = await User.findByPk(employeeId);
-  if (!employee) return;
-
-  const tokens = await getUserActiveFCMTokens(employee);
-  if (!tokens.length) return;
-
-  await sendPushNotification(notificationObj, tokens);
-
-  await Notification.create({
-    user_id: employee.id,
-    role_id: roleId.toString(),
-    notification: notificationObj.body,
-    title: notificationObj.title,
-    notification_types: notificationObj.notification_types,
-    is_active: true,
-  });
-};
-
-const deleteEventFromCalendar = async (userId, refreshToken, eventId) => {
-  console.log(userId, "userId");
-  console.log(refreshToken, "refreshToken");
-  console.log(eventId, "eventId");
-
-  // return refreshToken
-
-  if (!eventId) {
-    console.log(`Skipping null or empty event ID for user ${userId}`);
-    return;
-  }
-  console.log(
-    `Attempting to delete event ${eventId} for user ${userId} with refresh token ${refreshToken}`,
-  );
-  try {
-    await deleteCalendarEvent(eventId, refreshToken);
-    console.log(`Event ${eventId} successfully deleted for user ${userId}`);
-  } catch (error) {
-    console.error(
-      `Failed to delete event ${eventId} for user ${userId}. Error: ${error.message}`,
-    );
-    console.error(error); // Log the full error object
-  }
-};
-
-const sendBookingNotification = async (fcmTokens, notificationObj) => {
-  if (!fcmTokens || fcmTokens.length === 0) {
-    return;
-  }
-  console.log("FCM Tokens", fcmTokens);
-  console.log("Notification Object", notificationObj);
-
-  await sendPushNotification(notificationObj, fcmTokens);
-};
 
 const checkBookingRequest = async () => {
   try {
@@ -572,84 +420,6 @@ const checkBookingRequest = async () => {
   }
 };
 
-const updatePendingBookings = async () => {
-  try {
-    // Get current UTC date and time
-    const now = new Date();
-    const currentUTCDate = now.toISOString().split("T")[0]; // Current UTC date in YYYY-MM-DD format
-    const currentUTCTime = now.toTimeString().split(" ")[0].substring(0, 5); // Current UTC time in HH:mm format
-
-    // Find bookings with status 'PENDING' that have expired based on UTC date and time
-    const pendingBookings = await Booking.findAll({
-      where: {
-        booking_status: "PENDING",
-        [Op.and]: [
-          {
-            [Op.or]: [
-              // Booking date_in_utc is before current UTC date, or it's the same date and the time_in_utc is before the current time
-              {
-                date_in_utc: {
-                  [Op.lt]: currentUTCDate, // Date is before current UTC date
-                },
-              },
-              {
-                [Op.and]: [
-                  {
-                    date_in_utc: {
-                      [Op.eq]: currentUTCDate, // Same date as current UTC date
-                    },
-                  },
-                  {
-                    time_in_utc: {
-                      [Op.lt]: currentUTCTime, // Time is before current UTC time
-                    },
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-        is_active: true,
-      },
-      include: [
-        {
-          model: User,
-          as: "booking_user",
-          attributes: ["id", "email"],
-        },
-      ],
-    });
-
-    console.log(pendingBookings, "pendingBookings");
-
-    if (pendingBookings.length > 0) {
-      await Promise.all(
-        pendingBookings.map(async (bookingDetail) => {
-          await bookingDetail.update({
-            booking_status: "REJECTED",
-          });
-
-          // Extract the email from the booking object
-          const email = bookingDetail.bookings?.booking_user?.email;
-          if (email) {
-            // await sendRejectedBookingEmail(email);
-          } else {
-            console.error(`No email found for booking ID: ${bookingDetail.id}`);
-          }
-        }),
-      );
-    }
-
-    console.log("Updated bookings to rejected: ", pendingBookings);
-    return pendingBookings;
-  } catch (error) {
-    console.error(error);
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
-  }
-};
 
 async function updateRecurringBookingWithEditMode(
   bookingId,
@@ -1092,7 +862,7 @@ const updateBookingStatus = async (reqBody) => {
 
       const groupName = `${bookingDoc.booking_name || "Booking"} - ${effectiveDate || formatDate(bookingDoc.date)}`;
 
-      const groupRef = admin.database().ref(`GroupChats/booking_${booking_id}`);
+      const groupRef = getDatabase().ref(`GroupChats/booking_${booking_id}`);
       const snapshot = await groupRef.once("value");
 
       if (snapshot.exists()) {
@@ -1117,27 +887,27 @@ const updateBookingStatus = async (reqBody) => {
         // Create new group
         await groupRef.set({
           name: groupName,
-          created_at: admin.database.ServerValue.TIMESTAMP,
+          created_at: ServerValue.TIMESTAMP,
           members: Object.fromEntries([...allMembers].map((id) => [id, true])),
           messages: {},
         });
         await groupRef.child("messages").push({
           sender: "System",
           message: "Welcome to the group for this booking!",
-          timestamp: admin.database.ServerValue.TIMESTAMP,
+          timestamp: ServerValue.TIMESTAMP,
         });
       }
 
       // await groupRef.set({
       // 	name: `Booking #${booking_id} Group`,
-      // 	created_at: admin.database.ServerValue.TIMESTAMP,
+      // 	created_at: ServerValue.TIMESTAMP,
       // 	members: Object.fromEntries([...allMembers].map((id) => [id, true])),
       // 	messages: {},
       // });
       // await groupRef.child("messages").push({
       // 	sender: "System",
       // 	message: "Welcome to the group for this booking!",
-      // 	timestamp: admin.database.ServerValue.TIMESTAMP,
+      // 	timestamp: ServerValue.TIMESTAMP,
       // });
 
       const isRecurringBooking =
@@ -2130,49 +1900,6 @@ const createRecurringGuestBookings = async ({
 };
 
 
-const sendAdminBookingNotification = async (
-  user,
-  receiverUniqueFCMTokensArray,
-) => {
-  if (!receiverUniqueFCMTokensArray) {
-    return;
-  }
-  console.log("receiverUniqueFCMTokensArray", receiverUniqueFCMTokensArray);
-  let clickAction = `anc`;
-  let notificationObj = {
-    title: "SERVICE BOOKED",
-    body: "Your Service has been booked successfully",
-    notification_types: notificationTypes.SERVICE_BOOKED,
-    // android: { // Specify android-specific properties
-    //     notification: {
-    //         clickAction: clickAction // Include click_action here
-    //     }
-    // }
-  };
-
-  condition: clickAction;
-
-  console.log("notificationObj", notificationObj);
-
-  await sendPushNotification(notificationObj, receiverUniqueFCMTokensArray);
-
-  const savenotificationObj = {
-    user_id: user.id,
-    role_id: user.role_id,
-    notification: notificationObj.body,
-    title: notificationObj.title,
-    notification_types: notificationObj.notification_types,
-    is_active: true,
-  };
-
-  const saveNotificationDoc = await Notification.create(savenotificationObj);
-  if (!saveNotificationDoc) {
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      "Error in saving Notifications",
-    );
-  }
-};
 
 const getMonthlyBookingCalendar = async (reqBody) => {
   try {
@@ -2310,22 +2037,6 @@ const getMonthlyBookingCalendar = async (reqBody) => {
   }
 };
 
-function calculateHaversineDistance(coord1, coord2) {
-  const toRad = (x) => (x * Math.PI) / 180;
-
-  const R = 6371; // Earth radius in KM
-  const dLat = toRad(coord2.lat - coord1.lat);
-  const dLon = toRad(coord2.lng - coord1.lng);
-
-  const lat1 = toRad(coord1.lat);
-  const lat2 = toRad(coord2.lat);
-
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c * 1000; // return distance in meters
-}
 
 const sendAttendanceAlerts = async () => {
   try {
@@ -3221,7 +2932,7 @@ const deleteBooking = async (reqBody) => {
 };
 
 const deleteFirebaseGroup = async (booking_id) => {
-  const groupRef = admin.database().ref(`GroupChats/booking_${booking_id}`);
+  const groupRef = getDatabase().ref(`GroupChats/booking_${booking_id}`);
   const snapshot = await groupRef.once("value");
 
   if (snapshot.exists()) {
@@ -3864,7 +3575,6 @@ module.exports = {
   getBookingById,
   updateBookingStatus,
   checkBookingRequest,
-  updatePendingBookings,
   adminCreateBooking,
   getMonthlyBookingCalendar,
   sendAttendanceAlerts,

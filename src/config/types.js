@@ -1,4 +1,3 @@
-const { ACCEPTED } = require("http-status");
 
 const userStatusTypes = {
   ACCEPTED: "ACCEPTED",
@@ -58,13 +57,6 @@ const bookingTypes = {
   DELETED:"DELETED"
 };
 
-const orderTypes = {
-  ACCEPTED: "ACCEPTED",
-  REJECTED: "REJECTED",
-  BOOKED: "BOOKED",
-  SHIPPED: "SHIPPED",
-  DELIVERED: "DELIVERED",
-};
 
 const tokenTypes = {
   ACCESS: "access",
@@ -136,10 +128,9 @@ module.exports = {
   bookingTypes,
   tokenTypes,
   currancyTypes,
-  orderTypes,
   notificationTypes,
   leaveStatusTypes,
   reportTypes,
   notificationTypes,
-  quoteQuestionTypes
+  quoteQuestionTypes,
 };

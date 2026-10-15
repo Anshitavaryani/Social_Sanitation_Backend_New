@@ -1,9 +1,8 @@
-const admin = require("firebase-admin");
 const { getMessaging } = require('firebase-admin/messaging');
 const { Notification, UserToken } = require("../../models");
 const ApiError = require("../../utils/ApiError");
-const httpStatus = require("http-status");
-const { Sequelize, Op } = require("sequelize");
+const { status: httpStatus } = require("http-status");
+const { Op } = require("sequelize");
 
 const sendPushNotification = async (notificationObj, registrationTokens, sound = "default") => {
   if (!registrationTokens || registrationTokens.length === 0) {
@@ -40,7 +39,7 @@ const sendPushNotification = async (notificationObj, registrationTokens, sound =
   console.log("registrationTokens",registrationTokens)
 
   try {
-    const response = await admin.messaging().sendEachForMulticast(message);
+    const response = await getMessaging().sendEachForMulticast(message);
     console.log("response",response)
  
     return "Notification sent successfully";
@@ -78,23 +77,6 @@ const getUserActiveFCMTokens = async (user) => {
 	return Array.from(receiverUniqueFCMTokensSet);
 };
 
-const createNotification = async ({
-  user_id,
-  role_id = null,
-  title,
-  message,
-  type,
-}) => {
-  return Notification.create({
-    user_id,
-    role_id,
-    title,
-    notification: message,
-    notification_types: type,
-    is_active: true,
-    is_admin_read: false,
-  });
-};
 
 const getAllNotificationsOfUser = async (body) => {
   try {
@@ -207,8 +189,7 @@ const markAllNotificationAsRead = async (body) => {
 module.exports = {
   sendPushNotification,
   getUserActiveFCMTokens,
-  createNotification,
   getAllNotificationsOfUser,
   markOneNotificationAsRead,
-  markAllNotificationAsRead
+  markAllNotificationAsRead,
 };

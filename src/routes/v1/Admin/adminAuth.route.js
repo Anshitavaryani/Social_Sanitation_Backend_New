@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 const {adminAuthController, serviceEstimateController} = require('../../../controllers');
-const {adminAuthMiddleware, roleMiddleware} = require('../../../middlewares');
+const { adminAuthMiddleware } = require('../../../middlewares');
 
 router.post('/register',  adminAuthController.createAdminUser);
 router.post('/login', [adminAuthMiddleware.validateLoginAdminBody], adminAuthController.loginAdminUser);

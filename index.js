@@ -36,10 +36,6 @@ const exitHandler = () => {
 };
 
 // Unexpected error handler
-const unexpectedErrorHandler = (error) => {
-  logger.error(error);
-  exitHandler();
-};
 
 // Keep the API running on uncaught exceptions
 process.on("uncaughtException", (error) => {

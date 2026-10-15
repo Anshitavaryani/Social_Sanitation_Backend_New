@@ -1,6 +1,6 @@
 /** @format */
 
-const httpStatus = require("http-status");
+const { status: httpStatus } = require("http-status");
 const Attendance = require("../../models/attendance.model");
 const ApiError = require("../../utils/ApiError");
 const { leaveStatusTypes } = require("../../config/types");
@@ -19,7 +19,7 @@ const {
 } = require("./email.service");
 const convertToEST = require("../../config/timeManagement");
 const moment = require("moment");
-const admin = require("firebase-admin");
+const { getDatabase } = require("firebase-admin/database");
 
 // attendce apis
 // const clockIn = async (reqBody, headers,files) => {
@@ -2286,7 +2286,7 @@ const autoClockOutEmployees = async () => {
 
 const syncClockInData = async () => {
 	try {
-		const driversSnapshot = await admin.database().ref("drivers").once("value");
+		const driversSnapshot = await getDatabase().ref("drivers").once("value");
 		const driversData = driversSnapshot.val();
 
 		if (!driversData) {
@@ -2358,7 +2358,7 @@ const syncClockInData = async () => {
 
 const syncClockOutData = async () => {
 	try {
-		const driversSnapshot = await admin.database().ref("drivers").once("value");
+		const driversSnapshot = await getDatabase().ref("drivers").once("value");
 		const driversData = driversSnapshot.val();
 
 		if (!driversData) {
@@ -2435,7 +2435,7 @@ const autoCompleteExpiredBreaks = async () => {
 		if (activeBreaks.length === 0) return;
 
 		// fetch all drivers snapshot at once for performance
-		const driversSnapshot = await admin.database().ref("drivers").once("value");
+		const driversSnapshot = await getDatabase().ref("drivers").once("value");
 		const driversData = driversSnapshot.val();
 
 		for (const b of activeBreaks) {

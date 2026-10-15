@@ -2,7 +2,7 @@ const dotenv = require('dotenv')
 const path = require('path')
 const Joi = require('joi')
 
-dotenv.config({ path: path.join(__dirname, '../../.env') });
+dotenv.config({ path: path.join(__dirname, '../../.env'), quiet: true });
 
 const envVarsSchema = Joi.object()
     .keys({
@@ -36,10 +36,6 @@ const envVarsSchema = Joi.object()
         API_BASE_URL: Joi.string().description('Base url for apis'),
         ADMIN_BASE_URL: Joi.string().description('Base url for Admin apis'),
         DEFAULT_TIMEZONE: Joi.string().default('UTC').description('Default Timezone for application'),
-        STRIPE_PUBLISHABLE_KEY: Joi.string().description('Stripe Secret Credential'),
-        STRIPE_SECRET_KEY: Joi.string().description('Stripe Secret Credential'),
-        STRIPE_WEBHOOK_SECRET_INTENT_CHARGE: Joi.string().description('Stripe Secret Credential'),
-        STRIPE_WEBHOOK_SECRET_CUSTOMER_INVOICE_PRICE: Joi.string().description('Stripe Secret Credential'),
 
         SUP_ADM_ROLE_ID: Joi.string(),
         ADM_ROLE_ID: Joi.string(),
@@ -105,10 +101,6 @@ module.exports = {
     DEFAULT_TIMEZONE: envVars.DEFAULT_TIMEZONE,
     STORY_VALIDATION_TIME_SPAN_HOURS: envVars.STORY_VALIDATION_TIME_SPAN_HOURS,
     
-    STRIPE_PUBLISHABLE_KEY: envVars.STRIPE_PUBLISHABLE_KEY,
-    STRIPE_SECRET_KEY: envVars.STRIPE_SECRET_KEY,
-    STRIPE_WEBHOOK_SECRET_INTENT_CHARGE: envVars.STRIPE_WEBHOOK_SECRET_INTENT_CHARGE,
-    STRIPE_WEBHOOK_SECRET_CUSTOMER_INVOICE_PRICE: envVars.STRIPE_WEBHOOK_SECRET_CUSTOMER_INVOICE_PRICE,
 
     SQUARE_ENVIRONMENT:envVars.SQUARE_ENVIRONMENT,
     SQUARE_ACCESS_TOKEN:envVars.SQUARE_ACCESS_TOKEN,

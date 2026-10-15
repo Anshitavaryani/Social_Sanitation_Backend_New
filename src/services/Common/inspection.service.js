@@ -1,6 +1,6 @@
-const httpStatus = require("http-status");
+const { status: httpStatus } = require("http-status");
 const ApiError = require("../../utils/ApiError");
-const { Op, Sequelize } = require("sequelize");
+const { Op } = require("sequelize");
 const sequelize = require("../../config/central.db");
 const {
   User,

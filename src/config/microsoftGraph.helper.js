@@ -1,5 +1,4 @@
 const { Client } = require("@microsoft/microsoft-graph-client");
-const fetch = require("isomorphic-fetch");
 const { ConfidentialClientApplication } = require("@azure/msal-node");
 const fs = require("fs");
 const path = require("path");

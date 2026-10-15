@@ -6,7 +6,6 @@ const {
   adminAuthMiddleware,
   userAuthMiddleware,
 } = require("../../../middlewares");
-const upload = require("../../../config/multer");
 
 // bdm api routes
 router.post(

@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 const {productController} = require('../../../controllers');
-const {adminAuthMiddleware, userAuthMiddleware} = require('../../../middlewares');
+const { userAuthMiddleware } = require('../../../middlewares');
 
 //admin product apis
 router.post('/createProduct',productController.createProduct);

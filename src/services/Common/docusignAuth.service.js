@@ -1,6 +1,4 @@
 const docusign = require("docusign-esign");
-const fs = require("fs");
-const path = require("path");
 
 const getDocusignClient = async () => {
   const dsApiClient = new docusign.ApiClient();
@@ -11,8 +9,7 @@ const getDocusignClient = async () => {
   // API server (demo)  ← THIS WAS MISSING
   dsApiClient.setBasePath("https://demo.docusign.net/restapi");
 
-  const privateKeyPath = path.resolve(__dirname, "../../../private.key");
-  const privateKey = fs.readFileSync(privateKeyPath, "utf8");
+  const privateKey = process.env.DOCUSIGN_PRIVATE_KEY?.replace(/\\n/g, "\n");
 
   const results = await dsApiClient.requestJWTUserToken(
     process.env.DOCUSIGN_INTEGRATION_KEY,

@@ -1,6 +1,6 @@
 /** @format */
 
-const httpStatus = require("http-status");
+const { status: httpStatus } = require("http-status");
 const bcrypt = require("bcryptjs");
 const randomize = require("randomatic");
 const moment = require("moment");

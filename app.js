@@ -5,7 +5,7 @@ const helmet = require("helmet");
 const moment = require("moment-timezone");
 const cors = require("cors");
 const compression = require("compression");
-const httpStatus = require("http-status");
+const { status: httpStatus } = require("http-status");
 const cron = require("node-cron");
 const path = require("path");
 const app = express();
@@ -22,13 +22,10 @@ const credentials = require("./src/middlewares/credentials.js");
 const ApiError = require("./src/utils/ApiError.js");
 const upload = require("./src/config/multer.js");
 const errorHandler = require("./src/utils/errorHandler.js");
-const logger = require("./src/config/logger.js");
 require("./src/models");
 const PUBLIC_DIR = path.resolve(__dirname, "./public");
 
-var admin = require("firebase-admin");
-
-var serviceAccount = require("./serviceAccoountKey.json");
+const { initializeApp, cert } = require("firebase-admin/app");
 const {
   autoClockOutEmployees,
   syncClockInData,
@@ -42,8 +39,12 @@ const {
 const { expireQuotesJob } = require("./src/services/Admin/user.service.js");
 const { sendInvoiceCron, generateRecurringInvoicesCron, sendDueBalancesCron } = require("./src/services/Common/invoice.service.js");
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
+initializeApp({
+  credential: cert({
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+  }),
   databaseURL: "https://social-sanitation-default-rtdb.firebaseio.com",
 });
 

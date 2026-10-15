@@ -1,8 +1,7 @@
 /** @format */
 
-const httpStatus = require("http-status");
+const { status: httpStatus } = require("http-status");
 const catchAsync = require("../../utils/catchAsync");
-const ApiError = require("../../utils/ApiError");
 const { serviceEstimateService } = require("../../services");
 const responseWrapper = require("../../config/responseWrapper");
 const fs = require("fs");
@@ -11,16 +10,8 @@ const { ServiceEstimate, ContractAgreement, User } = require("../../models");
 const {
   downloadSignedPDF,
 } = require("../../services/Common/docusignDownload.service");
-const {
-  sendEmailWithAttachment,
-  sendServiceRequestEmailWithPDF,
-  sendSignedServiceRequestEmailWithPDF,
-} = require("../../services/Common/email.service");
+const { sendSignedServiceRequestEmailWithPDF } = require("../../services/Common/email.service");
 const ServiceRequest = require("../../models/serviceRequest.model");
-const {
-  getSigningUrl,
-} = require("../../services/Common/docusignSigning.service");
-const { sendMailViaGraph } = require("../../config/microsoftGraph.helper");
 
 const generateEstimatePDFController = catchAsync(async (req, res) => {
   const response = await serviceEstimateService.generateEstimatePDFService(
@@ -306,63 +297,6 @@ const handleDocusignWebhook = async (req, res) => {
   }
 };
 
-const updatePaymentMethodWithText = async (envelopeId, contractId) => {
-  try {
-    const envelopesApi = new docusign.EnvelopesApi(await getDocusignClient());
-
-    // Get recipient tabs to know which checkbox was selected
-    const tabs = await envelopesApi.listTabs(
-      process.env.DOCUSIGN_ACCOUNT_ID,
-      envelopeId,
-      "1", // client recipientId
-    );
-
-    let selectedMethod = "Not Selected";
-
-    if (tabs.checkboxTabs) {
-      const eft = tabs.checkboxTabs.find(
-        (t) => t.tabLabel === "payment_eft" && t.selected === "true",
-      );
-      const check = tabs.checkboxTabs.find(
-        (t) => t.tabLabel === "payment_check" && t.selected === "true",
-      );
-      const card = tabs.checkboxTabs.find(
-        (t) => t.tabLabel === "payment_card" && t.selected === "true",
-      );
-
-      if (eft) selectedMethod = "☑ EFT";
-      else if (check) selectedMethod = "☑ Check";
-      else if (card) selectedMethod = "☑ Card Payment";
-    }
-
-    // Create Text Tab for final view
-    const paymentText = new docusign.Text();
-    paymentText.documentId = "1";
-    paymentText.recipientId = "2"; // Admin sees this
-    paymentText.tabLabel = "final_payment_method";
-    paymentText.value = selectedMethod;
-    paymentText.anchorString = "/payment_eft/"; // Position near payment section
-    paymentText.anchorXOffset = "80";
-    paymentText.anchorYOffset = "30";
-    paymentText.font = "Arial";
-    paymentText.fontSize = "11";
-    paymentText.bold = "true";
-
-    const tabsApi = new docusign.Tabs();
-    tabsApi.textTabs = [paymentText];
-
-    await envelopesApi.createRecipientTabs(
-      process.env.DOCUSIGN_ACCOUNT_ID,
-      envelopeId,
-      "2", // admin recipient
-      { tabs: tabsApi },
-    );
-
-    console.log("✅ Payment method updated with clean text:", selectedMethod);
-  } catch (error) {
-    console.error("Failed to update payment text tab:", error);
-  }
-};
 
 // scope of work controllers
 

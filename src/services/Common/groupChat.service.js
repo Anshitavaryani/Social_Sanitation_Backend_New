@@ -1,8 +1,8 @@
 /** @format */
 
-const httpStatus = require("http-status");
+const { status: httpStatus } = require("http-status");
 const ApiError = require("../../utils/ApiError");
-const admin = require("firebase-admin");
+const { getDatabase, ServerValue } = require("firebase-admin/database");
 const { User, Profile, Admin } = require("../../models");
 const fs = require("fs");
 const path = require("path");
@@ -63,7 +63,7 @@ const getGroupRef = (groupId) => {
     throw new ApiError(httpStatus.BAD_REQUEST, "Valid groupId is required.");
   }
 
-  return admin.database().ref(`GroupChats/${groupId}`);
+  return getDatabase().ref(`GroupChats/${groupId}`);
 };
 
 const assertTeamCreator = (user) => {
@@ -287,7 +287,7 @@ const sendGroupMessage = async (reqBody, files = {}) => {
       sender,
       sender_name: user.user_profile?.name || user.name || "Unknown",
       message: message?.trim() || "",
-      timestamp: admin.database.ServerValue.TIMESTAMP,
+      timestamp: ServerValue.TIMESTAMP,
     };
 
     if (attachments.length) {
@@ -323,7 +323,7 @@ const getMyGroups = async (reqBody) => {
     const user = getAuthenticatedUser(reqBody);
     const userKey = getParticipantKey(user.id, user.role_id);
 
-    const groupChatsRef = admin.database().ref("GroupChats");
+    const groupChatsRef = getDatabase().ref("GroupChats");
     const snapshot = await groupChatsRef.once("value");
     const allGroups = snapshot.val() || {};
 
@@ -719,8 +719,8 @@ const createTeam = async (reqBody) => {
     participants.set(validated.key, validated);
   }
 
-  const groupRef = admin.database().ref("GroupChats").push();
-  const timestamp = admin.database.ServerValue.TIMESTAMP;
+  const groupRef = getDatabase().ref("GroupChats").push();
+  const timestamp = ServerValue.TIMESTAMP;
 
   const members = {};
 
@@ -758,7 +758,7 @@ const getMyTeams = async (reqBody) => {
     const user = getAuthenticatedUser(reqBody);
     const userKey = getParticipantKey(user.id, user.role_id);
 
-    const groupChatsRef = admin.database().ref("GroupChats");
+    const groupChatsRef = getDatabase().ref("GroupChats");
     const snapshot = await groupChatsRef.once("value");
     const allGroups = snapshot.val() || {};
 

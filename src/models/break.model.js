@@ -2,7 +2,6 @@
 
 const { Sequelize, DataTypes, Model } = require("sequelize");
 const sequelize = require("../config/central.db");
-const { leaveStatusTypes } = require("../config/types");
 
 class Break extends Model {}
 Break.init(

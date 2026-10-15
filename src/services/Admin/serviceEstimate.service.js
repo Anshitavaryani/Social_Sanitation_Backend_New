@@ -1,8 +1,8 @@
 /** @format */
 
-const httpStatus = require("http-status");
+const { status: httpStatus } = require("http-status");
 const path = require("path");
-const { Sequelize, Op } = require("sequelize");
+const { Op } = require("sequelize");
 const fs = require("fs");
 const {
   generateEstimatePDF,
@@ -30,7 +30,6 @@ const {
   createContractEnvelope,
 } = require("../Common/docusignEnvelope.service");
 const { generateContractPaymentLink } = require("../Common/square.service");
-const { sendContractReviewEmail } = require("../Common/email.service");
 
 const RATE_MATRIX = {
   small: {

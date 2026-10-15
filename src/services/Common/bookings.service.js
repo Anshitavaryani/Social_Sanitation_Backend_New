@@ -1,43 +1,15 @@
 /** @format */
 
-const httpStatus = require("http-status");
+const { status: httpStatus } = require("http-status");
 const moment = require("moment");
-const {
-  Booking,
-  Service,
-  Profile,
-  User,
-  UserAttachment,
-  ServiceAttachment,
-  UserAddress,
-  BookingAssignment,
-  UserOAuth,
-  UserToken,
-  Country,
-  State,
-  City,
-  BDMUser,
-  Admin,
-  BookingAttachment,
-  ServiceChecklist,
-  BookingServiceChecklist,
-  ServiceChecklistMapping,
-  Report,
-  Notification,
-  ServiceChecklistHeading,
-  GuestBookingAddress,
-} = require("../../models");
+const { Booking, Service, Profile, User, UserAttachment, ServiceAttachment, UserAddress, BookingAssignment, Country, State, City, BDMUser, Admin, BookingAttachment, ServiceChecklist, BookingServiceChecklist, ServiceChecklistMapping, Notification, ServiceChecklistHeading, GuestBookingAddress } = require("../../models");
 const ApiError = require("../../utils/ApiError");
-const { Sequelize, Op } = require("sequelize");
+const { Op } = require("sequelize");
 const {
   sendPushNotification,
   getUserActiveFCMTokens,
 } = require("./notification.service");
-const {
-  sendEmailToAdmin,
-  sendEmailToUser,
-  sendRejectedBookingEmail,
-} = require("./email.service");
+const { sendEmailToAdmin } = require("./email.service");
 const { notificationTypes } = require("../../config/types");
 const convertToEST = require("../../config/timeManagement");
 
@@ -610,64 +582,7 @@ const updateBookingStatusByEmployee = async (reqBody) => {
   }
 };
 
-const sendStartedNotification = async (user) => {
-  console.log(user, "user");
-  const receiverUniqueFCMTokensArray = await getUserActiveFCMTokens(user);
 
-  let notificationObj = {
-    title: "BOOKING STARTED",
-    body: "Your booking has been started successfully",
-    notification_types: notificationTypes.BOOKING_STARTED,
-  };
-
-  await sendPushNotification(notificationObj, receiverUniqueFCMTokensArray);
-
-  const savenotificationObj = {
-    user_id: user.id,
-    role_id: "6",
-    notification: notificationObj.body,
-    title: notificationObj.title,
-    notification_types: notificationObj.notification_types,
-    is_active: true,
-  };
-  const saveNotificationDoc = await Notification.create(savenotificationObj);
-
-  if (!saveNotificationDoc) {
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      "Error in saving Notifications",
-    );
-  }
-};
-
-const sendSuccessNotification = async (user) => {
-  const receiverUniqueFCMTokensArray = await getUserActiveFCMTokens(user);
-
-  let notificationObj = {
-    title: "BOOKING COMPLETED",
-    body: "Your booking has been Completed successfully",
-    notification_types: notificationTypes.BOOKING_COMPLETED,
-  };
-
-  await sendPushNotification(notificationObj, receiverUniqueFCMTokensArray);
-
-  const savenotificationObj = {
-    user_id: user.id,
-    role_id: "6",
-    title: notificationObj.title,
-    notification: notificationObj.body,
-    notification_types: notificationObj.notification_types,
-    is_active: true,
-  };
-  const saveNotificationDoc = await Notification.create(savenotificationObj);
-
-  if (!saveNotificationDoc) {
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      "Error in saving Notifications",
-    );
-  }
-};
 
 const uploadImages = async (reqBody, files) => {
   const { user } = reqBody;

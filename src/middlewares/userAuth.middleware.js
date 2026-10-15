@@ -1,4 +1,4 @@
-const httpStatus = require('http-status');
+const { status: httpStatus } = require('http-status');
 const jwt = require('jsonwebtoken');
 
 const { User, OTP, UserToken, Profile, Admin } = require('../models');

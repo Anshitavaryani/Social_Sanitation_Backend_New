@@ -1,8 +1,7 @@
 const { calendarService } = require("../../services/Common");
 const responseWrapper = require("../../config/responseWrapper");
 const catchAsync = require('../../utils/catchAsync');
-const httpStatus = require('http-status');
-const { oAuth2Client } = require("../../config/googleCalendar");
+const { status: httpStatus } = require('http-status');
 
 const authorize = catchAsync(async (req, res) => {
   const { user } = req.body;

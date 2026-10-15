@@ -1,9 +1,7 @@
-const httpStatus = require("http-status");
+const { status: httpStatus } = require("http-status");
 const catchAsync = require("../../utils/catchAsync");
-const ApiError = require("../../utils/ApiError");
 const { invoiceService } = require("../../services");
 const responseWrapper = require("../../config/responseWrapper");
-const fs = require("fs");
 
 const createInvoice = catchAsync(async (req, res) => {
   const response = await invoiceService.createInvoice(req.body);

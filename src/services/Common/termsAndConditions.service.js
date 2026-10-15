@@ -1,10 +1,6 @@
-const httpStatus = require("http-status");
+const { status: httpStatus } = require("http-status");
 
-const {
-  ProductAttachment,
-  Product,
-  TermsAndConditions,
-} = require("../../models");
+const { TermsAndConditions } = require("../../models");
 const ApiError = require("../../utils/ApiError");
 
 const createTermsAndConditons = async (reqBody) => {
