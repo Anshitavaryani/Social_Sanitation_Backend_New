@@ -88,7 +88,7 @@ const resumeSigningService = catchAsync(async (req, res) => {
   const bookings = await serviceEstimateService.resumeSigningService(
     req.params.id,
   );
-  return responseWrapper(res, bookings, "");
+  return responseWrapper(res, bookings, "The signing email was sent again.");
 });
 
 const deleteServiceEstimate = catchAsync(async (req, res) => {
@@ -154,7 +154,7 @@ const resumeContractAgreement = catchAsync(async (req, res) => {
   const bookings = await serviceEstimateService.resumeContractAgreement(
     req.params.id,
   );
-  return responseWrapper(res, bookings, "");
+  return responseWrapper(res, bookings, "The signing email was sent again.");
 });
 
 const deleteContractAgreement = catchAsync(async (req, res) => {

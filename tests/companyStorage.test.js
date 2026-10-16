@@ -40,9 +40,9 @@ const estimatePdf = loadFromRoot("src/config/serviceEstimate.js");
 const pdf = loadFromRoot("src/config/puppeteer.js"); // the real templates, before the stand-in below
 
 // The services below run as in production up to DocuSign, the PDF and the emails, which are recorded
-const signingRequests = [];
+const resent = [];
 mockModule("src/services/Common/docusignSigning.service.js", {
-  getSigningUrl: async (request) => signingRequests.push(request) && "https://sign.example/view",
+  resendSigningEmail: async (envelopeId) => resent.push(envelopeId),
 });
 mockModule("src/config/puppeteer.js", { generatePDF: async (form, s, d, c, id) => `/tmp/hiring-${id}.pdf`, generateSpanishPDF: async () => "/tmp/x.pdf" });
 const emailsSent = [];
@@ -80,12 +80,15 @@ test("invoices go out from the assigned admin's address, otherwise the default s
   assert.equal(company.invoiceSenderEmail(null), config.mail.senderEmail);
 });
 
-test("resuming a contract asks DocuSign for the contract's own signer (it asked for a developer's personal Gmail)", async () => {
+test("resuming a signature has DocuSign email the envelope again (the in-app link it asked for never worked)", async () => {
   const service = loadFromRoot("src/services/Admin/serviceEstimate.service.js");
   models.ContractAgreement.findOne = async () => ({ id: 4, docusign_envelope_id: "ENV-1", client_email: "client@example.com", client_name: "Client Co" });
-  const result = await service.resumeContractAgreement(4);
-  assert.equal(result.data.signingUrl, "https://sign.example/view");
-  assert.deepEqual(signingRequests, [{ envelopeId: "ENV-1", signerEmail: "client@example.com", signerName: "Client Co" }]);
+  models.ServiceEstimate.findOne = async () => ({ id: 5, docusign_envelope_id: "ENV-2", client_email: "estimate@example.com" });
+  const contract = await service.resumeContractAgreement(4);
+  const estimate = await service.resumeSigningService(5);
+  assert.deepEqual(resent, ["ENV-1", "ENV-2"]);
+  assert.deepEqual(contract.data, { signingUrl: null, resent: true, sent_to: "client@example.com" });
+  assert.deepEqual(estimate.data, { signingUrl: null, resent: true, sent_to: "estimate@example.com" });
 });
 
 test("hiring form images are stored with file_uri /images (it was /uploads, a link that did not resolve)", async () => {

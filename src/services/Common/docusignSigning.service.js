@@ -1,32 +1,16 @@
 const docusign = require("docusign-esign");
-const { adminPanelUrl } = require("../../config/company");
 const { getDocusignClient } = require("./docusignAuth.service");
 const config = require("../../config/config");
 
-const getSigningUrl = async ({
-  envelopeId,
-  signerEmail,
-  signerName,
-}) => {
-
+// Resuming a signature: DocuSign emails the envelope to its signers again. Every envelope here is
+// signed from that email (none is set up for signing inside the app, which needs a clientUserId per
+// signer), so the old embedded signing link always failed.
+const resendSigningEmail = async (envelopeId) => {
   const dsApiClient = await getDocusignClient();
-  const envelopesApi = new docusign.EnvelopesApi(dsApiClient);
-
-  const viewRequest = new docusign.RecipientViewRequest();
-
-  viewRequest.returnUrl = adminPanelUrl("docusign-success");
-  viewRequest.authenticationMethod = "none";
-  viewRequest.email = signerEmail;
-  viewRequest.userName = signerName;
-  viewRequest.clientUserId = "admin_signer"; // 🔥 MUST MATCH
-
-  const results = await envelopesApi.createRecipientView(
-    config.docusign.accountId,
-    envelopeId,
-    { recipientViewRequest: viewRequest }
-  );
-
-  return results.url;
+  await new docusign.EnvelopesApi(dsApiClient).update(config.docusign.accountId, envelopeId, {
+    resendEnvelope: "true",
+    envelope: {},
+  });
 };
 
-module.exports = { getSigningUrl };
+module.exports = { resendSigningEmail };

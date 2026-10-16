@@ -30,7 +30,7 @@ const {
 } = require("../../models");
 const ApiError = require("../../utils/ApiError");
 const { formatUsd } = require("../../utils/money");
-const { getSigningUrl } = require("../Common/docusignSigning.service");
+const { resendSigningEmail } = require("../Common/docusignSigning.service");
 const {
   createEnvelope,
   createContractEnvelope,
@@ -779,19 +779,14 @@ const resumeSigningService = async (estimateId) => {
       );
     }
 
-    const signerEmail = estimate.client_email;
-    const signerName = STAFF.ESTIMATE_CONTACT.NAME;
-
-    const signingUrl = await getSigningUrl({
-      envelopeId: estimate.docusign_envelope_id,
-      signerEmail,
-      signerName,
-    });
+    await resendSigningEmail(estimate.docusign_envelope_id);
 
     return {
       success: true,
       data: {
-        signingUrl,
+        signingUrl: null, // signing happens from the email DocuSign just sent again
+        resent: true,
+        sent_to: estimate.client_email,
       },
     };
   } catch (error) {
@@ -1133,20 +1128,14 @@ const resumeContractAgreement = async (estimateId) => {
       );
     }
 
-    // the contract envelope's signer is the client (createContractEnvelope)
-    const signerEmail = estimate.client_email;
-    const signerName = estimate.client_name || "Client";
-
-    const signingUrl = await getSigningUrl({
-      envelopeId: estimate.docusign_envelope_id,
-      signerEmail,
-      signerName,
-    });
+    await resendSigningEmail(estimate.docusign_envelope_id);
 
     return {
       success: true,
       data: {
-        signingUrl,
+        signingUrl: null, // signing happens from the email DocuSign just sent again
+        resent: true,
+        sent_to: estimate.client_email,
       },
     };
   } catch (error) {
