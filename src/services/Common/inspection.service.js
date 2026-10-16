@@ -499,11 +499,7 @@ const createInspection = async (body) => {
       await transaction.rollback();
     }
 
-    if (error instanceof ApiError) {
-      throw error;
-    }
-
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -633,10 +629,7 @@ const getMyInspectionsByBDM = async (body) => {
       data: formattedInspections,
     };
   } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -849,11 +842,7 @@ const deleteInspection = async (body) => {
       await transaction.rollback();
     }
 
-    if (error instanceof ApiError) {
-      throw error;
-    }
-
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -906,11 +895,7 @@ const getMyAssignedInspections = async (body) => {
       data: inspections,
     };
   } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
-
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -1025,11 +1010,7 @@ const getInspectionById = async (inspectionId) => {
       data,
     };
   } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
-
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -1126,10 +1107,7 @@ const updateInspectionItem = async (itemId, body) => {
       data: updatedItem,
     };
   } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -1251,10 +1229,7 @@ const submitInspection = async (body) => {
     if (!transaction.finished) {
       await transaction.rollback();
     }
-    if (error instanceof ApiError) {
-      throw error;
-    }
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -1452,11 +1427,7 @@ const reviewInspectionItem = async (body) => {
       data: updatedItem,
     };
   } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
-
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -1693,11 +1664,7 @@ const reviewInspectionSection = async (body) => {
       },
     };
   } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
-
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -1789,11 +1756,7 @@ const uploadInspectionItemImage = async (body, files, itemId) => {
       data: images,
     };
   } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
-
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -1946,11 +1909,7 @@ const uploadBDMInspectionItemImage = async (body, files, itemId) => {
       data: images,
     };
   } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
-
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -2147,11 +2106,7 @@ const completeInspection = async (body) => {
       await transaction.rollback();
     }
 
-    if (error instanceof ApiError) {
-      throw error;
-    }
-
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -2285,10 +2240,7 @@ const sendInspectionToClient = async (body) => {
       },
     };
   } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -2383,10 +2335,7 @@ const deleteInspectionItemImage = async (body, imageId) => {
       data: { id: image.id },
     };
   } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -2434,11 +2383,7 @@ const getInspectionsByEmployeeId = async (employeeId) => {
       data: inspections,
     };
   } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
-
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -2539,11 +2484,7 @@ const reopenInspection = async (body) => {
       await transaction.rollback();
     }
 
-    if (error instanceof ApiError) {
-      throw error;
-    }
-
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 

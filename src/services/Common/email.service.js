@@ -604,7 +604,7 @@ const sendFormEmailWithPDF = async (toEmail, pdfPath) => {
     return true;
   } catch (error) {
     logger.error("Error sending email with PDF:", error);
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -632,7 +632,7 @@ const sendFormToAdminWithPDF = async (userEmail, pdfPath) => {
     return true;
   } catch (error) {
     logger.error("Error sending admin email with PDF:", error);
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 

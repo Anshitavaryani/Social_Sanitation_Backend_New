@@ -67,7 +67,7 @@ const getAllBDMs = async () => {
 
 		return userDoc;
 	} catch (error) {
-		throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+		throw ApiError.orInternal(error);
 	}
 };
 
@@ -145,7 +145,7 @@ const getAllUsers = async () => {
 
 		return result;
 	} catch (error) {
-		throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+		throw ApiError.orInternal(error);
 	}
 };
 
@@ -181,7 +181,7 @@ const getAllUsersByBDMId = async (id) => {
 
 		return filteredUsers;
 	} catch (error) {
-		throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+		throw ApiError.orInternal(error);
 	}
 };
 
@@ -202,7 +202,7 @@ const getBDMByUserId = async (user_id) => {
 
 		return record.bdm;
 	} catch (error) {
-		throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+		throw ApiError.orInternal(error);
 	}
 };
 
@@ -253,7 +253,7 @@ const getAllBookingsByBDMId = async (reqBody) => {
 			data: bookings,
 		};
 	} catch (error) {
-		throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+		throw ApiError.orInternal(error);
 	}
 };
 

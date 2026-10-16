@@ -106,7 +106,7 @@ const getAllUsers = async (reqBody) => {
 
     return userDoc;
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -190,7 +190,7 @@ const getAllDrivers = async (reqBody) => {
 
     return userDoc;
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -939,7 +939,7 @@ const updateEmployeeType = async (body) => {
 
     return user;
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -2705,7 +2705,7 @@ const getAllUserNameByAdmin = async (id) => {
 
     return userDocs;
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -2753,7 +2753,7 @@ const getAllSupervisorByAdmin = async (id) => {
 
     return result;
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -2801,7 +2801,7 @@ const getAllQualityInspectorByAdmin = async (id) => {
 
     return result;
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -2849,7 +2849,7 @@ const getAllCleanerByAdmin = async (id) => {
 
     return result;
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -2887,7 +2887,7 @@ const getAllTransactions = async () => {
 
     return userDocs;
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -3219,7 +3219,7 @@ const getLatestDraftQuote = async (userId) => {
 
     return draft;
   } catch (err) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, err.message);
+    throw ApiError.orInternal(err);
   }
 };
 
@@ -3236,7 +3236,7 @@ const getAllDraftQuotesByUser = async (userId) => {
 
     return drafts;
   } catch (err) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, err.message);
+    throw ApiError.orInternal(err);
   }
 };
 
@@ -3515,7 +3515,7 @@ const getNextQuoteRef = async (ref_type) => {
       sequence: nextNumber,
     };
   } catch (err) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, err.message);
+    throw ApiError.orInternal(err);
   }
 };
 
@@ -3541,7 +3541,7 @@ const getServiceQuotesByUserId = async (id) => {
     return quotes;
   } catch (error) {
     logger.error("getServiceQuotesByUser error:", error);
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -3568,7 +3568,7 @@ const getServiceQuoteById = async (id) => {
     return quote;
   } catch (error) {
     logger.error("getServiceQuoteById:", error);
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -3755,7 +3755,7 @@ Ref #: ${ref_no}`,
     };
   } catch (error) {
     logger.error("editServiceQuote failed:", error);
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -3887,7 +3887,7 @@ const submitServiceRequest = async (reqBody) => {
     };
   } catch (error) {
     logger.error("submitServiceRequest failed:", error);
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -3913,7 +3913,7 @@ const getServiceRequestById = async (id) => {
 
     return request;
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -4055,7 +4055,7 @@ const editServiceRequest = async (reqBody) => {
     };
   } catch (error) {
     logger.error("editServiceRequest failed:", error);
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -4089,7 +4089,7 @@ const getNextServiceRequestRef = async (ref_type) => {
       sequence: nextNumber,
     };
   } catch (err) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, err.message);
+    throw ApiError.orInternal(err);
   }
 };
 
@@ -4142,7 +4142,7 @@ const getAllServiceRequests = async ({ month } = {}) => {
     return invoices;
   } catch (error) {
     logger.error("getAllInvoices error:", error);
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -4168,7 +4168,7 @@ const getServiceRequestsByUserId = async (user_id) => {
       data: requests,
     };
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -4236,7 +4236,7 @@ const toggleLogoutImageRequired = async (reqBody, res) => {
     });
   } catch (error) {
     logger.error("Toggle Error:", error);
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -4279,7 +4279,7 @@ const sendReviewEmail = async (reqBody) => {
     );
   } catch (error) {
     logger.error("sendReviewEmail error:", error);
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -4333,7 +4333,7 @@ const getReviewLink = async () => {
     return quotes;
   } catch (error) {
     logger.error("getServiceQuotesByUser error:", error);
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -4609,7 +4609,7 @@ const getAllUserName = async () => {
       };
     });
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -4650,7 +4650,7 @@ const getUserAddressesByUserId = async (userId) => {
       country: a.user_country?.name || null,
     }));
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -4823,7 +4823,7 @@ const getLiveWorkingEmployees = async (reqBody) => {
     };
   } catch (error) {
     logger.error("Error in getLiveWorkingEmployees:", error);
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -4908,7 +4908,7 @@ const getLateAbsentEmployees = async (reqBody) => {
     };
   } catch (error) {
     logger.error("Error:", error);
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -5084,7 +5084,7 @@ const getUpcomingScheduledBookings = async () => {
   } catch (error) {
     logger.error("Error in getUpcomingScheduledBookings:", error);
 
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 

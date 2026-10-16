@@ -496,7 +496,7 @@ const getInvoicesByUserId = async (user_id) => {
       data: invoices,
     };
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -1267,7 +1267,7 @@ const getNextInvoiceRef = async (ref_type) => {
       sequence: nextNumber,
     };
   } catch (err) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, err.message);
+    throw ApiError.orInternal(err);
   }
 };
 
@@ -1352,7 +1352,7 @@ const getAllInvoices = async ({ month } = {}) => {
   } catch (error) {
     logger.error("getAllInvoices error:", error);
 
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -2886,7 +2886,7 @@ const getBusinessAnalytics = async ({ month }) => {
   } catch (error) {
     logger.error("getBusinessAnalytics failed:", error);
 
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -2934,7 +2934,7 @@ const getUpcomingInvoices = async () => {
   } catch (error) {
     logger.error("getUpcomingInvoices error:", error);
 
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 

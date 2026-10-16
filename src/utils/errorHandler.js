@@ -19,7 +19,6 @@ const errorHandler = (err, req, res, next) => {
                 data: '',
             }
         );
-        // logged after responding: the logger's error format rewrites err.message to the stack
         if (statusCode >= 500) {
             logger.error(err);
         }

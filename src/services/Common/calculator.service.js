@@ -217,7 +217,7 @@ const createCostCalculator = async (reqBody) => {
   } catch (error) {
     logger.error("createCostCalculator error", error);
 
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -243,7 +243,7 @@ const getCostCalculationById = async (id) => {
   } catch (error) {
     logger.error("getCostCalculationById error", error);
 
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -288,7 +288,7 @@ const getAllCostCalculations = async (query) => {
   } catch (error) {
     logger.error("getAllCostCalculations error", error);
 
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -306,7 +306,7 @@ const deleteCostCalculation = async (id) => {
   } catch (error) {
     logger.error("deleteCostCalculation error", error);
 
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -406,7 +406,7 @@ const createBidMaximizer = async (reqBody) => {
   } catch (error) {
     logger.error("createBidMaximizer error", error);
 
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -428,7 +428,7 @@ const getCostCalculationSettings = async (query) => {
       ],
     });
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -448,7 +448,7 @@ const updateCostCalculationSetting = async (reqBody) => {
 
     return setting;
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 

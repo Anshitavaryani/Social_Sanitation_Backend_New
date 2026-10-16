@@ -938,7 +938,7 @@ const updateBookingStatus = async (reqBody) => {
     }
   } catch (error) {
     logger.error("Exception caught in updateBookingStatus:", error);
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 

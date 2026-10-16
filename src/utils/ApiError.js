@@ -16,6 +16,12 @@ class ApiError extends Error {
     static from(error) {
         return new ApiError(error.statusCode || httpStatus.INTERNAL_SERVER_ERROR, error.message);
     }
+
+    // What a catch block rethrows when the error may come from another service: an ApiError this
+    // code threw keeps its status (404, 400...); anything else is a 500 with its message
+    static orInternal(error) {
+        return error instanceof ApiError ? error : new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    }
 }
 
 module.exports = ApiError;

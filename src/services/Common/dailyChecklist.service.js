@@ -474,7 +474,7 @@ const getJanitors = async (reqBody) => {
 
 		return userDoc;
 	} catch (error) {
-		throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+		throw ApiError.orInternal(error);
 	}
 };
 

@@ -191,3 +191,43 @@ test("catch blocks rethrow with ApiError.from: the caught error's status, else 5
   walk(path.join(ROOT, "src"));
   assert.deepEqual(handWritten, [], "use ApiError.from(error)");
 });
+
+test("catch blocks that may see other services' errors keep their own 404s and 400s (they all became 500)", async () => {
+  const ApiError = loadFromRoot("src/utils/ApiError.js");
+  const own = new ApiError(404, "Contract Agreement not found");
+  assert.equal(ApiError.orInternal(own), own);
+  const other = Object.assign(new Error("Request failed with status code 401"), { statusCode: 401 });
+  assert.deepEqual([ApiError.orInternal(other).statusCode, ApiError.orInternal(other).message], [500, other.message], "another service's status stays out");
+
+  const service = loadFromRoot("src/services/Admin/serviceEstimate.service.js");
+  models.ContractAgreement.findOne = async () => null;
+  await assert.rejects(service.deleteContractAgreement(9), (err) => err.statusCode === 404 && err.message === "Contract Agreement not found");
+
+  // no catch block rebuilds a 500 by hand any more
+  const is500 = (n) => (n.type === "MemberExpression" && n.property.name === "INTERNAL_SERVER_ERROR") || (n.type === "Literal" && n.value === 500);
+  const left = [];
+  const visit = (node, file) => {
+    if (!node || typeof node.type !== "string") return;
+    if (node.type === "CatchClause" && node.param?.type === "Identifier") {
+      for (const statement of node.body.body) {
+        const created = statement.type === "ThrowStatement" ? statement.argument : null;
+        if (created?.type === "NewExpression" && created.callee.name === "ApiError" && is500(created.arguments[0]) && created.arguments[1]?.object?.name === node.param.name && created.arguments[1]?.property?.name === "message") {
+          left.push(`${path.relative(ROOT, file)}:${statement.loc.start.line}`);
+        }
+      }
+    }
+    for (const [key, child] of Object.entries(node)) {
+      if (key === "loc") continue;
+      if (Array.isArray(child)) child.forEach((item) => visit(item, file));
+      else if (child && typeof child.type === "string") visit(child, file);
+    }
+  };
+  const walk = (dir) =>
+    fs.readdirSync(dir, { withFileTypes: true }).forEach((entry) => {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) return walk(full);
+      if (entry.name.endsWith(".js")) visit(espree.parse(fs.readFileSync(full, "utf8"), { ecmaVersion: "latest", loc: true }), full);
+    });
+  walk(path.join(ROOT, "src"));
+  assert.deepEqual(left, [], "use ApiError.orInternal(error)");
+});

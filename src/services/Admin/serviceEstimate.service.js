@@ -350,7 +350,7 @@ const generateEstimatePDFService = async (reqBody) => {
   } catch (error) {
     logger.error("generateEstimatePDFService failed:", error);
 
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -418,7 +418,7 @@ const downloadScopeOfWorkPdfService = async (userId) => {
     return { fileUrl, fileName };
   } catch (error) {
     logger.error("downloadScopeOfWorkPdfService failed:", error);
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -437,7 +437,7 @@ const getServiceEstimateById = async (id) => {
 
     return estimate;
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -456,7 +456,7 @@ const getAllServiceEstimate = async () => {
 
     return userDoc;
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -475,7 +475,7 @@ const getServiceEstimateByUserId = async (user_id) => {
       data: estimates,
     };
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -735,7 +735,7 @@ const updateServiceEstimate = async (reqBody) => {
   } catch (error) {
     logger.error("updateServiceEstimate failed:", error);
 
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -794,7 +794,7 @@ const resumeSigningService = async (estimateId) => {
       },
     };
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -903,7 +903,7 @@ const generateContractAgreementService = async (reqBody) => {
       },
     };
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -922,7 +922,7 @@ const getAllContractAgreement = async () => {
 
     return userDoc;
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -1065,7 +1065,7 @@ const updateContractAgreement = async (reqBody) => {
     };
   } catch (error) {
     logger.error("updateContractAgreement failed:", error);
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -1084,7 +1084,7 @@ const getContractAgreementByUserId = async (user_id) => {
       data: contracts,
     };
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -1149,7 +1149,7 @@ const resumeContractAgreement = async (estimateId) => {
       },
     };
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -1189,7 +1189,7 @@ const createScopeSection = async (reqBody) => {
 
     return { success: true, data: section };
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -1204,7 +1204,7 @@ const updateScopeSection = async (id, reqBody) => {
 
     return { success: true, data: section };
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -1243,11 +1243,7 @@ const deleteScopeSection = async (id) => {
 
     return { success: true };
   } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
-
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -1290,7 +1286,7 @@ const createScopeItem = async (reqBody) => {
 
     return { success: true, data: item };
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -1305,7 +1301,7 @@ const updateScopeItem = async (id, reqBody) => {
 
     return { success: true, data: item };
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -1337,11 +1333,7 @@ const deleteScopeItem = async (id) => {
 
     return { success: true };
   } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
-
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -1377,9 +1369,7 @@ const getScope = async (client_type = "commercial") => {
 
     return { success: true, data };
   } catch (error) {
-    if (error instanceof ApiError) throw error;
-
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -1780,14 +1770,7 @@ const getUserScope = async (user_id) => {
       data: finalData,
     };
   } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
-
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -1976,7 +1959,7 @@ const updateUserScopeSection = async (id, reqBody) => {
       data: section,
     };
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -2013,7 +1996,7 @@ const createUserScopeItem = async (reqBody) => {
       data: item,
     };
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -2032,7 +2015,7 @@ const updateUserScopeItem = async (id, reqBody) => {
       data: item,
     };
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -2052,7 +2035,7 @@ const deleteUserScopeItem = async (id) => {
       success: true,
     };
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -2081,7 +2064,7 @@ const createUserScopeSection = async (reqBody) => {
       data: section,
     };
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -2112,7 +2095,7 @@ const deleteUserScopeSection = async (id) => {
       success: true,
     };
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -2131,7 +2114,7 @@ const reorderUserScopeSections = async (reqBody) => {
 
     return { success: true };
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -2150,7 +2133,7 @@ const reorderUserScopeItems = async (reqBody) => {
 
     return { success: true };
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -2182,7 +2165,7 @@ const getEstimateScope = async (estimate_id) => {
       data: scope,
     };
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -2235,7 +2218,7 @@ const createEstimateSection = async (reqBody, estimate_id) => {
       data: newSection,
     };
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -2287,7 +2270,7 @@ const updateEstimateSection = async (id, reqBody) => {
       data: section,
     };
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -2332,7 +2315,7 @@ const deleteEstimateSection = async (id, reqBody) => {
       success: true,
     };
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -2402,7 +2385,7 @@ const createEstimateItem = async (reqBody, estimate_id) => {
       data: newItem,
     };
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -2474,7 +2457,7 @@ const updateEstimateItem = async (id, reqBody) => {
       data: updatedItem,
     };
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -2531,7 +2514,7 @@ const deleteEstimateItem = async (id, reqBody) => {
       success: true,
     };
   } catch (error) {
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
+    throw ApiError.orInternal(error);
   }
 };
 
