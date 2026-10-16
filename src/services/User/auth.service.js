@@ -435,41 +435,6 @@ const saveLogoutTiming = async (tokenDoc, timezone) => {
 	}
 };
 
-// ***********************************GUEST APIS**********************************
-
-const guestLogin = async (headers) => {
-	try {
-		// Generate a unique identifier for the guest user
-		const guestUserId = generateGuestUserId();
-
-		// Create a user entry for the guest in the user table
-		const userObj = {
-			guest_id: guestUserId,
-			role_id: headers.role_id,
-		};
-		const guestUser = await User.create(userObj);
-
-		// Generate an authentication token for the guest user
-		const token = await generateAuthTokens(guestUser);
-
-		return {
-			guest_id: guestUserId,
-			role_id: headers.role_id,
-			tokens: token,
-		};
-	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
-	}
-};
-
-// Function to generate a unique identifier for the guest user
-function generateGuestUserId() {
-	return "Guest" + Math.floor(10000 + Math.random() * 90000);
-}
-
 module.exports = {
 	register,
 	login,
@@ -478,5 +443,4 @@ module.exports = {
 	verifyOTP,
 	forgotPassword,
 	logout,
-	guestLogin,
 };

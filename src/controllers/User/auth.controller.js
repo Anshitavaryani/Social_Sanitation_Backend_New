@@ -67,11 +67,6 @@ const logout = catchAsync(async (req, res) => {
     return responseWrapper(res, response, 'Successfully Logged out.');
 });
 
-const guestLogin = catchAsync(async (req, res) => {
-    const response = await userAuthService.guestLogin(req.headers);
-    return responseWrapper(res, response, 'Successfully Logged in as Guest.');
-});
-
 
 module.exports = {
     register,
@@ -80,6 +75,5 @@ module.exports = {
     sendOTP,
     verifyOTP,
     forgotPassword,
-    logout,
-    guestLogin
+    logout
 };

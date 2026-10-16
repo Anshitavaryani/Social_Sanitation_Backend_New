@@ -14,7 +14,6 @@ router.post('/login', publicRoute, [userAuthMiddleware.validateSignInReqBody],us
 router.post('/reset-password', [ userAuthMiddleware.verifyAuthJWTToken], userAuthController.resetPassword);
 router.post('/forgot-password', publicRoute,[userAuthMiddleware.validateForgetPassordToken], userAuthController.forgotPassword);
 router.get('/logout', [userAuthMiddleware.verifyAuthJWTToken], userAuthController.logout);
-router.post('/guestLogin', publicRoute, userAuthController.guestLogin);
 
 
 module.exports = router;

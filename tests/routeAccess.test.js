@@ -83,7 +83,7 @@ const concrete = (routePath) => routePath.replace(/:\w+/g, "1");
 const isAuthError = (status) => status === 401 || status === 403;
 
 test("every route declares its access level, and new levels come first", () => {
-  assert.ok(routes.length >= 380, `found ${routes.length} routes`);
+  assert.ok(routes.length >= 379, `found ${routes.length} routes`);
   const undeclared = routes.filter((r) => r.level === "NONE").map((r) => `${r.method} ${r.path} (${r.file})`);
   assert.deepEqual(undeclared, [], "routes without an access level");
   const newMarkersNotFirst = routes
@@ -94,7 +94,7 @@ test("every route declares its access level, and new levels come first", () => {
 
 test("the access matrix has the expected shape", () => {
   const counts = routes.reduce((acc, r) => ({ ...acc, [r.level]: (acc[r.level] || 0) + 1 }), {});
-  assert.deepEqual(counts, { PUBLIC: 42, AUTH: 34, ADMIN: 247, USER: 57 });
+  assert.deepEqual(counts, { PUBLIC: 41, AUTH: 34, ADMIN: 247, USER: 57 });
   const levelOf = (method, p) => routes.find((r) => r.method === method && r.path === p)?.level;
   // the routes the audit called out
   for (const [method, p] of [
@@ -239,3 +239,31 @@ test("the log routes are admin-only", async () => {
   assert.equal((await call("GET", "/api/v1/logs", { token: adminToken() })).status, 200);
 });
 
+test("every admin role can read the admin content lists (they used to let through only the role names Admin and Admin Level One)", async () => {
+  const { ROLE_NAMES } = loadFromRoot("src/config/roles.js");
+  const adminRoles = [1, 2, 3, 5];
+  activeAdmins = new Map(adminRoles.map((id) => [id, { id, role_id: id, is_active: true }]));
+  const { findOne, findByPk } = models.Role;
+  models.Role.findByPk = models.Role.findOne = async (id) => ({ id, name: ROLE_NAMES[typeof id === "object" ? id.where.id : id] });
+  try {
+    for (const roleId of adminRoles) {
+      for (const path of [
+        "/api/v1/content/getAllAboutUsByAdmin",
+        "/api/v1/content/getAllTermsAndConditonsByAdmin",
+        "/api/v1/content/getAllBannerImgaeByAdmin",
+        "/api/v1/contactUs/getAllContactUs",
+      ]) {
+        const res = await call("GET", path, { token: adminToken({ id: roleId, role_id: roleId }) });
+        assert.equal(res.status, 200, `role ${roleId}: ${path}`);
+      }
+    }
+  } finally {
+    Object.assign(models.Role, { findOne, findByPk });
+    activeAdmins = new Map([[1, { id: 1, role_id: 1, is_active: true }]]);
+  }
+});
+
+test("guest login is gone: it handed anyone an app token, with the role taken from a request header", async () => {
+  const res = await call("POST", "/api/v1/user/auth/guestLogin", { headers: { role_id: "7" } });
+  assert.equal(res.status, 404);
+});

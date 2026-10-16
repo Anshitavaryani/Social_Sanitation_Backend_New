@@ -32,21 +32,6 @@ const paymentStatusTypes = {
   REFUNDED: "REFUNDED",
 };
 
-const rolesTypes = {
-  ADM: "Admin",
-  ADM_LEVEL_3: "Admin Level Three",
-  ADM_LEVEL_2: "Admin Level Two",
-  ADM_LEVEL_1: "Admin Level One",
-  BDM: "Business Development Manager",
-  USER: "User",
-  SUPERVISOR: "Supervisor",
-  QUALITY_INSPECTOR: "Quality Inspector",
-  CLEANER: "Cleaner",
-  SALES_EXECUTIVE:"Sales executive",
-  JANITOR:"Janitor",
-  HOUSEKEEPPING:"Housekeeping",
-};
-
 // bookings.booking_status. DELETED and RESCHEDULED are not in the column's ENUM, so the list
 // filters that include them never match a row (audit doc).
 const bookingTypes = {
@@ -271,7 +256,6 @@ module.exports = {
   paymentModeTypes,
   otpTypes,
   paymentStatusTypes,
-  rolesTypes,
   bookingTypes,
   bookingListFilterTypes,
   invoicePaymentStatusTypes,
