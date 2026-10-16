@@ -51,10 +51,7 @@ const envSchema = Joi.object({
     .default(1)
     .description("Days an admin password-reset token is valid"),
 
-  // Roles and the first super admin (npm run auth)
-  SUP_ADM_ROLE_ID: optional(Joi.string()).description("Role id of super admins"),
-  ADM_ROLE_ID: optional(Joi.string()).description("Role id of admins"),
-  USR_ROLE_ID: optional(Joi.string()).description("Role id used when an app request sends none"),
+  // The first super admin (npm run auth); role ids live in src/config/roles.js
   ADM_DEPT_ID: optional(Joi.string()).description("Department of the first super admin"),
   SUPER_ADMIN_NAME: optional(Joi.string()).description("Name of the first super admin"),
   SUPER_ADMIN_EMAIL: optional(Joi.string()).description("Email of the first super admin"),

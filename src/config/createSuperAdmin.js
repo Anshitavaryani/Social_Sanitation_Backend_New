@@ -1,12 +1,13 @@
 const { adminAuthService } = require('../services/Admin');
 const config = require('../config/config');
+const { ROLE } = require("./roles");
 
 async function createSuperAdmin(){
     const adminObj = {
         name : config.SUPER_ADMIN_NAME,
         email : config.SUPER_ADMIN_EMAIL,
         password : config.SUPER_ADMIN_PASSWORD,
-        role_id : config.SUP_ADM_ROLE_ID,
+        role_id : ROLE.SUPER_ADMIN,
         department_id : config.ADM_DEPT_ID
     };
     try{

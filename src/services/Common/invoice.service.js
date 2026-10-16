@@ -31,6 +31,7 @@ const { generateInvoicePDF } = require("../../config/puppeteer");
 const { sendInvoiceEmailWithPDF } = require("./email.service");
 const ApiError = require("../../utils/ApiError");
 const config = require("../../config/config");
+const { ROLE } = require("../../config/roles");
 const { generateInvoicePaymentLink, deleteSquarePaymentLink } = require("./square.service");
 const sequelize = require("../../config/central.db");
 const { paymentStatusTypes } = require("../../config/types");
@@ -2310,7 +2311,7 @@ const getMonthlyAllInvoicesSummary = async ({ month }) => {
           as: "invoices_user",
           attributes: ["id", "email"],
           where: {
-            role_id: "6",
+            role_id: ROLE.CLIENT,
             is_active: true,
           },
           include: [

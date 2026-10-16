@@ -2,6 +2,7 @@
 
 const { status: httpStatus } = require("http-status");
 const ApiError = require("../../utils/ApiError");
+const { ROLE, EMPLOYEE_ROLE_IDS } = require("../../config/roles");
 const { getDatabase, ServerValue } = require("firebase-admin/database");
 const { sendPushNotification, getUserActiveFCMTokens } = require("./notification.service");
 const { User, Admin, Profile, UserAttachment, BDMUser } = require("../../models");
@@ -20,7 +21,7 @@ const sendMessage = async (body, files, headers) => {
 
 		let chatType;
 		if (user_type === "USER") {
-			chatType = user.role_id === 6 ? "USER_ADMIN_CHAT" : "EMPLOYEE_ADMIN_CHAT";
+			chatType = user.role_id === ROLE.CLIENT ? "USER_ADMIN_CHAT" : "EMPLOYEE_ADMIN_CHAT";
 		} else {
 			const receiverDetails = await User.findOne({
 				where: { id: receiverUserId, is_active: true },
@@ -29,7 +30,7 @@ const sendMessage = async (body, files, headers) => {
 				throw new ApiError(httpStatus.NOT_FOUND, "Receiver not found");
 			}
 			chatType =
-				receiverDetails.role_id === 6
+				receiverDetails.role_id === ROLE.CLIENT
 					? "USER_ADMIN_CHAT"
 					: "EMPLOYEE_ADMIN_CHAT";
 		}
@@ -112,7 +113,7 @@ const getUserMessages = async (body) => {
 		const { user, userId } = body;
 		const receiverUser = await User.findOne({ where: { id: userId } });
 		const chatType =
-			receiverUser.role_id === 6 ? "USER_ADMIN_CHAT" : "EMPLOYEE_ADMIN_CHAT";
+			receiverUser.role_id === ROLE.CLIENT ? "USER_ADMIN_CHAT" : "EMPLOYEE_ADMIN_CHAT";
 
 		const fixedPageSize = 10; // Set your desired page size
 		const fixedPage = 1; // Set your desired page number
@@ -173,7 +174,7 @@ const markUserMessagesAsRead = async (body) => {
 
 		// Determine chat type based on receiver's role
 		const chatType =
-			receiverDoc.role_id === 6 ? "USER_ADMIN_CHAT" : "EMPLOYEE_ADMIN_CHAT";
+			receiverDoc.role_id === ROLE.CLIENT ? "USER_ADMIN_CHAT" : "EMPLOYEE_ADMIN_CHAT";
 		console.log("chatType", chatType);
 
 		// Update the messages to mark them as read
@@ -214,10 +215,10 @@ const getChatList = async (body) => {
 		const { user } = body;
 
 		let chatType, userType;
-		if (user.role_id === 6) {
+		if (user.role_id === ROLE.CLIENT) {
 			chatType = "USER_ADMIN_CHAT";
 			userType = "USER";
-		} else if ([7, 8, 9].includes(user.role_id)) {
+		} else if (EMPLOYEE_ROLE_IDS.includes(user.role_id)) {
 			chatType = "EMPLOYEE_ADMIN_CHAT";
 			userType = "USER";
 		} else {
@@ -303,7 +304,7 @@ const getAdminMessages = async (body) => {
 
 		// Determine the chat type based on the user's role_id
 		const chatType =
-			user.role_id === 6 ? "USER_ADMIN_CHAT" : "EMPLOYEE_ADMIN_CHAT";
+			user.role_id === ROLE.CLIENT ? "USER_ADMIN_CHAT" : "EMPLOYEE_ADMIN_CHAT";
 
 		const adminMessagesSnapshot = await getDatabase()
 			.ref(`${chatType}/messages/ADMIN_${receiverUserId}/USER_${user.id}`)
@@ -483,9 +484,9 @@ const getLastMessage = async (body, params) => {
 		}
 
 		let chatType;
-		if (user.role_id === 6) {
+		if (user.role_id === ROLE.CLIENT) {
 			chatType = "USER_ADMIN_CHAT";
-		} else if (user.role_id === 7) {
+		} else if (user.role_id === ROLE.SUPERVISOR) {
 			chatType = "EMPLOYEE_ADMIN_CHAT";
 		} else {
 			throw new ApiError(httpStatus.UNAUTHORIZED, "Unauthorized access.");
@@ -528,7 +529,7 @@ const markAdminMessagesAsRead = async (body, param) => {
 
 		// Determine chat type based on receiver's role
 		const chatType =
-			receiverDoc.role_id === 6 ? "USER_ADMIN_CHAT" : "EMPLOYEE_ADMIN_CHAT";
+			receiverDoc.role_id === ROLE.CLIENT ? "USER_ADMIN_CHAT" : "EMPLOYEE_ADMIN_CHAT";
 
 		// Update the messages to mark them as read
 		await markMessagesAsRead(user.id, receiverUserId, chatType);

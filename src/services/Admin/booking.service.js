@@ -25,6 +25,7 @@ const { randomUUID: uuidv4 } = require("crypto");
 
 const { Booking, Service, Profile, User, UserAttachment, ServiceAttachment, UserAddress, BookingAssignment, Country, State, City, BookingAttachment, BDMUser, Admin, Attendance, GuestBookingAddress, Break, AttendancePayroll } = require("../../models");
 const ApiError = require("../../utils/ApiError");
+const { ROLE, EMPLOYEE_ROLE_IDS } = require("../../config/roles");
 const { Sequelize, Op } = require("sequelize");
 const config = require("../../config/config");
 const { sendEmailToAdmin, sendClockOutDistanceEmail, sendGroupedAttendanceEmail, sendTwoWeekScheduleEmail } = require("../Common/email.service");
@@ -759,20 +760,20 @@ const updateBookingStatus = async (reqBody) => {
       if (Array.isArray(cleaners) && cleaners.length > 0) {
         console.log("🧼 Cleaners:", cleaners);
         cleaners.forEach((id) =>
-          assignments.push({ booking_id, employee_id: id, role_id: 9 }),
+          assignments.push({ booking_id, employee_id: id, role_id: ROLE.CLEANER }),
         );
       }
       if (Array.isArray(supervisors) && supervisors.length > 0) {
         console.log("👷 Supervisors:", supervisors);
         supervisors.forEach((id) =>
-          assignments.push({ booking_id, employee_id: id, role_id: 7 }),
+          assignments.push({ booking_id, employee_id: id, role_id: ROLE.SUPERVISOR }),
         );
       }
       if (Array.isArray(quality_inspectors) && quality_inspectors.length > 0) {
         console.log("🔍 Quality Inspectors:", quality_inspectors);
 
         quality_inspectors.forEach((id) =>
-          assignments.push({ booking_id, employee_id: id, role_id: 8 }),
+          assignments.push({ booking_id, employee_id: id, role_id: ROLE.QUALITY_INSPECTOR }),
         );
       }
 
@@ -2767,7 +2768,7 @@ const getDayOverviewForGantt = async (reqBody) => {
 
     // 1️⃣ GET ALL EMPLOYEES (role_id 7, 8, 9)
     const allEmployees = await User.findAll({
-      where: { role_id: { [Op.in]: [7, 8, 9] } },
+      where: { role_id: { [Op.in]: EMPLOYEE_ROLE_IDS } },
       include: [
         {
           model: Profile,
@@ -2858,7 +2859,7 @@ const getEmployeeDayOverview = async ({ date }) => {
 
   // 1️⃣ Employees
   const employees = await User.findAll({
-    where: { role_id: { [Op.in]: [7, 8, 9] } },
+    where: { role_id: { [Op.in]: EMPLOYEE_ROLE_IDS } },
     include: [
       {
         model: Profile,
@@ -2967,7 +2968,7 @@ const getEmployeeRangeOverview = async ({
 
   // ✅ 2. Employees
   const employeeWhere = {
-    role_id: { [Op.in]: [7, 8, 9] },
+    role_id: { [Op.in]: EMPLOYEE_ROLE_IDS },
   };
 
   if (employee_type) {

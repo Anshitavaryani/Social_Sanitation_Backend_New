@@ -48,9 +48,6 @@ module.exports = {
         adminResetExpirationDays: envVars.JWT_ADMIN_RESET_EXPIRATION_DAYS,
     },
 
-    SUP_ADM_ROLE_ID: envVars.SUP_ADM_ROLE_ID,
-    ADM_ROLE_ID: envVars.ADM_ROLE_ID,
-    USR_ROLE_ID: envVars.USR_ROLE_ID,
     ADM_DEPT_ID: envVars.ADM_DEPT_ID,
     SUPER_ADMIN_NAME: envVars.SUPER_ADMIN_NAME,
     SUPER_ADMIN_PASSWORD: envVars.SUPER_ADMIN_PASSWORD,

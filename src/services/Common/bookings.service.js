@@ -4,6 +4,7 @@ const { status: httpStatus } = require("http-status");
 const { inZone, dateInTz, DATETIME_FORMAT, DATE_FORMAT, TIME_FORMAT, toBusinessDateTime, utcDate } = require("../../utils/time");
 const { Booking, Service, Profile, User, UserAttachment, ServiceAttachment, UserAddress, BookingAssignment, Country, State, City, BDMUser, Admin, BookingAttachment, ServiceChecklist, BookingServiceChecklist, ServiceChecklistMapping, Notification, ServiceChecklistHeading, GuestBookingAddress } = require("../../models");
 const ApiError = require("../../utils/ApiError");
+const { ROLE } = require("../../config/roles");
 const { Op } = require("sequelize");
 const {
   sendPushNotification,
@@ -632,7 +633,7 @@ const getAllServiceCheckListByUserForBookingId = async (booking_id) => {
 
     // Step 2: Get all active checklist headings with their tasks
     const headings = await ServiceChecklistHeading.findAll({
-      where: { is_active: true, role_id: "7" },
+      where: { is_active: true, role_id: ROLE.SUPERVISOR },
       attributes: ["id", "title"],
       order: [["created_at", "ASC"]],
       include: [

@@ -4,9 +4,9 @@ const router = express.Router();
 const {adminAuthController, serviceEstimateController} = require('../../../controllers');
 const { adminAuthMiddleware } = require('../../../middlewares');
 const { publicRoute, requireAdmin, requireAdminRole, requireAuth } = require("../../../middlewares/access.middleware");
-const config = require("../../../config/config");
+const { ROLE } = require("../../../config/roles");
 
-router.post('/register', ...requireAdminRole(config.SUP_ADM_ROLE_ID, config.ADM_ROLE_ID), adminAuthMiddleware.restrictSuperAdminCreation,  adminAuthController.createAdminUser);
+router.post('/register', ...requireAdminRole(ROLE.SUPER_ADMIN, ROLE.ADMIN), adminAuthMiddleware.restrictSuperAdminCreation,  adminAuthController.createAdminUser);
 router.post('/login', publicRoute, [adminAuthMiddleware.validateLoginAdminBody], adminAuthController.loginAdminUser);
 router.post('/change-password',  [ adminAuthMiddleware.validateResetPassordBody, adminAuthMiddleware.validateJWTtoken], adminAuthController.resetAdminPassword);
 router.post('/otp', publicRoute,  adminAuthController.sendOTP);

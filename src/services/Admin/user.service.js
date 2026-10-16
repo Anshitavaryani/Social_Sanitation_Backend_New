@@ -8,6 +8,7 @@ const { dayjs, dateInTz, addDays, nowWallClock, DATETIME_FORMAT, formatDisplayDa
 const fs = require("fs");
 const { Admin, User, Profile, UserAttachment, userLoginTiming, Service, Booking, ServiceAttachment, BookingAssignment, UserAddress, Payment, ClientChecklistDetail, ClientChecklist, QuoteItem, ServiceQuote, Country, State, City, ReviewLink, Attendance, Break, UserToken, UserOAuth, Invoice, FormSubmission, FormSection } = require("../../models");
 const ApiError = require("../../utils/ApiError");
+const { ROLE, EMPLOYEE_ROLE_IDS, BOOKING_ROLE_IDS } = require("../../config/roles");
 const { generateTemporaryPassword } = require("../../utils/temporaryPassword");
 const { sendUserCredentials, sendEmailWithPDF, sendReviewEmailWithPDF, sendServiceRequestEmailWithPDF, sendUpdatedUserCredentials } = require("../Common/email.service");
 const {
@@ -30,7 +31,7 @@ const getAllUsers = async (reqBody) => {
   try {
     const userDoc = await User.findAll({
       where: {
-        role_id: "6",
+        role_id: ROLE.CLIENT,
         is_active: true,
       },
 
@@ -108,7 +109,7 @@ const getAllDrivers = async (reqBody) => {
     const userDoc = await User.findAll({
       where: {
         role_id: {
-          [Sequelize.Op.in]: [7, 8, 9],
+          [Sequelize.Op.in]: EMPLOYEE_ROLE_IDS,
         },
         is_active: true,
       },
@@ -654,7 +655,7 @@ const getClosestEmployees = async (clientId) => {
     const employees = await User.findAll({
       where: {
         role_id: {
-          [Op.in]: [7, 8, 9],
+          [Op.in]: EMPLOYEE_ROLE_IDS,
         },
         is_active: true,
       },
@@ -761,7 +762,7 @@ const getClosestEmployeesByAddress = async (addressId) => {
     const employees = await User.findAll({
       where: {
         role_id: {
-          [Op.in]: [7, 8, 9],
+          [Op.in]: EMPLOYEE_ROLE_IDS,
         },
         is_active: true,
       },
@@ -998,7 +999,7 @@ const changeAssignedAdmin = async (reqBody) => {
     }
 
     // Only allow for clients
-    if (Number(user.role_id) !== 6) {
+    if (Number(user.role_id) !== ROLE.CLIENT) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
         "Only clients can be reassigned",
@@ -1118,20 +1119,6 @@ const getDefaultChecklistDetails = (clientType) => {
     "All Areas / Hallways",
   ];
 };
-
-// =========================================================
-// ROLE IDS THAT ARE "EMPLOYEES" (i.e. need a hiring form +
-// address instead of a client checklist)
-//
-// 7  -> Inspector / Supervisor
-// 8  -> Quality Assurance Technician
-// 9  -> Cleaner / HouseKeeping (sub_role_id 10 / 11)
-// =========================================================
-
-const EMPLOYEE_ROLE_IDS = [7, 8, 9, 10, 11];
-
-// Roles an employee can be assigned to a booking as (supervisor, QA, cleaner)
-const ASSIGNMENT_ROLE_IDS = [7, 8, 9];
 
 // Creates or updates a client's checklist and replaces its detail rows.
 // Shared by adminAddUser and adminEditUser.
@@ -1317,7 +1304,7 @@ const adminAddUser = async (reqBody) => {
     } = reqBody;
 
     const isEmployee = EMPLOYEE_ROLE_IDS.includes(Number(role_id));
-    const isClient = Number(role_id) === 6;
+    const isClient = Number(role_id) === ROLE.CLIENT;
 
     // ============================
     // Employee validation
@@ -1441,7 +1428,7 @@ const adminAddUser = async (reqBody) => {
       status: "ACCEPTED",
       client_type: finalClientType,
       employee_type: isEmployee ? employee_type : null,
-      assigned_to: Number(role_id) === 6 ? assigned_to : null,
+      assigned_to: Number(role_id) === ROLE.CLIENT ? assigned_to : null,
 
       hiring_form_submission_id: isEmployee ? hiring_form_submission_id : null,
     });
@@ -1547,7 +1534,7 @@ const adminAddUser = async (reqBody) => {
 
     let supportEmail = "socialsanitation@gmail.com";
 
-    if (Number(role_id) === 6) {
+    if (Number(role_id) === ROLE.CLIENT) {
       supportEmail = "clean.quote@socialsanitation.com";
     } else if (EMPLOYEE_ROLE_IDS.includes(Number(role_id))) {
       supportEmail = "reports@socialsanitation.com";
@@ -1616,8 +1603,8 @@ const syncEmployeeRoleData = async (
   // Completed/cancelled bookings keep the role the employee actually worked
   // in; only open bookings move to the new role.
   if (
-    !ASSIGNMENT_ROLE_IDS.includes(currentRoleId) ||
-    !ASSIGNMENT_ROLE_IDS.includes(newRoleId)
+    !BOOKING_ROLE_IDS.includes(currentRoleId) ||
+    !BOOKING_ROLE_IDS.includes(newRoleId)
   ) {
     return;
   }
@@ -2539,7 +2526,7 @@ const getUserCount = async () => {
   const userCount = await User.count({
     where: {
       is_active: true,
-      role_id: "6",
+      role_id: ROLE.CLIENT,
     },
   });
   return userCount;
@@ -2547,19 +2534,19 @@ const getUserCount = async () => {
 
 const getDriverCount = async () => {
   const supervisorCount = await User.count({
-    where: { is_active: true, role_id: "7" }, // Supervisor
+    where: { is_active: true, role_id: ROLE.SUPERVISOR },
   });
 
   const qualityAssuranceCount = await User.count({
-    where: { is_active: true, role_id: "8" }, // Quality Assurance
+    where: { is_active: true, role_id: ROLE.QUALITY_INSPECTOR },
   });
 
   const janitorCount = await User.count({
-    where: { is_active: true, role_id: "9", sub_role_id: "10" }, // Janitor
+    where: { is_active: true, role_id: ROLE.CLEANER, sub_role_id: ROLE.JANITOR },
   });
 
   const housekeepingCount = await User.count({
-    where: { is_active: true, role_id: "9", sub_role_id: "11" }, // Housekeeping
+    where: { is_active: true, role_id: ROLE.CLEANER, sub_role_id: ROLE.HOUSEKEEPING },
   });
 
   return {
@@ -2577,15 +2564,15 @@ const getDriverCount = async () => {
 
 const getAdminCount = async () => {
   const superAdminCount = await Admin.count({
-    where: { is_active: true, role_id: "1" }, // Super Admin
+    where: { is_active: true, role_id: ROLE.SUPER_ADMIN },
   });
 
   const salesExecutiveCount = await Admin.count({
-    where: { is_active: true, role_id: "3" }, // Sales Executive
+    where: { is_active: true, role_id: ROLE.OPERATIONS_ADMIN },
   });
 
   const bdmCount = await Admin.count({
-    where: { is_active: true, role_id: "5" }, // BDM
+    where: { is_active: true, role_id: ROLE.BDM },
   });
 
   return {
@@ -2751,7 +2738,7 @@ const getAllUserNameByAdmin = async (id) => {
   try {
     // Fetch users with their service provider booking details
     const userDocs = await User.findAll({
-      where: { role_id: "6", is_active: true },
+      where: { role_id: ROLE.CLIENT, is_active: true },
       attributes: ["id", "email", "role_id"],
       include: [
         {
@@ -2779,7 +2766,7 @@ const getAllSupervisorByAdmin = async (id) => {
   try {
     // Fetch users with their service provider booking details
     const userDocs = await User.findAll({
-      where: { role_id: "7", is_active: true },
+      where: { role_id: ROLE.SUPERVISOR, is_active: true },
       attributes: ["id", "email", "role_id"],
       include: [
         {
@@ -2827,7 +2814,7 @@ const getAllQualityInspectorByAdmin = async (id) => {
   try {
     // Fetch users with their service provider booking details
     const userDocs = await User.findAll({
-      where: { role_id: "8", is_active: true },
+      where: { role_id: ROLE.QUALITY_INSPECTOR, is_active: true },
       attributes: ["id", "email", "role_id"],
       include: [
         {
@@ -2875,7 +2862,7 @@ const getAllCleanerByAdmin = async (id) => {
   try {
     // Fetch users with their service provider booking details
     const userDocs = await User.findAll({
-      where: { role_id: "9", is_active: true },
+      where: { role_id: ROLE.CLEANER, is_active: true },
       attributes: ["id", "email", "role_id"],
       include: [
         {
@@ -4639,7 +4626,7 @@ const expireQuotesJob = async () => {
 const getAllUserName = async () => {
   try {
     const users = await User.findAll({
-      where: { role_id: "6", is_active: true },
+      where: { role_id: ROLE.CLIENT, is_active: true },
       attributes: ["id", "email"],
       include: [
         {
@@ -4786,7 +4773,7 @@ const getMonthlyInvoicesSummary = async ({ month }) => {
     const users = await User.findAll({
       attributes: ["id", "email"],
       where: {
-        role_id: "6",
+        role_id: ROLE.CLIENT,
         is_active: true,
         id: paidUserIds,
       },
@@ -5209,7 +5196,7 @@ const getEmployeeDropdown = async () => {
     const employees = await User.findAll({
       where: {
         role_id: {
-          [Sequelize.Op.in]: [7, 8, 9],
+          [Sequelize.Op.in]: EMPLOYEE_ROLE_IDS,
         },
         is_active: true,
       },

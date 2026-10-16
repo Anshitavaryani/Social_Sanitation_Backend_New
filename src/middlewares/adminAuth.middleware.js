@@ -6,8 +6,8 @@ const validateEmail = require('../helpers/validateEmail');
 const catchAsync = require('../utils/catchAsync');
 const responseWrapper = require('../config/responseWrapper');
 
-const config = require('../config/config');
 const ApiError = require('../utils/ApiError');
+const { ROLE } = require("../config/roles");
 
 
 
@@ -37,8 +37,7 @@ const validateJWTtoken = requireAdmin;
 
 // Only a super admin may create another super admin (POST /admin/auth/register)
 const restrictSuperAdminCreation = (req, res, next) => {
-    const superAdminRole = Number(config.SUP_ADM_ROLE_ID);
-    if (Number(req.body.role_id) === superAdminRole && Number(req.user.role_id) !== superAdminRole) {
+    if (Number(req.body.role_id) === ROLE.SUPER_ADMIN && Number(req.user.role_id) !== ROLE.SUPER_ADMIN) {
         return next(new ApiError(httpStatus.FORBIDDEN, 'Only a super admin can create another super admin.'));
     }
     next();

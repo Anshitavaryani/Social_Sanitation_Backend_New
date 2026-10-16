@@ -2,6 +2,7 @@ const { status: httpStatus } = require('http-status');
 const jwt = require('jsonwebtoken');
 const { requireAuth } = require('./access.middleware');
 const { parseUploads } = require('./upload.middleware');
+const { ROLE } = require("../config/roles");
 
 const { User, OTP, UserToken, Profile } = require('../models');
 const validateEmail = require('../helpers/validateEmail');
@@ -161,7 +162,7 @@ const validateForgetPassordToken = catchAsync(async (req, res, next) => {
 const setRoleIdIfNotPresent = (req, res, next) => {
     try {
         if (!req.headers.role_id) {
-            req.headers.role_id = config.USR_ROLE_ID;
+            req.headers.role_id = String(ROLE.CLIENT);
         };
         next();
 

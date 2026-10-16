@@ -3,6 +3,7 @@
 const { status: httpStatus } = require("http-status");
 const { User, BDMUser, Admin, Profile, Booking } = require("../../models");
 const ApiError = require("../../utils/ApiError");
+const { ROLE } = require("../../config/roles");
 const { Op } = require("sequelize");
 
 const assignUser = async (reqBody) => {
@@ -54,7 +55,7 @@ const assignUser = async (reqBody) => {
 const getAllBDMs = async () => {
 	try {
 		const userDoc = await Admin.findAll({
-			where: { is_active: true, role_id: "5" },
+			where: { is_active: true, role_id: ROLE.BDM },
 		});
 
 		if (!userDoc) {
@@ -126,7 +127,7 @@ const getAllUsers = async () => {
 		// Get users where role_id = 6 and exclude assigned users
 		const userDoc = await User.findAll({
 			where: {
-				role_id: 6,
+				role_id: ROLE.CLIENT,
 				id: { [Op.notIn]: assignedUserIds }, // Exclude assigned users
 			},
 			attributes: ["id"], // Select only 'id'

@@ -1,5 +1,6 @@
 const { status: httpStatus } = require("http-status");
 const ApiError = require("../../utils/ApiError");
+const { EMPLOYEE_ROLE_IDS } = require("../../config/roles");
 const { Op } = require("sequelize");
 const { dayjs, monthBoundsUtc, DATE_FORMAT, MONTH_FORMAT, formatDisplayMonth, isValidMonth } = require("../../utils/time");
 const {
@@ -776,7 +777,7 @@ const getMonthlyEmployeeEquipmentRecords = async (query) => {
       where: {
         is_active: true,
         role_id: {
-          [Op.in]: [7, 8, 9],
+          [Op.in]: EMPLOYEE_ROLE_IDS,
         },
       },
 

@@ -3,6 +3,7 @@
 const { status: httpStatus } = require("http-status");
 const Attendance = require("../../models/attendance.model");
 const ApiError = require("../../utils/ApiError");
+const { EMPLOYEE_ROLE_IDS } = require("../../config/roles");
 const { leaveStatusTypes } = require("../../config/types");
 const { Op, Sequelize } = require("sequelize");
 const {
@@ -878,7 +879,7 @@ const getAllAttendance = async (reqBody) => {
 
 		/* ================= USERS ================= */
 		const users = await User.findAll({
-			where: { is_active: true, role_id: [7, 8, 9] },
+			where: { is_active: true, role_id: EMPLOYEE_ROLE_IDS },
 			include: [
 				{
 					model: Profile,
@@ -1135,10 +1136,9 @@ const getTodayAttendanceStats = async (reqBody) => {
 		const { date } = reqBody;
 
 		// Step 1: Get all users with role_id 7, 8, 9
-		const roleIds = [7, 8, 9];
 		const users = await User.findAll({
 			where: {
-				role_id: { [Op.in]: roleIds },
+				role_id: { [Op.in]: EMPLOYEE_ROLE_IDS },
 				is_active: true,
 			},
 			attributes: ["id"],
@@ -1242,7 +1242,7 @@ const getDailyPresenceForMonth = async (reqBody) => {
 		});
 
 		const users = await User.findAll({
-			where: { is_active: true, role_id: [7, 8, 9] },
+			where: { is_active: true, role_id: EMPLOYEE_ROLE_IDS },
 			include: [
 				{
 					model: Profile,
@@ -1618,7 +1618,7 @@ const getAllBreaks = async (reqBody) => {
 
 		// ---- STEP 2: Fetch users ----
 		const users = await User.findAll({
-			where: { is_active: true, role_id: [7, 8, 9] },
+			where: { is_active: true, role_id: EMPLOYEE_ROLE_IDS },
 			include: [{ model: Profile, as: "user_profile", attributes: ["name"] }],
 			attributes: ["id", "role_id", "email"],
 		});

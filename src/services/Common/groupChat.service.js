@@ -8,17 +8,14 @@ const fs = require("fs");
 const path = require("path");
 
 const { uploadFileToFirebase } = require("../../config/firebaseStorage");
-
-const ALLOWED_USER_ROLES = [6, 7, 8, 9, 10, 11];
-const ALLOWED_ADMIN_ROLES = [1, 3, 5];
-const TEAM_CREATOR_ROLES = [1, 3, 5];
+const { ROLE, ROLE_NAMES, EMPLOYEE_ROLE_IDS, APP_USER_ROLE_IDS, TEAM_CHAT_ADMIN_ROLE_IDS } = require("../../config/roles");
 
 const getParticipantKey = (id, roleId) => {
-  if (roleId === 5) return `bdm_${id}`;
-  if (roleId === 1 || roleId === 3) return `admin_${id}`;
-  if (roleId === 6) return `user_${id}`;
+  if (roleId === ROLE.BDM) return `bdm_${id}`;
+  if (roleId === ROLE.SUPER_ADMIN || roleId === ROLE.OPERATIONS_ADMIN) return `admin_${id}`;
+  if (roleId === ROLE.CLIENT) return `user_${id}`;
 
-  if ([7, 8, 9, 10, 11].includes(roleId)) {
+  if (EMPLOYEE_ROLE_IDS.includes(roleId)) {
     return `employee_${id}`;
   }
 
@@ -53,7 +50,7 @@ const getGroupRef = (groupId) => {
 };
 
 const assertTeamCreator = (user) => {
-  if (!TEAM_CREATOR_ROLES.includes(getRoleId(user))) {
+  if (!TEAM_CHAT_ADMIN_ROLE_IDS.includes(getRoleId(user))) {
     throw new ApiError(
       httpStatus.FORBIDDEN,
       "Only admins and BDMs can manage teams.",
@@ -110,7 +107,7 @@ const validateParticipant = async (participant) => {
     throw new ApiError(httpStatus.BAD_REQUEST, "Invalid participant ID.");
   }
 
-  if (ALLOWED_ADMIN_ROLES.includes(roleId)) {
+  if (TEAM_CHAT_ADMIN_ROLE_IDS.includes(roleId)) {
     const adminRecord = await Admin.findByPk(id);
 
     if (!adminRecord) {
@@ -135,7 +132,7 @@ const validateParticipant = async (participant) => {
     };
   }
 
-  if (ALLOWED_USER_ROLES.includes(roleId)) {
+  if (APP_USER_ROLE_IDS.includes(roleId)) {
     const userRecord = await User.findByPk(id, {
       include: [
         {
@@ -942,7 +939,7 @@ const getAvailableTeamParticipants = async () => {
     // Admin-table participants: Super Admin, Operations Admin, BDM
     const adminRecords = await Admin.findAll({
       where: {
-        role_id: [1, 3, 5],
+        role_id: TEAM_CHAT_ADMIN_ROLE_IDS,
       },
       attributes: ["id", "role_id", "name"],
       order: [["name", "ASC"]],
@@ -951,7 +948,7 @@ const getAvailableTeamParticipants = async () => {
     // User-table participants: Clients and employees
     const userRecords = await User.findAll({
       where: {
-        role_id: [6, 7, 8, 9, 10, 11],
+        role_id: APP_USER_ROLE_IDS,
       },
       attributes: ["id", "role_id"],
       include: [
@@ -965,21 +962,6 @@ const getAvailableTeamParticipants = async () => {
       order: [["id", "ASC"]],
     });
 
-    const adminRoleNames = {
-      1: "Super Admin",
-      3: "Operations Administrator",
-      5: "BDM",
-    };
-
-    const userRoleNames = {
-      6: "Client",
-      7: "Supervisor",
-      8: "Quality Inspector",
-      9: "Cleaner",
-      10: "Janitor",
-      11: "Housekeeping",
-    };
-
     const admins = adminRecords.map((record) => {
       const id = Number(record.id);
       const role_id = Number(record.role_id);
@@ -987,9 +969,9 @@ const getAvailableTeamParticipants = async () => {
       return {
         id,
         role_id,
-        key: role_id === 5 ? `bdm_${id}` : `admin_${id}`,
+        key: role_id === ROLE.BDM ? `bdm_${id}` : `admin_${id}`,
         name: record.name || "Unknown",
-        role: adminRoleNames[role_id] || "Admin",
+        role: ROLE_NAMES[role_id] || "Admin",
         participantType: "admin",
       };
     });
@@ -1002,12 +984,12 @@ const getAvailableTeamParticipants = async () => {
         id,
         role_id,
         key:
-          role_id === 6
+          role_id === ROLE.CLIENT
             ? `user_${id}`
             : `employee_${id}`,
         name: record.user_profile?.name || "Unknown",
-        role: userRoleNames[role_id] || "User",
-        participantType: role_id === 6 ? "client" : "employee",
+        role: ROLE_NAMES[role_id] || "User",
+        participantType: role_id === ROLE.CLIENT ? "client" : "employee",
       };
     });
 
