@@ -204,10 +204,16 @@ test("applying for leave stores leave_date_est as New York midnight of that day"
 
 test("breaks are listed on the New York day of the clock-in, including after midnight", async () => {
   models.User.findAll = async () => [{ id: 9, role_id: 7, email: "a@b.c", user_profile: { name: "Ana" } }];
-  models.Break.findAll = async () => [
+  const breaks = [
     // clock_in_est is naive New York wall time: 00:30 on the 15th
     { user_id: 9, break_start_est: new Date("2026-10-15T00:40:00Z"), attendence_break: { clock_in_est: new Date("2026-10-15T00:30:00Z") } },
   ];
+  // the database applies the day range the query asks for (it used to load every break and filter here)
+  models.Break.findAll = async ({ include: [attendance] }) => {
+    const range = attendance.where.clock_in_est;
+    assert.equal(attendance.required, true);
+    return breaks.filter((b) => b.attendence_break.clock_in_est >= range[Op.gte] && b.attendence_break.clock_in_est < range[Op.lt]);
+  };
   const [onThe15th] = await attendanceService.getAllBreaks({ date: "2026-10-15" });
   assert.equal(onThe15th.break_count, 1, "the 00:30 clock-in counts for the 15th");
   const [onThe14th] = await attendanceService.getAllBreaks({ date: "2026-10-14" });

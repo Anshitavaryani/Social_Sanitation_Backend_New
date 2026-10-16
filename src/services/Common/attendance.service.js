@@ -1542,27 +1542,20 @@ const getAllBreaks = async (reqBody) => {
 			attributes: ["id", "role_id", "email"],
 		});
 
-		// ---- STEP 3: Fetch breaks with their attendance ----
-		const allBreaks = await Break.findAll({
+		// ---- STEP 3: Breaks of the attendances clocked in on that day (clock_in_est holds the
+		// New York wall time in a UTC field, so the day is its UTC date) ----
+		const dayStart = calendarDateUtc(dayKey);
+		const filteredBreaks = await Break.findAll({
 			include: [
 				{
 					model: Attendance,
 					as: "attendence_break",
 					attributes: ["id", "clock_in_est", "clock_out_est", "total_hours"],
+					required: true,
+					where: { clock_in_est: { [Op.gte]: dayStart.toDate(), [Op.lt]: dayStart.add(1, "day").toDate() } },
 				},
 			],
 			order: [["break_start_est", "ASC"]],
-		});
-
-		// ---- STEP 4: Filter breaks based on attendance clock-in EST date ----
-		const filteredBreaks = allBreaks.filter((b) => {
-			if (!b.attendence_break || !b.attendence_break.clock_in_est) return false;
-
-			const attendanceDay = dayjs
-				.utc(b.attendence_break.clock_in_est)
-				.format(DATE_FORMAT);
-
-			return attendanceDay === dayKey;
 		});
 
 		// ---- STEP 5: Map breaks to users ----
