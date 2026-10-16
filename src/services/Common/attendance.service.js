@@ -1680,7 +1680,6 @@ const getAllBreaks = async (reqBody) => {
 const manualClockInOut = async (reqBody) => {
 	try {
 		const { employee_id, role_id, date, clock_in, clock_out } = reqBody;
-		console.log(reqBody, "manualClockInOut reqBody");
 
 		if (!employee_id || !date) {
 			throw new ApiError(

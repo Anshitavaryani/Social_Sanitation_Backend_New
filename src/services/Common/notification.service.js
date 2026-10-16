@@ -30,7 +30,6 @@ const sendPushNotification = async (notificationObj, registrationTokens, sound =
     },
   };
 
-  console.log("registrationTokens",registrationTokens)
 
   try {
     const response = await getMessaging().sendEachForMulticast(message);

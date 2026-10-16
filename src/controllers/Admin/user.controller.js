@@ -344,7 +344,6 @@ const getNextServiceRequestRef = catchAsync(async (req, res) => {
 });
 
 const handleTwilioSmsStatus = async (req, res) => {
-  console.log("Twilio Status Callback:", req.body);
 
   // Example:
   // req.body.MessageSid

@@ -166,7 +166,6 @@ const sendBookingNotification = async (user, receiverUniqueFCMTokensArray) => {
   if (!receiverUniqueFCMTokensArray) {
     return;
   }
-  console.log("receiverUniqueFCMTokensArray", receiverUniqueFCMTokensArray);
   let clickAction = `anc`;
   let notificationObj = {
     title: "SERVICE BOOKED",

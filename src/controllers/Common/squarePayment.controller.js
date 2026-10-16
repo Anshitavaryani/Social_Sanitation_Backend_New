@@ -44,8 +44,6 @@ const getSquareKeys = catchAsync(async (req, res) => {
 
 const createCustomer = async (userDoc) => {
   try {
-    console.log(userDoc, "userDoc");
-
     // Define the customer object for Square API
     const customerObj = {
       givenName: userDoc.user_profile.name,
@@ -68,7 +66,7 @@ const createCustomer = async (userDoc) => {
       userDoc.square_customer_id = customer.id;
       await userDoc.save();
 
-      console.log("New Square customer created:", customer);
+      console.log("New Square customer created:", customer?.id);
     } else {
       console.log("Retrieving existing Square customer...");
 
@@ -78,7 +76,7 @@ const createCustomer = async (userDoc) => {
       });
       customer = response.customer;
 
-      console.log("Existing Square customer retrieved:", customer);
+      console.log("Existing Square customer retrieved:", customer?.id);
     }
 
     // Return the customer object or `false` if not found
@@ -96,8 +94,6 @@ const createPayment = catchAsync(async (req, res) => {
   try {
     const { user, booking_id, sourceId, amount } = req.body;
 
-    console.log(user, "user");
-    console.log(req.body, "req.body");
 
     // Create customer using the provided user information
     const customer = await createCustomer(user);
@@ -113,8 +109,6 @@ const createPayment = catchAsync(async (req, res) => {
       customerId: customer.id,
       note: "Booking Payment",
     };
-
-    console.log(paymentObj, "paymentObj");
 
     // Create payment through Square API
     const paymentResponse = await client.payments.create(paymentObj);

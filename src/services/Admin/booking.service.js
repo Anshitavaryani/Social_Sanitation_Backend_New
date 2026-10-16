@@ -562,7 +562,6 @@ const updateBookingStatus = async (reqBody) => {
     recurrence_end_value,
   } = reqBody;
 
-  console.log(reqBody.end_time_by_admin, "reqBody");
 
   let is_recurring = reqBody.is_recurring;
 
@@ -570,7 +569,6 @@ const updateBookingStatus = async (reqBody) => {
     is_recurring = is_recurring === "true";
   }
 
-  console.log("🔶 Incoming Request Body:", JSON.stringify(reqBody, null, 2));
 
   try {
     const bookingDoc = await Booking.findByPk(booking_id);
@@ -2628,7 +2626,7 @@ const getBookingOverviewById = async (id) => {
 const deleteBooking = async (reqBody) => {
   const booking_id = reqBody.booking_id; // use booking_id from form
   const delete_mode = reqBody.delete_mode; // optional, may be undefined
-  console.log(booking_id, delete_mode, reqBody, "reqBody");
+  console.log("Deleting booking", booking_id, delete_mode);
 
   try {
     const booking = await Booking.findByPk(booking_id);

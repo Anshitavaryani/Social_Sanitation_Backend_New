@@ -2183,32 +2183,6 @@ const adminEditUser = async (reqBody, id) => {
         // LOG EVERYTHING BEFORE SAVE
         // =======================================================
 
-        console.log("========================================");
-
-        console.log("EMPLOYEE USER ADDRESS SAVE");
-
-        console.log("Employee ID:", Number(id));
-
-        console.log("Role ID:", finalRoleId);
-
-        console.log("Hiring Form ID:", incomingHiringFormId);
-
-        console.log("Previous Hiring Form ID:", previousHiringFormSubmissionId);
-
-        console.log("Address:", fullAddress);
-
-        console.log("Country ID:", finalCountryId);
-
-        console.log("State ID:", finalStateId);
-
-        console.log("City ID:", finalCityId);
-
-        console.log("Latitude:", finalLatitude);
-
-        console.log("Longitude:", finalLongitude);
-
-        console.log("========================================");
-
         // =======================================================
         // CREATE NEW EMPLOYEE ADDRESS
         //
@@ -2310,14 +2284,6 @@ const adminEditUser = async (reqBody, id) => {
         }
 
         userAddress = verifiedAddress;
-
-        console.log("========================================");
-
-        console.log("EMPLOYEE ADDRESS VERIFIED IN DATABASE");
-
-        console.log(userAddress.toJSON());
-
-        console.log("========================================");
       }
     }
 
@@ -3883,7 +3849,6 @@ const submitServiceRequest = async (reqBody) => {
     } = reqBody;
 
     console.log("SERVICE DAYS:", service_days);
-    console.log("REQ BODY:", reqBody);
 
     /* ================= USER ================= */
     const userDocs = await User.findOne({ where: { id: user_id } });

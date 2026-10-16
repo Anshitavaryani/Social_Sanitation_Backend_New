@@ -22,6 +22,7 @@ const {
 } = require("../Common/email.service");
 const { generateAuthTokens } = require("../Common/token.service");
 const { otpTypes } = require("../../config/types");
+const otpGuard = require("../../utils/otpGuard");
 const generateRandomString = require("../../utils/randomStringGenrate");
 
 const sendOTP = async (body, headers) => {
@@ -87,7 +88,16 @@ const verifyOTP = async (email, otp, type, role_id) => {
 			throw new ApiError(httpStatus.BAD_REQUEST, "Invalid Email or Type");
 		}
 
-		if (otp !== otpDoc.code) {
+		if (!otpGuard.sameCode(otp, otpDoc.code)) {
+			// 4-digit codes: lock the code after 5 wrong attempts (each new code has a new id)
+			if (otpGuard.recordFailure(`user-otp:${otpDoc.id}`, 10 * 60 * 1000)) {
+				otpDoc.is_active = false;
+				await otpDoc.save();
+				throw new ApiError(
+					httpStatus.TOO_MANY_REQUESTS,
+					"Too many incorrect attempts. Please request a new OTP."
+				);
+			}
 			throw new ApiError(httpStatus.BAD_REQUEST, "Invalid OTP Entered");
 		}
 
@@ -95,6 +105,7 @@ const verifyOTP = async (email, otp, type, role_id) => {
 			throw new ApiError(httpStatus.BAD_REQUEST, "OTP has been Expired");
 		}
 
+		otpGuard.clear(`user-otp:${otpDoc.id}`);
 		otpDoc.is_active = false;
 		otpDoc.is_verified = true;
 		let isUpdate = "";
@@ -204,8 +215,6 @@ const register = async (body, files, headers) => {
 };
 
 const login = async (reqBody, headers) => {
-	console.log(reqBody,"reqBody")
-	console.log(headers,"headers")
 	try {
 		
 		const { role_id, timezone } = headers;

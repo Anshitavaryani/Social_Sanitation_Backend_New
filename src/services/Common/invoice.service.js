@@ -67,7 +67,6 @@ const createInvoice = async (reqBody) => {
 
     console.log("========== CREATE INVOICE ==========");
     console.log("Time:", new Date());
-    console.log(reqBody);
 
     let quote = null;
     let total_due = 0;

@@ -807,7 +807,6 @@ const resumeSigningService = async (estimateId) => {
 
 const generateContractAgreementService = async (reqBody) => {
   try {
-    console.log("REQ BODY:", reqBody);
     const {
       user_id,
       client_company_name,

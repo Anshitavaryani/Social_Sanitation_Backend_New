@@ -8,6 +8,7 @@ const ApiError = require("../../utils/ApiError");
 const config = require("../../config/config");
 const { emailService } = require("../Common");
 const { otpTypes } = require("../../config/types");
+const otpGuard = require("../../utils/otpGuard");
 const { sendAdminCredentials } = require("../Common/email.service");
 
 
@@ -147,6 +148,8 @@ const sendOTP = async (email) => {
       { otp: generatedOTP, is_otp_valid: true },
       { where: { email: user.email } }
     );
+    // The code is valid for 10 minutes and 5 attempts
+    otpGuard.issue(`admin-otp:${user.id}`, otpGuard.ADMIN_OTP_TTL_MS);
     return true;
   } catch (error) {
     throw new ApiError(
@@ -170,9 +173,34 @@ const verifyOTP = async (email, otp, otp_type) => {
       throw new ApiError(httpStatus.NOT_FOUND, "Invalid Email");
     }
 
-    if (otp !== user.otp || user.is_otp_valid === false) {
+    if (user.is_otp_valid === false) {
       throw new ApiError(httpStatus.NOT_FOUND, "Invalid OTP Entered");
     }
+
+    const guardKey = `admin-otp:${user.id}`;
+    const invalidateOtp = async () => {
+      otpGuard.clear(guardKey);
+      user.is_otp_valid = false;
+      await user.save();
+    };
+
+    if (!otpGuard.isActive(guardKey)) {
+      await invalidateOtp();
+      throw new ApiError(httpStatus.BAD_REQUEST, "OTP has expired. Please request a new one.");
+    }
+
+    if (!otpGuard.sameCode(otp, user.otp)) {
+      if (otpGuard.recordFailure(guardKey, otpGuard.ADMIN_OTP_TTL_MS)) {
+        await invalidateOtp();
+        throw new ApiError(
+          httpStatus.TOO_MANY_REQUESTS,
+          "Too many incorrect attempts. Please request a new OTP.",
+        );
+      }
+      throw new ApiError(httpStatus.NOT_FOUND, "Invalid OTP Entered");
+    }
+
+    otpGuard.clear(guardKey);
     let token = "";
     if (otp_type === otpTypes.FORGOT_PASSWORD) {
       token = jwt.sign(
@@ -285,7 +313,6 @@ const updateAdmin = async (reqBody) => {
       id: reqBody.admin_id,
     },
   });
-  console.log("reqBody", reqBody);
 
   if (
     reqBody.name &&

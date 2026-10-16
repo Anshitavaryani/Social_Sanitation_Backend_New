@@ -423,8 +423,6 @@ const getUserAddressByUserId = async (id) => {
 
 const createUserConsent = async (body, req = {}) => {
 	try {
-		console.log(body, "body");
-
 		const {
 			first_name,
 			last_name,

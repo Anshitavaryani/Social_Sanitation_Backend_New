@@ -171,7 +171,6 @@ const verifyAnyAuthJWTToken = catchAsync(async (req, res, next) => {
 			return responseWrapper(res, '', 'Access denied: No token provided', httpStatus.BAD_REQUEST);
 		}
 
-        console.log(token,role_id)
 		// 1. Try verifying as Admin
 		try {
 			const decoded = jwt.verify(token, Buffer.from(config?.jwt?.secret, 'hex'), {
@@ -211,8 +210,6 @@ const verifyAnyAuthJWTToken = catchAsync(async (req, res, next) => {
 				return responseWrapper(res, '', 'Token Not Found', httpStatus.BAD_REQUEST);
 			}
 
-            console.log(tokenDoc,"tokenDoc")
-
 			const user = await User.findOne({
 				where: { id: tokenDoc.user_id, is_active: 1, role_id: role_id },
 				include: [
@@ -227,8 +224,6 @@ const verifyAnyAuthJWTToken = catchAsync(async (req, res, next) => {
 			if (!user) {
 				return responseWrapper(res, '', 'User Not Found', httpStatus.NOT_FOUND);
 			}
-
-            console.log(user,"user")
 
 			req.body.user = user;
 			req.body.tokenDoc = tokenDoc;
