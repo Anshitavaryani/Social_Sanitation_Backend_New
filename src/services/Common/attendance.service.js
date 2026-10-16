@@ -35,6 +35,7 @@ const {
 	DATE_FORMAT,
 	formatDisplayDate,
 	utcDate,
+	resolveTimeZone,
 } = require("../../utils/time");
 const { getDatabase } = require("firebase-admin/database");
 
@@ -63,16 +64,14 @@ const clockIn = async (reqBody, headers, files) => {
 			.tz(BUSINESS_TZ)
 			.format(DATETIME_FORMAT);
 
-		const employeeDateEST = dayjs(employeeClockIn)
-			.tz(BUSINESS_TZ)
-			.format(DATE_FORMAT);
 
-
-		// Fetch all bookings for this employee
+		// This employee's bookings that start within a day of the clock-in (in any time zone a
+		// booking's own date is at most a day from the UTC date)
+		const clockInUtcDay = calendarDateUtc(utcDate(employeeClockIn));
 		const bookings = await Booking.findAll({
 			where: {
 				is_active: true,
-				time_zone: BUSINESS_TZ, // only bookings in the business time zone (audit row 12)
+				date_in_utc: { [Op.between]: [clockInUtcDay.subtract(1, "day").toDate(), clockInUtcDay.add(1, "day").toDate()] },
 			},
 			include: [
 				{
@@ -83,20 +82,12 @@ const clockIn = async (reqBody, headers, files) => {
 			],
 		});
 
-		// ⚡ FIXED: Correct booking date matching using date_in_utc + time_in_utc
+		// Today's bookings: those starting on the clock-in date in the booking's own time zone
+		// (a missing or unknown zone counts as BUSINESS_TZ)
 		const todaysBookings = bookings.filter((b) => {
-			// Combine date + time_in_utc into full UTC datetime
-			const bookingStartUTC = dayjs.utc(
-				`${toCalendarDate(b.date_in_utc)}T${b.time_in_utc}`,
-			);
-
-			// Convert that UTC to EST
-			const bookingStartEST = bookingStartUTC.tz(BUSINESS_TZ);
-
-			const bookingDateEST = bookingStartEST.format(DATE_FORMAT);
-
-
-			return bookingDateEST === employeeDateEST;
+			const zone = resolveTimeZone(b.time_zone);
+			const bookingStart = dayjs.utc(`${toCalendarDate(b.date_in_utc)}T${b.time_in_utc}`);
+			return bookingStart.tz(zone).format(DATE_FORMAT) === dayjs(employeeClockIn).tz(zone).format(DATE_FORMAT);
 		});
 
 		if (todaysBookings.length === 0) {

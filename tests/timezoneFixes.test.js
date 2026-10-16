@@ -387,3 +387,28 @@ test("editing 'following' bookings of a series computes UTC parts from the store
   assert.equal(parts.date_in_utc, "2026-12-15");
   assert.equal(parts.time_in_utc, "14:00:00"); // 09:00 EST
 });
+
+test("clock-in finds the day's booking in the booking's own time zone (only New York bookings were looked at)", async () => {
+  // a Los Angeles booking at 21:30 on 16 Oct is 04:30 UTC on 17 Oct, already 17 Oct in New York
+  const losAngeles = { id: 21, time_zone: "America/Los_Angeles", date_in_utc: new Date("2026-10-17T00:00:00Z"), time_in_utc: "04:30:00" };
+  const newYork = { id: 22, time_zone: "America/New_York", date_in_utc: new Date("2026-10-16T00:00:00Z"), time_in_utc: "13:00:00" };
+  let query;
+  const clockInWith = async (bookings, clock_in_time) => {
+    models.Booking.findAll = async (q) => (query = q) && bookings;
+    AttendanceModel.findOne = async () => ({ id: 1 }); // already clocked in: reached only when a booking matched
+    return quietly(() => attendanceService.clockIn({ user: { id: 9 }, clock_in_time }, { role_id: "9" }, {})).catch((err) => err.message);
+  };
+  const matched = "Already clocked in. Please clock out before clocking in again.";
+  const noTask = "You do not have any assigned task for today.";
+
+  // 20:50 in Los Angeles on 16 Oct, still 16 Oct in New York (23:50): compared in New York, the dates differed
+  assert.equal(await clockInWith([losAngeles], "2026-10-16 23:50:00"), matched);
+  assert.equal(await clockInWith([losAngeles], "2026-10-17 23:50:00"), noTask, "the next day in Los Angeles");
+  assert.equal(await clockInWith([newYork], "2026-10-16 08:55:00"), matched, "New York bookings as before");
+  assert.equal(await clockInWith([newYork], "2026-10-17 08:55:00"), noTask);
+
+  // only bookings within a day of the clock-in are loaded, in any time zone
+  assert.equal(query.where.time_zone, undefined);
+  const [from, to] = query.where.date_in_utc[Op.between];
+  assert.deepEqual([iso(from), iso(to)], ["2026-10-16T00:00:00.000Z", "2026-10-18T00:00:00.000Z"]);
+});
