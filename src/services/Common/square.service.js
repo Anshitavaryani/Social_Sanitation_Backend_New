@@ -1,5 +1,6 @@
 /** @format */
 const axios = require("axios");
+const logger = require("../../config/logger");
 const { adminPanelUrl } = require("../../config/company");
 const { currancyTypes, paymentPurposeTypes, paymentStatusTypes } = require("../../config/types");
 const { randomUUID: uuidv4 } = require("crypto");
@@ -108,8 +109,8 @@ async function generateSquarePaymentLink({
       orderId,
     };
   } catch (error) {
-    console.error(
-      "❌ Payment Link Error:",
+    logger.error(
+      "Payment Link Error:",
       error.response?.data || error.message,
     );
     throw new Error("Failed to generate Square Payment Link");
@@ -160,8 +161,8 @@ async function generateContractPaymentLink({
       orderId,
     };
   } catch (error) {
-    console.error(
-      "❌ Square Contract Payment Error:",
+    logger.error(
+      "Square Contract Payment Error:",
       error.response?.data || error.message,
     );
 
@@ -248,7 +249,7 @@ async function generateInvoicePaymentLink({
       orderId: paymentLink.order_id,
     };
   } catch (error) {
-    console.error(
+    logger.error(
       "Square Invoice Payment Error:",
       error.response?.data || error.message
     );

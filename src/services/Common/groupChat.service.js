@@ -1,6 +1,7 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
+const logger = require("../../config/logger");
 const ApiError = require("../../utils/ApiError");
 const { getDatabase, ServerValue } = require("firebase-admin/database");
 const { User, Profile, Admin } = require("../../models");
@@ -289,7 +290,7 @@ const sendGroupMessage = async (reqBody, files = {}) => {
       attachments,
     };
   } catch (error) {
-    console.error("sendGroupMessage error:", error);
+    logger.error("sendGroupMessage error:", error);
     throw error;
   }
 };
@@ -385,7 +386,7 @@ const getMyGroups = async (reqBody) => {
 
     return { groups: myGroups };
   } catch (error) {
-    console.error("getMyGroups error:", error);
+    logger.error("getMyGroups error:", error);
     throw error;
   }
 };
@@ -477,7 +478,7 @@ const getGroupMessages = async (groupId, reqBody) => {
 
     return { messages: enrichedMessages };
   } catch (error) {
-    console.error("getGroupMessages error:", error);
+    logger.error("getGroupMessages error:", error);
 
     if (error instanceof ApiError) {
       throw error;
@@ -607,7 +608,7 @@ const getGroupParticipants = async (groupId) => {
 
     return participants;
   } catch (error) {
-    console.error("Error fetching participants:", error);
+    logger.error("Error fetching participants:", error);
 
     if (error instanceof ApiError) {
       throw error;
@@ -823,7 +824,7 @@ const getMyTeams = async (reqBody) => {
 
     return { teams: myTeams };
   } catch (error) {
-    console.error("getMyTeams error:", error);
+    logger.error("getMyTeams error:", error);
     throw error;
   }
 };
@@ -1002,7 +1003,7 @@ const getAvailableTeamParticipants = async () => {
       total: participants.length,
     };
   } catch (error) {
-    console.error("getAvailableTeamParticipants error:", error);
+    logger.error("getAvailableTeamParticipants error:", error);
 
     if (error instanceof ApiError) {
       throw error;

@@ -1,6 +1,7 @@
 /** @format */
 
 const express = require("express");
+const logger = require("./src/config/logger");
 const helmet = require("helmet");
 const { dayjs, BUSINESS_TZ, DATE_FORMAT } = require("./src/utils/time.js");
 const cors = require("cors");
@@ -64,7 +65,7 @@ cron.schedule(
     try {
       await syncClockInData();
     } catch (err) {
-      console.error("syncClockInData failed:", err);
+      logger.error("syncClockInData failed:", err);
     }
   },
   { timezone: BUSINESS_TZ },
@@ -76,7 +77,7 @@ cron.schedule(
     try {
       await syncClockOutData();
     } catch (err) {
-      console.error("syncClockOutData failed:", err);
+      logger.error("syncClockOutData failed:", err);
     }
   },
   { timezone: BUSINESS_TZ },
@@ -88,7 +89,7 @@ cron.schedule(
     try {
       await sendAttendanceAlerts();
     } catch (err) {
-      console.error("sendAttendanceAlerts failed:", err);
+      logger.error("sendAttendanceAlerts failed:", err);
     }
   },
   { timezone: BUSINESS_TZ },
@@ -100,7 +101,7 @@ cron.schedule(
     try {
       await notifyAdminIfClockoutFar();
     } catch (err) {
-      console.error("notifyAdminIfClockoutFar failed:", err);
+      logger.error("notifyAdminIfClockoutFar failed:", err);
     }
   },
   { timezone: BUSINESS_TZ },
@@ -112,7 +113,7 @@ cron.schedule(
     try {
       await autoCompleteExpiredBreaks();
     } catch (err) {
-      console.error("autoCompleteExpiredBreaks failed:", err);
+      logger.error("autoCompleteExpiredBreaks failed:", err);
     }
   },
   { timezone: BUSINESS_TZ },
@@ -123,10 +124,10 @@ cron.schedule(
   "*/10 * * * *",
   async () => {
     try {
-      console.log("⏰ Running autoClockOut check...");
+      logger.debug("Running autoClockOut check...");
       await autoClockOutEmployees();
     } catch (err) {
-      console.error("autoClockOutEmployees failed:", err);
+      logger.error("autoClockOutEmployees failed:", err);
     }
   },
   { timezone: BUSINESS_TZ },
@@ -136,10 +137,10 @@ cron.schedule(
   "0 0 * * *",
   async () => {
     try {
-      console.log("🧾 Running invoice expiry job...");
+      logger.debug("Running invoice expiry job...");
       await expireQuotesJob();
     } catch (err) {
-      console.error("expireQuotesJob failed:", err);
+      logger.error("expireQuotesJob failed:", err);
     }
   },
   { timezone: BUSINESS_TZ },
@@ -149,10 +150,10 @@ cron.schedule(
   "0 2 * * *",
   async () => {
     try {
-      console.log("Generating recurring invoices...");
+      logger.debug("Generating recurring invoices...");
       await generateRecurringInvoicesCron();
     } catch (err) {
-      console.error(err);
+      logger.error("generateRecurringInvoicesCron failed:", err);
     }
   },
   { timezone: BUSINESS_TZ },
@@ -164,7 +165,7 @@ cron.schedule(
     try {
       await sendInvoiceCron();
     } catch (err) {
-      console.error(err);
+      logger.error("sendInvoiceCron failed:", err);
     }
   },
   { timezone: BUSINESS_TZ },
@@ -176,7 +177,7 @@ cron.schedule(
     try {
       await sendDueBalancesCron();
     } catch (err) {
-      console.error("sendDueBalancesCron failed:", err);
+      logger.error("sendDueBalancesCron failed:", err);
     }
   },
   { timezone: BUSINESS_TZ },

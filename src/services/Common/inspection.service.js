@@ -1,4 +1,5 @@
 const fs = require("fs");
+const logger = require("../../config/logger");
 const { UPLOAD_DIRS } = require("../../config/storage");
 const path = require("path");
 const { status: httpStatus } = require("http-status");
@@ -772,7 +773,7 @@ const deleteInspection = async (body) => {
          * file is already missing.
          */
 
-        console.error("Failed to delete inspection image:", fileError.message);
+        logger.error("Failed to delete inspection image:", fileError.message);
       }
     }
 
@@ -2372,7 +2373,7 @@ const deleteInspectionItemImage = async (body, imageId) => {
     try {
       deleteInspectionImageFile(image.image);
     } catch (fileError) {
-      console.error("Failed to delete image file:", fileError.message);
+      logger.error("Failed to delete image file:", fileError.message);
     }
 
     await image.destroy();

@@ -14,7 +14,7 @@ async function createSuperAdmin(){
         await adminAuthService.createAdminUser(adminObj);
         console.log('Super Admin created:', config.SUPER_ADMIN_EMAIL, '(password: SUPER_ADMIN_PASSWORD from .env)');
     }catch(error){
-        console.log('Error : Super Admin Creation Failed');
+        console.log('Error : Super Admin Creation Failed:', error.message);
         return;
     };
 };

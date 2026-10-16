@@ -1,6 +1,7 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
+const logger = require("../../config/logger");
 const { UPLOAD_DIRS, docUrl } = require("../../config/storage");
 const { COMPANY } = require("../../config/company");
 const { attendanceStatusTypes, bookingListFilterTypes, bookingTypes, invoicePaymentStatusTypes, jobStatusTypes, paymentStatusTypes, quoteStatusTypes, userStatusTypes } = require("../../config/types");
@@ -507,7 +508,7 @@ const getBookingByEmployeeId = async (reqBody) => {
 
     return bookingDetailsWithoutTeamLeader;
   } catch (error) {
-    console.error("Error:", error);
+    logger.error("Error:", error);
     throw ApiError.from(error);
   }
 };
@@ -887,7 +888,7 @@ const deleteUserAddress = async (addressId) => {
       });
 
       if (remainingAddressCount === 0) {
-        console.log(
+        logger.info(
           `Employee ${userId} has no addresses left — clearing hiring_form_submission_id.`,
         );
 
@@ -909,7 +910,7 @@ const deleteUserAddress = async (addressId) => {
     try {
       await transaction.rollback();
     } catch (rollbackError) {
-      console.error("Transaction rollback error:", rollbackError);
+      logger.error("Transaction rollback error:", rollbackError);
     }
 
     throw ApiError.from(error);
@@ -994,7 +995,7 @@ const changeAssignedAdmin = async (reqBody) => {
       },
     };
   } catch (error) {
-    console.error("Error in changeAssignedAdmin:", error);
+    logger.error("Error in changeAssignedAdmin:", error);
     throw new ApiError(
       error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
       error.message || "Internal Server Error",
@@ -1052,7 +1053,7 @@ const resetUserCredentials = async (reqBody) => {
       message: `New credentials sent to ${finalEmail}`,
     };
   } catch (error) {
-    console.error("Error in resetUserCredentials:", error);
+    logger.error("Error in resetUserCredentials:", error);
     throw new ApiError(
       httpStatus.INTERNAL_SERVER_ERROR,
       error.message || "Internal Server Error",
@@ -1518,7 +1519,7 @@ const adminAddUser = async (reqBody) => {
 
     return user;
   } catch (error) {
-    console.error("Error in adminAddUser:", error);
+    logger.error("Error in adminAddUser:", error);
 
     if (error instanceof ApiError) {
       throw error;
@@ -2016,9 +2017,6 @@ const adminEditUser = async (reqBody, id) => {
         Number(previousHiringFormSubmissionId) === incomingHiringFormId;
 
       if (isSameHiringFormAsBefore) {
-        console.log(
-          `Hiring form ${incomingHiringFormId} unchanged for employee ${id} — skipping address creation.`,
-        );
 
         // =====================================================
         // RETURN THE EXISTING ADDRESS UNCHANGED
@@ -2060,7 +2058,7 @@ const adminEditUser = async (reqBody, id) => {
                 ? JSON.parse(personalInfoSection.data)
                 : personalInfoSection.data;
           } catch (error) {
-            console.error("Personal info JSON parse error:", error);
+            logger.error("Personal info JSON parse error:", error);
 
             throw new ApiError(
               httpStatus.BAD_REQUEST,
@@ -2142,16 +2140,11 @@ const adminEditUser = async (reqBody, id) => {
         // isSameHiringFormAsBefore above.
         // =======================================================
 
-        console.log(`Creating new employee address for employee ${id}...`);
 
         userAddress = await UserAddress.create(addressPayload, {
           transaction,
         });
 
-        console.log(
-          "Employee address created successfully:",
-          userAddress?.toJSON?.(),
-        );
 
         // =======================================================
         // VERIFY ADDRESS
@@ -2293,16 +2286,13 @@ const adminEditUser = async (reqBody, id) => {
     try {
       await transaction.rollback();
     } catch (rollbackError) {
-      console.error("Transaction rollback error:", rollbackError);
+      logger.error("Transaction rollback error:", rollbackError);
     }
 
-    console.error("========================================");
 
-    console.error("ERROR IN adminEditUser");
 
-    console.error(error);
+    logger.error("adminEditUser failed:", error);
 
-    console.error("========================================");
 
     if (error instanceof ApiError) {
       throw error;
@@ -2393,7 +2383,7 @@ const changeEmployeeRole = async (id, role_id) => {
     try {
       await transaction.rollback();
     } catch (rollbackError) {
-      console.error("Role change transaction rollback error:", rollbackError);
+      logger.error("Role change transaction rollback error:", rollbackError);
     }
 
     if (error instanceof ApiError) {
@@ -2468,7 +2458,7 @@ const getClientChecklistByUserId = async (id) => {
       data: formatted,
     };
   } catch (error) {
-    console.error("Error in getClientChecklistByUserId:", error);
+    logger.error("Error in getClientChecklistByUserId:", error);
 
     throw new ApiError(
       httpStatus.INTERNAL_SERVER_ERROR,
@@ -2626,7 +2616,7 @@ const getMostBookedService = async () => {
 
     return mappedResult;
   } catch (error) {
-    console.error("Error while fetching most booked service:", error);
+    logger.error("Error while fetching most booked service:", error);
     throw error;
   }
 };
@@ -3171,13 +3161,12 @@ Ref #: ${finalRefNo}`;
           message: smsText,
         });
 
-        console.log("Twilio SID:", smsResponse.sid);
+        logger.info("SMS sent:", smsResponse.sid);
       } catch (err) {
-        console.error("SMS failed:", err.message);
+        logger.error("SMS failed:", err.message);
       }
     }
 
-    console.log(sendSMS, "sendSMS");
 
     return {
       success: true,
@@ -3188,7 +3177,7 @@ Ref #: ${finalRefNo}`;
       },
     };
   } catch (error) {
-    console.error(error);
+    logger.error("submitServiceQuote failed:", error);
 
     if (error instanceof ApiError) {
       throw error;
@@ -3204,8 +3193,7 @@ Ref #: ${finalRefNo}`;
 const handleTwilioSmsStatus = async (data) => {
   const { MessageSid, MessageStatus } = data;
 
-  console.log("SID:", MessageSid);
-  console.log("Status:", MessageStatus);
+  logger.info("SMS status:", MessageSid, MessageStatus);
 
   // Optional: update DB here
 
@@ -3415,7 +3403,7 @@ const saveDraftQuote = async (reqBody) => {
       data: { quote_id: quote.id },
     };
   } catch (err) {
-    console.error("saveDraftQuote error:", err);
+    logger.error("saveDraftQuote error:", err);
 
     if (err instanceof ApiError) {
       throw err;
@@ -3444,7 +3432,7 @@ const deleteQuote = async (quoteId) => {
       try {
         await deleteSquarePaymentLink(quote.square_payment_link_id);
       } catch (err) {
-        console.warn("Failed to delete Square payment link:", err.message);
+        logger.warn("Failed to delete Square payment link:", err.message);
       }
     }
 
@@ -3521,8 +3509,6 @@ const getNextQuoteRef = async (ref_type) => {
 
     const nextNumber = maxNumber + 1;
 
-    console.log("Highest Ref Number:", maxNumber);
-    console.log("Next Number:", nextNumber);
 
     return {
       ref_no: `${ref_type}${nextNumber}`,
@@ -3554,7 +3540,7 @@ const getServiceQuotesByUserId = async (id) => {
 
     return quotes;
   } catch (error) {
-    console.error("getServiceQuotesByUser error:", error);
+    logger.error("getServiceQuotesByUser error:", error);
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
   }
 };
@@ -3581,7 +3567,7 @@ const getServiceQuoteById = async (id) => {
 
     return quote;
   } catch (error) {
-    console.error("getServiceQuoteById:", error);
+    logger.error("getServiceQuoteById:", error);
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
   }
 };
@@ -3758,7 +3744,7 @@ ${pdfPublicUrl}
 Ref #: ${ref_no}`,
         });
       } catch (err) {
-        console.error(err);
+        logger.error("editServiceQuote failed:", err);
       }
     }
 
@@ -3768,7 +3754,7 @@ Ref #: ${ref_no}`,
       data: quote,
     };
   } catch (error) {
-    console.error(error);
+    logger.error("editServiceQuote failed:", error);
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
   }
 };
@@ -3789,7 +3775,6 @@ const submitServiceRequest = async (reqBody) => {
       signature,
     } = reqBody;
 
-    console.log("SERVICE DAYS:", service_days);
 
     /* ================= USER ================= */
     const userDocs = await User.findOne({ where: { id: user_id } });
@@ -3901,7 +3886,7 @@ const submitServiceRequest = async (reqBody) => {
       },
     };
   } catch (error) {
-    console.error(error);
+    logger.error("submitServiceRequest failed:", error);
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
   }
 };
@@ -4069,7 +4054,7 @@ const editServiceRequest = async (reqBody) => {
       data: request,
     };
   } catch (error) {
-    console.error(error);
+    logger.error("editServiceRequest failed:", error);
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
   }
 };
@@ -4156,7 +4141,7 @@ const getAllServiceRequests = async ({ month } = {}) => {
 
     return invoices;
   } catch (error) {
-    console.error("getAllInvoices error:", error);
+    logger.error("getAllInvoices error:", error);
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
   }
 };
@@ -4250,7 +4235,7 @@ const toggleLogoutImageRequired = async (reqBody, res) => {
       },
     });
   } catch (error) {
-    console.error("Toggle Error:", error);
+    logger.error("Toggle Error:", error);
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
   }
 };
@@ -4293,7 +4278,7 @@ const sendReviewEmail = async (reqBody) => {
       reviewLinks.booking_review_link,
     );
   } catch (error) {
-    console.error("sendReviewEmail error:", error);
+    logger.error("sendReviewEmail error:", error);
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
   }
 };
@@ -4347,7 +4332,7 @@ const getReviewLink = async () => {
 
     return quotes;
   } catch (error) {
-    console.error("getServiceQuotesByUser error:", error);
+    logger.error("getServiceQuotesByUser error:", error);
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
   }
 };
@@ -4405,7 +4390,7 @@ const markQuoteAsCheckPaid = async (quoteId) => {
     try {
       await deleteSquarePaymentLink(quote.square_payment_link_id);
     } catch (err) {
-      console.warn("Failed to delete Square link:", err.message);
+      logger.warn("Failed to delete Square link:", err.message);
     }
   }
 
@@ -4464,7 +4449,7 @@ const markQuoteAsACHPaid = async (quoteId) => {
     try {
       await deleteSquarePaymentLink(quote.square_payment_link_id);
     } catch (err) {
-      console.warn("Failed to delete Square link:", err.message);
+      logger.warn("Failed to delete Square link:", err.message);
     }
   }
 
@@ -4540,9 +4525,7 @@ const getAllInvoices = async ({ month } = {}) => {
 
     return invoices;
   } catch (error) {
-    console.error("🔥 FULL ERROR:", error);
-    console.error("🔥 SQL MESSAGE:", error?.parent?.sqlMessage);
-    console.error("🔥 SQL:", error?.sql);
+    logger.error("FULL ERROR:", error);
     throw error;
   }
 };
@@ -4745,7 +4728,7 @@ const getMonthlyInvoicesSummary = async ({ month }) => {
 
     return result;
   } catch (err) {
-    console.error(err);
+    logger.error("getMonthlyInvoicesSummary failed:", err);
     throw err;
   }
 };
@@ -4839,7 +4822,7 @@ const getLiveWorkingEmployees = async (reqBody) => {
       data: liveEmployees,
     };
   } catch (error) {
-    console.error("❌ Error in getLiveWorkingEmployees:", error);
+    logger.error("Error in getLiveWorkingEmployees:", error);
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
   }
 };
@@ -4924,7 +4907,7 @@ const getLateAbsentEmployees = async (reqBody) => {
       data: result,
     };
   } catch (error) {
-    console.error("❌ Error:", error);
+    logger.error("Error:", error);
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
   }
 };
@@ -5099,7 +5082,7 @@ const getUpcomingScheduledBookings = async () => {
       data: formattedBookings,
     };
   } catch (error) {
-    console.error("❌ Error in getUpcomingScheduledBookings:", error);
+    logger.error("Error in getUpcomingScheduledBookings:", error);
 
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
   }

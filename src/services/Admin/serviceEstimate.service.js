@@ -1,6 +1,7 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
+const logger = require("../../config/logger");
 const { UPLOAD_DIRS, docUrl } = require("../../config/storage");
 const { COMPANY, STAFF } = require("../../config/company");
 const { contractStatusTypes } = require("../../config/types");
@@ -270,10 +271,6 @@ const generateEstimatePDFService = async (reqBody) => {
       })),
     }));
 
-    console.log(
-      "CURRENT SCOPE DATA FOR PDF:",
-      JSON.stringify(cleanScopeSections, null, 2),
-    );
 
     /* ================= GENERATE PDF ================= */
     await generateEstimatePDF(
@@ -351,7 +348,7 @@ const generateEstimatePDFService = async (reqBody) => {
       },
     };
   } catch (error) {
-    console.error(error);
+    logger.error("generateEstimatePDFService failed:", error);
 
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
   }
@@ -420,7 +417,7 @@ const downloadScopeOfWorkPdfService = async (userId) => {
 
     return { fileUrl, fileName };
   } catch (error) {
-    console.error(error);
+    logger.error("downloadScopeOfWorkPdfService failed:", error);
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
   }
 };
@@ -736,7 +733,7 @@ const updateServiceEstimate = async (reqBody) => {
       data: estimate,
     };
   } catch (error) {
-    console.error(error);
+    logger.error("updateServiceEstimate failed:", error);
 
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
   }
@@ -832,7 +829,6 @@ const generateContractAgreementService = async (reqBody) => {
       user_id,
     });
 
-    console.log(paymentUrl, "paymentUrl");
 
     const fileName = `Contract-Agreement-${client_company_name}.pdf`;
 
@@ -860,7 +856,6 @@ const generateContractAgreementService = async (reqBody) => {
       pdfPath,
     );
 
-    console.log("reached here");
 
     /* ===== DOCUSIGN ===== */
 
@@ -871,19 +866,9 @@ const generateContractAgreementService = async (reqBody) => {
       clientName: signerName,
     });
 
-    console.log(envelopeId, "envelopeId");
 
     const publicUrl = docUrl(fileName);
 
-    console.log({
-      user_id,
-      client_company_name,
-      client_legal_name,
-      client_representative,
-      service_address,
-      total_monthly_price,
-      contract_date,
-    });
     const contract = await ContractAgreement.create({
       user_id,
 
@@ -1079,7 +1064,7 @@ const updateContractAgreement = async (reqBody) => {
       data: contract,
     };
   } catch (error) {
-    console.error(error);
+    logger.error("updateContractAgreement failed:", error);
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
   }
 };
@@ -1936,7 +1921,7 @@ const getUserScopeView = async (userId) => {
       data: filteredSections,
     };
   } catch (error) {
-    console.error("Error getting user scope view:", error);
+    logger.error("Error getting user scope view:", error);
 
     if (error instanceof ApiError) {
       throw error;
@@ -1963,7 +1948,7 @@ const checkUserScopeExists = async (userId) => {
       exists: !!scope,
     };
   } catch (error) {
-    console.error("Error checking user scope:", error);
+    logger.error("Error checking user scope:", error);
 
     if (error instanceof ApiError) {
       throw error;
@@ -2225,9 +2210,6 @@ const createEstimateSection = async (reqBody, estimate_id) => {
       sections = [];
     }
 
-    console.log("scope_sections raw:", estimate.scope_sections);
-    console.log("typeof:", typeof estimate.scope_sections);
-    console.log("isArray:", Array.isArray(estimate.scope_sections));
 
     const nextOrder =
       sections.length > 0

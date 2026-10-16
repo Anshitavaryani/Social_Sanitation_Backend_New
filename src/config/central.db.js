@@ -14,7 +14,8 @@ const sequelizeOptions = {
         min: 0,
         idle: 10000,
     },
-    logging: config.env === 'production' ? false : console.log
+    // SQL statements at debug level outside production (they carry customer data)
+    logging: config.env === 'production' ? false : (sql) => logger.debug(sql)
 };
 
 //create connection object

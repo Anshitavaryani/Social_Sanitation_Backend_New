@@ -1,6 +1,7 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
+const logger = require("../../config/logger");
 const { IMAGE_FILE_URI, docUrl } = require("../../config/storage");
 const ApiError = require("../../utils/ApiError");
 const { FormSubmission, FormSection, FormAttachment } = require("../../models");
@@ -15,9 +16,6 @@ const submitForm = async (reqBody, files) => {
   try {
     let { formData, language } = reqBody;
 
-    // 🚨 Debugging Log
-    console.log("Received formData:", formData);
-    console.log("Received language:", language);
 
     // Ensure formData is parsed correctly
     if (typeof formData === "string") {
@@ -34,7 +32,6 @@ const submitForm = async (reqBody, files) => {
     const signatureCompanyBase64Url =
       formData?.floridaAgreement?.companysignature;
     const driverLicenseNumber = formData?.policy?.["Driver's License Number"];
-    console.log(driverLicenseNumber, "driverLicenseNumber");
 
     if (!userEmail) {
       throw new ApiError(httpStatus.BAD_REQUEST, "User email is missing");
@@ -48,8 +45,6 @@ const submitForm = async (reqBody, files) => {
       applicant_email: userEmail.trim().toLowerCase(),
     });
 
-    console.log("Received files:", files);
-    console.log("Received images:", files?.images);
 
     // ✅ **Loop through formData and store each section separately**
     for (const sectionName in formData) {
@@ -63,8 +58,6 @@ const submitForm = async (reqBody, files) => {
           data: sectionData, // ✅ Store as JSON Object instead of String
         });
 
-        // 🚨 Debugging Log
-        console.log(`Saving section: ${sectionName}`, sectionData);
       }
     }
 
@@ -81,8 +74,6 @@ const submitForm = async (reqBody, files) => {
           file_size: currImage.size,
         });
 
-        // 🚨 Debugging Log
-        console.log("Saving File:", currImage.filename);
       }
     }
 
@@ -125,7 +116,7 @@ const submitForm = async (reqBody, files) => {
       submission_id: submission.id,
     };
   } catch (error) {
-    console.error("Error in submitForm:", error);
+    logger.error("Error in submitForm:", error);
     throw ApiError.from(error);
   }
 };
@@ -278,7 +269,7 @@ const getHiringFormsByEmail = async (email, name) => {
               ? JSON.parse(personalInfoSection.data)
               : personalInfoSection.data;
         } catch (error) {
-          console.error(
+          logger.error(
             `Failed to parse personalInfo for submission ${submission.id}:`,
             error,
           );
@@ -349,7 +340,7 @@ const getHiringFormsByEmail = async (email, name) => {
               ? JSON.parse(personalInfoSection.data)
               : personalInfoSection.data;
         } catch (error) {
-          console.error(
+          logger.error(
             `Failed to parse personalInfo for submission ${submission.id}:`,
             error,
           );
@@ -424,7 +415,7 @@ const getHiringFormsByEmail = async (email, name) => {
 
     return data;
   } catch (error) {
-    console.error("Error in getHiringFormsByEmail:", error);
+    logger.error("Error in getHiringFormsByEmail:", error);
 
     if (error instanceof ApiError) {
       throw error;

@@ -1,5 +1,6 @@
 /** @format */
 const { status: httpStatus } = require("http-status");
+const logger = require("../../config/logger");
 const { COMPANY, APP_STORE_LINKS, adminPanelUrl, LOGO_URL } = require("../../config/company");
 const { attendanceStatusTypes } = require("../../config/types");
 const { formatDisplayDate, formatTime12h } = require("../../utils/time");
@@ -25,7 +26,7 @@ const sendEmailVerification = async (to, otp) => {
 
     return true;
   } catch (error) {
-    console.error("Email verification error:", error);
+    logger.error("Email verification error:", error);
     throw new ApiError(
       httpStatus.INTERNAL_SERVER_ERROR,
       error.message || "Failed to send verification email",
@@ -43,7 +44,7 @@ const sendForgotPasswordOTP = async (to, otp) => {
 
     return true;
   } catch (error) {
-    console.error("Forgot password email error:", error);
+    logger.error("Forgot password email error:", error);
     throw new ApiError(
       httpStatus.INTERNAL_SERVER_ERROR,
       error.message || "Failed to send forgot password email",
@@ -105,7 +106,7 @@ const sendUserCredentials = async (
 
     return true;
   } catch (error) {
-    console.error("Error sending user credentials email:", error);
+    logger.error("Error sending user credentials email:", error);
     throw new ApiError(
       httpStatus.INTERNAL_SERVER_ERROR,
       error.message || "Failed to send user credentials email",
@@ -165,7 +166,7 @@ const sendUpdatedUserCredentials = async (to, password) => {
 
     return true;
   } catch (error) {
-    console.error("Error sending updated user credentials email:", error);
+    logger.error("Error sending updated user credentials email:", error);
     throw new ApiError(
       httpStatus.INTERNAL_SERVER_ERROR,
       error.message || "Failed to send updated user credentials email",
@@ -207,7 +208,7 @@ const sendAdminCredentials = async (to, password) => {
 
     return true;
   } catch (error) {
-    console.error("Error sending admin credentials email:", error);
+    logger.error("Error sending admin credentials email:", error);
     throw new ApiError(
       httpStatus.INTERNAL_SERVER_ERROR,
       error.message || "Failed to send admin credentials email",
@@ -265,7 +266,7 @@ const sendEmailToAdmin = async (user, bookingDoc, serviceDoc) => {
 
     return true;
   } catch (error) {
-    console.error("Error sending admin booking email:", error);
+    logger.error("Error sending admin booking email:", error);
     throw new ApiError(
       httpStatus.INTERNAL_SERVER_ERROR,
       error.message || "Failed to send booking notification to admin",
@@ -308,7 +309,7 @@ const sendLeaveStatusEmail = async (userEmail, status) => {
 
     return true;
   } catch (error) {
-    console.error("Error sending leave status email:", error);
+    logger.error("Error sending leave status email:", error);
     throw new ApiError(
       httpStatus.INTERNAL_SERVER_ERROR,
       error.message || "Failed to send leave status email",
@@ -351,7 +352,7 @@ const sendEmailWithPDF = async (
 
     return true;
   } catch (error) {
-    console.error("Error sending email with PDF:", error);
+    logger.error("Error sending email with PDF:", error);
 
     throw new ApiError(
       httpStatus.INTERNAL_SERVER_ERROR,
@@ -403,7 +404,7 @@ const sendServiceRequestEmailWithPDF = async (toEmail, pdfPath, refNo) => {
 
     return true;
   } catch (error) {
-    console.error("Error sending Service Request email:", error);
+    logger.error("Error sending Service Request email:", error);
 
     throw new ApiError(
       httpStatus.INTERNAL_SERVER_ERROR,
@@ -454,7 +455,7 @@ const sendSignedServiceRequestEmailWithPDF = async (
 
     return true;
   } catch (error) {
-    console.error("Error sending signed Service Request email:", error);
+    logger.error("Error sending signed Service Request email:", error);
 
     throw new ApiError(
       httpStatus.INTERNAL_SERVER_ERROR,
@@ -506,7 +507,7 @@ const sendInvoiceEmailWithPDF = async (user, invoice, pdfPath, senderEmail) => {
 
     return true;
   } catch (error) {
-    console.error("Error sending email with PDF:", error);
+    logger.error("Error sending email with PDF:", error);
     throw new ApiError(
       httpStatus.INTERNAL_SERVER_ERROR,
       error.message || "Failed to send invoice email",
@@ -570,7 +571,7 @@ const sendReviewEmailWithPDF = async (
 
     return true;
   } catch (error) {
-    console.error("Error sending review email:", error);
+    logger.error("Error sending review email:", error);
     throw new ApiError(
       httpStatus.INTERNAL_SERVER_ERROR,
       error.message || "Failed to send review email",
@@ -602,7 +603,7 @@ const sendFormEmailWithPDF = async (toEmail, pdfPath) => {
 
     return true;
   } catch (error) {
-    console.error("Error sending email with PDF:", error);
+    logger.error("Error sending email with PDF:", error);
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
   }
 };
@@ -630,7 +631,7 @@ const sendFormToAdminWithPDF = async (userEmail, pdfPath) => {
 
     return true;
   } catch (error) {
-    console.error("Error sending admin email with PDF:", error);
+    logger.error("Error sending admin email with PDF:", error);
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
   }
 };
@@ -688,7 +689,7 @@ const sendGroupedAttendanceEmail = async ({
 
     return true;
   } catch (error) {
-    console.error("❌ Email error:", error);
+    logger.error("Email error:", error);
   }
 };
 

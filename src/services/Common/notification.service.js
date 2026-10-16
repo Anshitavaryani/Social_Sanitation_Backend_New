@@ -1,4 +1,5 @@
 const { getMessaging } = require('firebase-admin/messaging');
+const logger = require("../../config/logger");
 const { Notification, UserToken } = require("../../models");
 const ApiError = require("../../utils/ApiError");
 const { status: httpStatus } = require("http-status");
@@ -35,7 +36,7 @@ const sendPushNotification = async (notificationObj, registrationTokens, sound =
  
     return "Notification sent successfully";
   } catch (error) {
-    console.error("Error sending push notification:", error);
+    logger.error("Error sending push notification:", error);
     throw error;
   }
 };

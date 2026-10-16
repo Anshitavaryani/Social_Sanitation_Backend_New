@@ -1,6 +1,7 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
+const logger = require("../../config/logger");
 
 const {
 	DailyChecklist,
@@ -271,7 +272,7 @@ const markDailyChecklistItemAsCompleted = async (reqBody, id) => {
 			},
 		};
 	} catch (error) {
-		console.error("Error marking checklist item:", error);
+		logger.error("Error marking checklist item:", error);
 		throw new ApiError(
 			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
 			error.message || "Internal server error."
@@ -334,7 +335,7 @@ const getDailyChecklistWithTodayStatus = async (reqBody) => {
 			data: formattedChecklist,
 		};
 	} catch (error) {
-		console.error("Error fetching daily checklist:", error);
+		logger.error("Error fetching daily checklist:", error);
 		throw new ApiError(
 			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
 			error.message || "Internal server error"
@@ -437,7 +438,7 @@ const getWeeklyChecklistWithStatus = async (reqBody) => {
 			data: result,
 		};
 	} catch (error) {
-		console.error("Error fetching weekly checklist by date:", error);
+		logger.error("Error fetching weekly checklist by date:", error);
 		throw new ApiError(
 			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
 			error.message || "Internal server error"

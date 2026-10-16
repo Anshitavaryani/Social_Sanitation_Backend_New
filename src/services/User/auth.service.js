@@ -1,6 +1,7 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
+const logger = require("../../config/logger");
 const { IMAGE_FILE_URI } = require("../../config/storage");
 const bcrypt = require("bcryptjs");
 const { dayjs, inZone, isValidTimeZone, DATETIME_FORMAT } = require("../../utils/time");
@@ -365,7 +366,7 @@ const saveLoginTiming = async (user, token, reqBody, timezone) => {
 
 		// The timing row needs a known timezone; without one, skip it instead of failing the login
 		if (!timeZoneDoc) {
-			console.warn("Login timing not recorded: unknown timezone header", timezone);
+			logger.warn("Login timing not recorded: unknown timezone header", timezone);
 			return null;
 		}
 

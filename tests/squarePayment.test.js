@@ -253,13 +253,14 @@ test("webhook with a forged or missing signature is rejected with 401 before any
 
 test("without a configured signature key the webhook keeps working (and warns)", async () => {
   const warnings = [];
-  const warn = console.warn;
-  console.warn = (msg) => warnings.push(msg);
+  const logger = loadFromRoot("src/config/logger.js");
+  const warn = logger.warn;
+  logger.warn = (...args) => warnings.push(args.join(" "));
   try {
     const { res } = await runHandler(controller.handlePaymentWebhook, { body: { type: "refund.created" }, get: () => undefined });
     assert.equal(res.body.message, "Event ignored");
   } finally {
-    console.warn = warn;
+    logger.warn = warn;
   }
   assert.ok(warnings.some((w) => String(w).includes("SQUARE_WEBHOOK_SIGNATURE_KEY")));
 });

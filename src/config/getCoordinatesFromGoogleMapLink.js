@@ -1,4 +1,5 @@
 const axios = require("axios");
+const logger = require("./logger");
 
 const getCoordinatesFromGoogleMapLink = async (google_map_link, googleApiKey) => {
 	try {
@@ -50,7 +51,7 @@ const getCoordinatesFromGoogleMapLink = async (google_map_link, googleApiKey) =>
 
 		throw new Error("No coordinates found in URL");
 	} catch (err) {
-		console.error("Error fetching coordinates:", err.message);
+		logger.error("Error fetching coordinates:", err.message);
 		return null;
 	}
 };
@@ -66,7 +67,7 @@ const unshortenGoogleMapsLink = async (shortUrl) => {
 		if (!fullUrl) throw new Error("Redirect location not found");
 		return fullUrl;
 	} catch (err) {
-		console.error("Failed to expand shortened Google Maps link:", err.message);
+		logger.error("Failed to expand shortened Google Maps link:", err.message);
 		return null;
 	}
 };

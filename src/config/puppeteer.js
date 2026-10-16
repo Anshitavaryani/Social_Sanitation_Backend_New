@@ -4446,7 +4446,6 @@ const generateServiceRequestPDF = async (data) => {
     );
   });
 
-  console.log(pdfPath, "helloo");
 
   await page.pdf({
     path: pdfPath,

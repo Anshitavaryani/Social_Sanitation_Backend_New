@@ -27,7 +27,7 @@ const successHandler = morgan(successResponseFormat, {
                     // If the file does not exist, create it
                     fs.writeFile(fileName, logMessage, (err) => {
                         if (err) {
-                            console.error('Error creating file:', err);
+                            logger.error('Error creating file:', err);
                             return;
                         }
                     });
@@ -35,7 +35,7 @@ const successHandler = morgan(successResponseFormat, {
                     // If the file already exists, append the log message to it
                     fs.appendFile(fileName, logMessage, (err) => {
                         if (err) {
-                            console.error('Error appending to file:', err);
+                            logger.error('Error appending to file:', err);
                             return;
                         }
                     });
@@ -62,7 +62,7 @@ const errorHandler = morgan(errorResponseFormat, {
                     // If the file does not exist, create it
                     fs.writeFile(fileName, logMessage, (err) => {
                         if (err) {
-                            console.error('Error creating file:', err);
+                            logger.error('Error creating file:', err);
                             return;
                         }
                     });
@@ -70,7 +70,7 @@ const errorHandler = morgan(errorResponseFormat, {
                     // If the file already exists, append the log message to it
                     fs.appendFile(fileName, logMessage, (err) => {
                         if (err) {
-                            console.error('Error appending to file:', err);
+                            logger.error('Error appending to file:', err);
                             return;
                         }
                     });

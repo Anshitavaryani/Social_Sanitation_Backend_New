@@ -1,4 +1,5 @@
 const { status: httpStatus } = require("http-status");
+const logger = require("../../config/logger");
 const { paymentStatusTypes } = require("../../config/types");
 const { Op } = require("sequelize");
 const { dayBoundsUtc } = require("../../utils/time");
@@ -67,7 +68,7 @@ const getPaymentStatus = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("getPaymentStatus error:", error);
+    logger.error("getPaymentStatus error:", error);
     return res.status(500).json({
       success: false,
       message: "Failed to fetch payment status",

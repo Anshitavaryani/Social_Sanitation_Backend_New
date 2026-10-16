@@ -1,6 +1,7 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
+const logger = require("../../config/logger");
 const { UPLOAD_DIRS, docUrl } = require("../../config/storage");
 const { invoiceSenderEmail } = require("../../config/company");
 const { Sequelize, Op } = require("sequelize");
@@ -73,8 +74,6 @@ const createInvoice = async (reqBody) => {
       balance_date,
     } = reqBody;
 
-    console.log("========== CREATE INVOICE ==========");
-    console.log("Time:", new Date());
 
     let quote = null;
     let total_due = 0;
@@ -289,7 +288,7 @@ const createInvoice = async (reqBody) => {
       signature: quote ? quote.signature : signature,
     });
 
-    console.log("Invoice Created:", invoice.id, invoice.ref_no);
+    logger.info("Invoice created:", invoice.id, invoice.ref_no);
 
     if (quote) {
       await quote.update({
@@ -390,7 +389,7 @@ const createInvoice = async (reqBody) => {
       ? Number(invoice.deposit_amount || 0)
       : Number(invoice.total_due || 0);
 
-    const { paymentUrl, paymentLinkId } = await generateInvoicePaymentLink({
+    const { paymentUrl } = await generateInvoicePaymentLink({
       amount: initialPaymentAmount,
       clientName: invoice.to_company_name,
       customerEmail: user?.email,
@@ -400,7 +399,6 @@ const createInvoice = async (reqBody) => {
       paymentPurpose,
     });
 
-    console.log({ paymentUrl, paymentLinkId }, "paymentLink");
 
     /* ================= GENERATE PDF ================= */
 
@@ -1352,7 +1350,7 @@ const getAllInvoices = async ({ month } = {}) => {
 
     return invoices;
   } catch (error) {
-    console.error("getAllInvoices error:", error);
+    logger.error("getAllInvoices error:", error);
 
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
   }
@@ -1395,7 +1393,7 @@ const deleteInvoice = async (invoiceId) => {
           payment_status: paymentStatusTypes.REJECTED,
         });
       } catch (err) {
-        console.warn(
+        logger.warn(
           "Failed to delete Square payment link:",
           err.response?.data || err.message,
         );
@@ -1485,7 +1483,6 @@ const sendInvoiceCron = async () => {
   try {
     const todayNY = dateInTz();
 
-    console.log("todayNY", todayNY);
 
     const invoices = await Invoice.findAll({
       where: {
@@ -1505,7 +1502,7 @@ const sendInvoiceCron = async () => {
       },
     });
 
-    console.log(`Invoices to process: ${invoices.length}`);
+    logger.debug(`Invoices to process: ${invoices.length}`);
 
     for (const invoice of invoices) {
       /* ---------- PREVENT DUPLICATE SEND ---------- */
@@ -1546,7 +1543,7 @@ const sendInvoiceCron = async () => {
       if (invoice.deposit_required) {
         // The cron may send only the initial deposit.
         if (invoice.payment_stage !== invoicePaymentStageTypes.DEPOSIT_PENDING) {
-          console.log(
+          logger.debug(
             `Skipping invoice ${invoice.ref_no}: payment stage is ${invoice.payment_stage}`,
           );
           continue;
@@ -1557,7 +1554,7 @@ const sendInvoiceCron = async () => {
       } else {
         // Existing non-deposit invoices retain full-payment behavior.
         if (invoice.payment_stage && invoice.payment_stage !== invoicePaymentStageTypes.FULL) {
-          console.log(
+          logger.debug(
             `Skipping invoice ${invoice.ref_no}: payment stage is ${invoice.payment_stage}`,
           );
           continue;
@@ -1568,7 +1565,7 @@ const sendInvoiceCron = async () => {
       }
 
       if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) {
-        console.log(
+        logger.debug(
           `Skipping invoice ${invoice.ref_no}: invalid payment amount`,
         );
         continue;
@@ -1634,10 +1631,10 @@ const sendInvoiceCron = async () => {
         last_sent_at: new Date(),
       });
 
-      console.log(`Invoice ${invoice.ref_no} sent successfully.`);
+      logger.info(`Invoice ${invoice.ref_no} sent successfully.`);
     }
   } catch (error) {
-    console.error("sendInvoiceCron error:", error);
+    logger.error("sendInvoiceCron error:", error);
   }
 };
 
@@ -1652,16 +1649,12 @@ const generateRecurringInvoicesCron = async () => {
       },
     });
 
-    console.log(
+    logger.info(
       `Recurring invoices to generate: ${recurringInvoices.length}`,
     );
 
     for (const recurring of recurringInvoices) {
       try {
-        console.log(
-          "Processing recurring invoice:",
-          recurring.invoice_id,
-        );
 
         const invoice = await Invoice.findByPk(recurring.invoice_id, {
           include: [
@@ -1675,7 +1668,7 @@ const generateRecurringInvoicesCron = async () => {
         });
 
         if (!invoice) {
-          console.log(
+          logger.warn(
             `Invoice not found for recurring schedule ${recurring.id}.`,
           );
           continue;
@@ -1688,7 +1681,7 @@ const generateRecurringInvoicesCron = async () => {
           Number(recurring.occurrences_generated || 0) >=
             Number(recurring.max_occurrences)
         ) {
-          console.log("Maximum occurrences reached.");
+          logger.info(`Recurring schedule ${recurring.id} reached its maximum occurrences.`);
 
           await recurring.update({
             status: recurringInvoiceStatusTypes.COMPLETED,
@@ -1700,7 +1693,7 @@ const generateRecurringInvoicesCron = async () => {
         // ---------- CHECK TEMPLATE STATUS ----------
 
         if (invoice.status !== invoiceStatusTypes.ACTIVE || !invoice.is_active) {
-          console.log("Template invoice is inactive.");
+          logger.info(`Recurring schedule ${recurring.id}: template invoice ${invoice.id} is inactive.`);
           continue;
         }
 
@@ -1709,7 +1702,7 @@ const generateRecurringInvoicesCron = async () => {
         const billingMoment = parseDateInZone(recurring.next_billing_date, timezone);
 
         if (!billingMoment.isValid()) {
-          console.error(
+          logger.error(
             `Invalid next billing date for recurring schedule ${recurring.id}:`,
             recurring.next_billing_date,
           );
@@ -1723,7 +1716,7 @@ const generateRecurringInvoicesCron = async () => {
             endMoment.isValid() &&
             billingMoment.isAfter(endMoment, "day")
           ) {
-            console.log(
+            logger.info(
               `Recurring schedule ${recurring.id} completed.`,
             );
 
@@ -1855,7 +1848,7 @@ const generateRecurringInvoicesCron = async () => {
         const totalDue = Number(invoice.total_due || 0);
 
         if (!Number.isFinite(totalDue) || totalDue < 0) {
-          console.error(
+          logger.error(
             `Invalid total_due on recurring template invoice ${invoice.id}.`,
           );
           continue;
@@ -1877,14 +1870,14 @@ const generateRecurringInvoicesCron = async () => {
           );
 
           if (!originalBillingMoment.isValid()) {
-            console.error(
+            logger.error(
               `Cannot generate deposit invoice from template ${invoice.id}: invalid billing_date.`,
             );
             continue;
           }
 
           if (!originalBalanceDueMoment.isValid()) {
-            console.error(
+            logger.error(
               `Cannot generate deposit invoice from template ${invoice.id}: balance_due_date is missing or invalid.`,
             );
             continue;
@@ -1896,7 +1889,7 @@ const generateRecurringInvoicesCron = async () => {
           );
 
           if (balanceGap <= 0) {
-            console.error(
+            logger.error(
               `Cannot generate deposit invoice from template ${invoice.id}: balance_due_date must be after billing_date.`,
             );
             continue;
@@ -1926,7 +1919,7 @@ const generateRecurringInvoicesCron = async () => {
         });
 
         if (existingInvoice) {
-          console.log(
+          logger.info(
             `Invoice already exists for billing date ${nextInvoiceDate}.`,
           );
           continue;
@@ -1988,7 +1981,7 @@ const generateRecurringInvoicesCron = async () => {
           is_active: true,
         });
 
-        console.log(
+        logger.info(
           `Created recurring invoice ${newInvoice.ref_no}. Deposit required: ${recurringDepositRequired}.`,
         );
 
@@ -2017,7 +2010,6 @@ const generateRecurringInvoicesCron = async () => {
           await InvoiceItem.bulkCreate(newItems);
         }
 
-        console.log(`Copied ${newItems.length} invoice items.`);
 
         // ---------- UPDATE RECURRING SCHEDULE ----------
 
@@ -2048,11 +2040,11 @@ const generateRecurringInvoicesCron = async () => {
 
         await recurring.update(updateData);
 
-        console.log(
+        logger.info(
           `Recurring schedule ${recurring.id} updated. Next billing date: ${nextBillingMoment.format(DATE_FORMAT)}`,
         );
       } catch (invoiceError) {
-        console.error(
+        logger.error(
           `Failed processing recurring schedule ${recurring.id}:`,
           invoiceError,
         );
@@ -2060,7 +2052,7 @@ const generateRecurringInvoicesCron = async () => {
       }
     }
   } catch (error) {
-    console.error("generateRecurringInvoicesCron:", error);
+    logger.error("generateRecurringInvoicesCron:", error);
   }
 };
 
@@ -2279,7 +2271,7 @@ const getMonthlyAllInvoicesSummary = async ({ month }) => {
       employees: Object.values(userMap),
     };
   } catch (err) {
-    console.error(err);
+    logger.error("getMonthlyAllInvoicesSummary failed:", err);
     throw err;
   }
 };
@@ -2892,7 +2884,7 @@ const getBusinessAnalytics = async ({ month }) => {
       },
     };
   } catch (error) {
-    console.error(error);
+    logger.error("getBusinessAnalytics failed:", error);
 
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
   }
@@ -2940,7 +2932,7 @@ const getUpcomingInvoices = async () => {
 
     return invoices;
   } catch (error) {
-    console.error("getUpcomingInvoices error:", error);
+    logger.error("getUpcomingInvoices error:", error);
 
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
   }
@@ -3334,7 +3326,7 @@ const sendDueBalancesCron = async () => {
 
     // The balance email must never be sent before 9:00 AM New York time.
     if (nowNY.hour() < 9) {
-      console.log("Balance cron skipped: it is before 9:00 AM New York time.");
+      logger.debug("Balance cron skipped: it is before 9:00 AM New York time.");
       return;
     }
 
@@ -3353,7 +3345,7 @@ const sendDueBalancesCron = async () => {
       },
     });
 
-    console.log(
+    logger.debug(
       `Balances eligible to send after 9 AM: ${invoices.length}`,
     );
 
@@ -3377,18 +3369,18 @@ const sendDueBalancesCron = async () => {
 
         await sendInvoiceBalance(currentInvoice.id);
 
-        console.log(
+        logger.info(
           `Balance sent for invoice ${currentInvoice.ref_no}`,
         );
       } catch (err) {
-        console.error(
+        logger.error(
           `Balance failed for invoice ${invoice.ref_no}:`,
           err.message,
         );
       }
     }
   } catch (error) {
-    console.error("sendDueBalancesCron error:", error);
+    logger.error("sendDueBalancesCron error:", error);
   }
 };
 

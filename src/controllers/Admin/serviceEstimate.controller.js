@@ -1,6 +1,7 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
+const logger = require("../../config/logger");
 const { UPLOAD_DIRS, docUrl } = require("../../config/storage");
 const { contractStatusTypes, quoteStatusTypes } = require("../../config/types");
 const catchAsync = require("../../utils/catchAsync");
@@ -162,7 +163,6 @@ const deleteContractAgreement = catchAsync(async (req, res) => {
 
 const handleDocusignWebhook = async (req, res) => {
   try {
-    console.log("DOCUSIGN WEBHOOK PAYLOAD:");
 
     const envelopeId =
       req.body?.data?.envelopeId ||
@@ -174,8 +174,7 @@ const handleDocusignWebhook = async (req, res) => {
       req.body?.data?.event ||
       req.body?.data?.envelopeSummary?.status;
 
-    console.log("Envelope ID:", envelopeId);
-    console.log("Event:", event);
+    logger.info("DocuSign webhook:", event, "envelope", envelopeId);
 
     // 🔥 HANDLE CLIENT SIGN FIRST
 
@@ -189,7 +188,7 @@ const handleDocusignWebhook = async (req, res) => {
     try {
       signedPdfBuffer = await downloadSignedPDF(envelopeId);
     } catch (error) {
-      console.error("PDF download failed:", error);
+      logger.error("PDF download failed:", error);
       return res.status(200).send("Download failed");
     }
 
@@ -207,14 +206,12 @@ const handleDocusignWebhook = async (req, res) => {
     });
 
     if (serviceRequest) {
-      console.log("ServiceRequest found");
 
       const signedFileName = `signed-${serviceRequest.ref_no}.pdf`;
       const savePath = path.join(pdfDir, signedFileName);
 
       fs.writeFileSync(savePath, signedPdfBuffer);
 
-      console.log("Before update:", serviceRequest.status);
 
       await serviceRequest.update({
         status: quoteStatusTypes.SIGNED,
@@ -223,7 +220,6 @@ const handleDocusignWebhook = async (req, res) => {
 
       await serviceRequest.reload();
 
-      console.log("After update:", serviceRequest.status);
 
       try {
         const user = await User.findOne({
@@ -238,7 +234,7 @@ const handleDocusignWebhook = async (req, res) => {
           );
         }
       } catch (error) {
-        console.error("ServiceRequest email failed:", error);
+        logger.error("ServiceRequest email failed:", error);
       }
 
       handled = true;
@@ -256,7 +252,6 @@ const handleDocusignWebhook = async (req, res) => {
     }
 
     if (document) {
-      console.log("Estimate/Contract found");
 
       const signedFileName = `signed-${document.file_name}`;
       const savePath = path.join(pdfDir, signedFileName);
@@ -274,12 +269,12 @@ const handleDocusignWebhook = async (req, res) => {
 
     /* ================= FINAL SAFETY ================= */
     if (!handled) {
-      console.log("No matching record for envelope:", envelopeId);
+      logger.warn("DocuSign webhook: no service request, estimate or contract for envelope", envelopeId);
     }
 
     return res.status(200).send("Webhook processed");
   } catch (err) {
-    console.error("DOCUSIGN WEBHOOK ERROR:", err);
+    logger.error("DOCUSIGN WEBHOOK ERROR:", err);
     return res.status(200).send("Webhook error handled");
   }
 };

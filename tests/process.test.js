@@ -11,7 +11,7 @@ const runIndex = (env, timeoutMs = 30000) =>
     const child = spawn(
       process.execPath,
       ["--require", path.join(__dirname, "helpers/childPreload.js"), "index.js"],
-      { cwd: ROOT, env: { ...process.env, ...env } },
+      { cwd: ROOT, env: { ...process.env, LOG_LEVEL: "info", ...env } },
     );
     let output = "";
     child.stdout.on("data", (chunk) => (output += chunk));
@@ -37,7 +37,7 @@ test("SIGTERM shuts the server down cleanly with code 0", async () => {
   const child = spawn(
     process.execPath,
     ["--require", path.join(__dirname, "helpers/childPreload.js"), "index.js"],
-    { cwd: ROOT, env: process.env },
+    { cwd: ROOT, env: { ...process.env, LOG_LEVEL: "info" } },
   );
   let output = "";
   child.stdout.on("data", (chunk) => {

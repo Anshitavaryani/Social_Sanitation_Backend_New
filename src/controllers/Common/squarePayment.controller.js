@@ -1,6 +1,7 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
+const logger = require("../../config/logger");
 const { currancyTypes, invoicePaymentStageTypes, invoicePaymentStatusTypes, jobStatusTypes, paymentPurposeTypes, paymentStatusTypes, squarePaymentStatusTypes } = require("../../config/types");
 const { createHash, randomUUID } = require("crypto");
 const { SquareClient, SquareEnvironment, WebhooksHelper } = require("square");
@@ -48,7 +49,6 @@ const createCustomer = async (userDoc) => {
 
     // Check if `square_customer_id` exists
     if (!userDoc.square_customer_id || userDoc.square_customer_id === "") {
-      console.log("Creating new Square customer...");
 
       // Create a new customer in Square
       const response = await client.customers.create(customerObj);
@@ -58,9 +58,8 @@ const createCustomer = async (userDoc) => {
       userDoc.square_customer_id = customer.id;
       await userDoc.save();
 
-      console.log("New Square customer created:", customer?.id);
+      logger.debug("New Square customer created:", customer?.id);
     } else {
-      console.log("Retrieving existing Square customer...");
 
       // Retrieve existing customer information from Square
       const response = await client.customers.get({
@@ -68,13 +67,12 @@ const createCustomer = async (userDoc) => {
       });
       customer = response.customer;
 
-      console.log("Existing Square customer retrieved:", customer?.id);
     }
 
     // Return the customer object or `false` if not found
     return customer ? customer : false;
   } catch (error) {
-    console.error("Square API Error:", error);
+    logger.error("Square API Error:", error);
     throw ApiError.from(error);
   }
 };
@@ -157,7 +155,7 @@ const createPayment = catchAsync(async (req, res) => {
 
     return responseWrapper(res, response, "");
   } catch (error) {
-    console.error("Square API Error:", error);
+    logger.error("Square API Error:", error);
     throw ApiError.from(error);
   }
 });
@@ -168,7 +166,7 @@ const createPayment = catchAsync(async (req, res) => {
 const isAuthenticSquareWebhook = async (req) => {
   const signatureKey = config.square.webhookSignatureKey;
   if (!signatureKey) {
-    console.warn("SQUARE_WEBHOOK_SIGNATURE_KEY is not set: Square webhook signature not verified");
+    logger.warn("SQUARE_WEBHOOK_SIGNATURE_KEY is not set: Square webhook signature not verified");
     return true;
   }
   const notificationUrl =
@@ -183,7 +181,6 @@ const isAuthenticSquareWebhook = async (req) => {
 
 const handlePaymentWebhook = catchAsync(async (req, res) => {
   try {
-    console.log("🔥 Webhook HIT");
 
     if (!(await isAuthenticSquareWebhook(req))) {
       return res.status(httpStatus.UNAUTHORIZED).json({ message: "Invalid webhook signature" });
@@ -192,7 +189,7 @@ const handlePaymentWebhook = catchAsync(async (req, res) => {
     const event = req.body;
     const eventType = event.type;
 
-    console.log("Received Square event:", event?.type, event?.event_id);
+    logger.info("Square webhook:", event?.type, event?.event_id);
 
     if (
       eventType !== "payment.created" &&
@@ -204,7 +201,7 @@ const handlePaymentWebhook = catchAsync(async (req, res) => {
     const paymentData = event?.data?.object?.payment;
 
     if (!paymentData) {
-      console.error("Missing payment object", event);
+      logger.error("Square webhook without a payment object:", event?.type, event?.event_id);
 
       return res.status(200).json({
         message: "Invalid event data ignored",
@@ -231,7 +228,7 @@ const handlePaymentWebhook = catchAsync(async (req, res) => {
             null;
         }
       } catch (err) {
-        console.error(
+        logger.error(
           "Unable to fetch Square payment details:",
           err.message,
         );
@@ -248,7 +245,7 @@ const handlePaymentWebhook = catchAsync(async (req, res) => {
       null;
 
     if (!paymentId || !paymentStatus) {
-      console.warn("Missing payment ID or status");
+      logger.warn("Missing payment ID or status");
 
       return res.status(200).json({
         message: "Incomplete payment ignored",
@@ -272,7 +269,7 @@ const handlePaymentWebhook = catchAsync(async (req, res) => {
     }
 
     if (!paymentRecord) {
-      console.warn("No matching payment record:", {
+      logger.warn("No matching payment record:", {
         paymentId,
         orderId,
       });
@@ -317,7 +314,7 @@ const handlePaymentWebhook = catchAsync(async (req, res) => {
     ).toUpperCase();
 
     if (![paymentPurposeTypes.DEPOSIT, paymentPurposeTypes.BALANCE, paymentPurposeTypes.FULL].includes(paymentPurpose)) {
-      console.error("Unknown or missing payment purpose:", {
+      logger.error("Unknown or missing payment purpose:", {
         paymentId,
         paymentRecordId: paymentRecord.id,
         paymentPurpose: paymentRecord.payment_purpose,
@@ -336,7 +333,7 @@ const handlePaymentWebhook = catchAsync(async (req, res) => {
       invoice = await Invoice.findByPk(paymentRecord.invoice_id);
 
       if (!invoice) {
-        console.error(
+        logger.error(
           "Invoice not found for payment:",
           paymentRecord.invoice_id,
         );
@@ -354,7 +351,7 @@ const handlePaymentWebhook = catchAsync(async (req, res) => {
 
       if (paymentPurpose === paymentPurposeTypes.DEPOSIT) {
         if (!invoice.deposit_required) {
-          console.error(
+          logger.error(
             "Deposit payment received for a non-deposit invoice:",
             {
               invoiceId: invoice.id,
@@ -370,7 +367,7 @@ const handlePaymentWebhook = catchAsync(async (req, res) => {
 
         if (currentStage === invoicePaymentStageTypes.COMPLETED) {
           // Do not regress an already completed invoice.
-          console.warn(
+          logger.warn(
             "Deposit payment received for completed invoice:",
             {
               invoiceId: invoice.id,
@@ -387,7 +384,7 @@ const handlePaymentWebhook = catchAsync(async (req, res) => {
             payment_status: invoicePaymentStatusTypes.NOT_PAID,
           });
         } else {
-          console.error("Unexpected stage for deposit payment:", {
+          logger.error("Unexpected stage for deposit payment:", {
             invoiceId: invoice.id,
             paymentId,
             currentStage,
@@ -408,7 +405,7 @@ const handlePaymentWebhook = catchAsync(async (req, res) => {
             payment_status: invoicePaymentStatusTypes.PAID,
           });
         } else {
-          console.error("Unexpected stage for balance payment:", {
+          logger.error("Unexpected stage for balance payment:", {
             invoiceId: invoice.id,
             paymentId,
             currentStage,
@@ -430,7 +427,7 @@ const handlePaymentWebhook = catchAsync(async (req, res) => {
             payment_status: invoicePaymentStatusTypes.PAID,
           });
         } else {
-          console.error("Unexpected stage for full payment:", {
+          logger.error("Unexpected stage for full payment:", {
             invoiceId: invoice.id,
             paymentId,
             currentStage,
@@ -482,7 +479,7 @@ const handlePaymentWebhook = catchAsync(async (req, res) => {
       receipt_url: receiptUrl,
     });
 
-    console.log("✅ Payment processed:", {
+    logger.info("Payment processed:", {
       paymentId,
       invoiceId: paymentRecord.invoice_id,
       paymentPurpose,
@@ -492,7 +489,7 @@ const handlePaymentWebhook = catchAsync(async (req, res) => {
       message: "Webhook processed successfully",
     });
   } catch (error) {
-    console.error("❌ Webhook error:", error);
+    logger.error("Webhook error:", error);
 
     return res.status(500).send("Webhook processing failed");
   }

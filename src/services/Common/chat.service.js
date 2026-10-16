@@ -1,6 +1,7 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
+const logger = require("../../config/logger");
 const ApiError = require("../../utils/ApiError");
 const { ROLE, EMPLOYEE_ROLE_IDS } = require("../../config/roles");
 const { getDatabase, ServerValue } = require("firebase-admin/database");
@@ -78,11 +79,11 @@ const sendMessage = async (body, files, headers) => {
 					senderType: user_type,
 				});
 			} catch (error) {
-				console.error("Chat push notification not sent:", error.message);
+				logger.error("Chat push notification not sent:", error.message);
 			}
 		}
 	} catch (error) {
-		console.error(error);
+		logger.error("sendMessage failed:", error);
 		throw error;
 	}
 };
@@ -101,7 +102,7 @@ async function uploadImages(files) {
 			);
 			imageUrls.push(downloadURL);
 		} catch (error) {
-			console.error("Error uploading image:", error);
+			logger.error("Error uploading image:", error);
 		}
 	}
 
@@ -136,7 +137,7 @@ const getUserMessages = async (body) => {
 
 		return userMessages;
 	} catch (error) {
-		console.error(error);
+		logger.error("getUserMessages failed:", error);
 		throw error;
 	}
 };
@@ -150,22 +151,12 @@ const markUserMessagesAsRead = async (body) => {
 			throw new ApiError(httpStatus.BAD_REQUEST, "Required Receiver Id.");
 		}
 
-		// Log the ids and their types for debugging
-		console.log(
-			"ReceiverUserId:",
-			receiverUserId,
-			"Type of ReceiverUserId:",
-			typeof receiverUserId
-		);
-		console.log("UserId:", user.id, "Type of UserId:", typeof user.id);
 
 		// Find the receiver user document
 		let receiverDoc = await User.findOne({
 			where: { id: receiverUserId },
 		});
 
-		// Log the receiver document for debugging
-		console.log(receiverDoc, "receiverDoc");
 
 		// Check if receiverDoc exists
 		if (!receiverDoc) {
@@ -175,7 +166,6 @@ const markUserMessagesAsRead = async (body) => {
 		// Determine chat type based on receiver's role
 		const chatType =
 			receiverDoc.role_id === ROLE.CLIENT ? "USER_ADMIN_CHAT" : "EMPLOYEE_ADMIN_CHAT";
-		console.log("chatType", chatType);
 
 		// Update the messages to mark them as read
 		await markAsRead(user.id, receiverUserId, chatType);
@@ -205,7 +195,7 @@ const markAsRead = async (userId, receiverUserId, chatType) => {
 			userMessagesRef.child(messageKey).update({ read: true });
 		});
 	} catch (error) {
-		console.error("Error marking messages as read:", error);
+		logger.error("Error marking messages as read:", error);
 		throw error;
 	}
 };
@@ -232,7 +222,6 @@ const getChatList = async (body) => {
 		const chatRoomRef = getDatabase()
 			.ref(`${chatType}/messages/${userType}_${user.id}`);
 
-		console.log(chatRoomRef, "chatRoomRef");
 
 		const snapshot = await chatRoomRef.once("value");
 
@@ -261,7 +250,6 @@ const getChatList = async (body) => {
 			});
 		});
 
-		console.log(snapshot, "snapshot");
 
 		list.sort((a, b) => b.lastMessageTime - a.lastMessageTime);
 
@@ -562,7 +550,7 @@ const markMessagesAsRead = async (userId, receiverUserId, chatType) => {
 			userMessagesRef.child(lastMessageKey).update({ read: true });
 		}
 	} catch (error) {
-		console.error("Error marking messages as read:", error);
+		logger.error("Error marking messages as read:", error);
 		throw error;
 	}
 };
@@ -599,7 +587,7 @@ const sendNotification = async (body) => {
         // Send notifications to the receiver
         await sendPushNotification(notificationObj, fcmTokens);
     } catch (error) {
-        console.error("Error sending notification:", error);
+        logger.error("Error sending notification:", error);
         throw error;
     }
 };

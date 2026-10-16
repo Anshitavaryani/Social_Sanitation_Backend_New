@@ -2070,7 +2070,6 @@ const generateEstimatePDF = async (data, pdfPath) => {
     );
   });
 
-  console.log(pdfPath, "helloo");
 
   await page.pdf({
     path: pdfPath,
@@ -3163,7 +3162,6 @@ const generateContractPDF = async (data, pdfPath) => {
     );
   });
 
-  console.log(pdfPath, "helloo");
 
   await page.pdf({
     path: pdfPath,

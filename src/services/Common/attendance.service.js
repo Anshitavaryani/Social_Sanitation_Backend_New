@@ -1,6 +1,7 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
+const logger = require("../../config/logger");
 const Attendance = require("../../models/attendance.model");
 const ApiError = require("../../utils/ApiError");
 const { attendanceStatus } = require("../../utils/attendanceStatus");
@@ -66,12 +67,6 @@ const clockIn = async (reqBody, headers, files) => {
 			.tz(BUSINESS_TZ)
 			.format(DATE_FORMAT);
 
-		console.log({
-			raw_time_sent: clock_in_time,
-			parsed_utc: employeeClockIn,
-			clock_in_est_string: employeeClockInEST,
-			employeeDateEST,
-		});
 
 		// Fetch all bookings for this employee
 		const bookings = await Booking.findAll({
@@ -100,15 +95,6 @@ const clockIn = async (reqBody, headers, files) => {
 
 			const bookingDateEST = bookingStartEST.format(DATE_FORMAT);
 
-			console.log("Booking Match Check:", {
-				booking_id: b.id,
-				booking_date_in_utc: b.date_in_utc,
-				booking_time_in_utc: b.time_in_utc,
-				bookingStartUTC: bookingStartUTC.format(),
-				bookingStartEST: bookingStartEST.format(),
-				bookingDateEST,
-				employeeDateEST,
-			});
 
 			return bookingDateEST === employeeDateEST;
 		});
@@ -175,7 +161,7 @@ const clockIn = async (reqBody, headers, files) => {
 
 		return newClockIn;
 	} catch (error) {
-		console.error("Clock-In Error:", error);
+		logger.error("Clock-In Error:", error);
 		throw new ApiError(
 			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
 			error.message || "An unexpected error occurred.",
@@ -264,10 +250,9 @@ const clockOut = async (reqBody, headers, files) => {
 
 		await attendance.save();
 
-		console.log(`Clock-out saved: ${attendance.total_hours}`);
 		return attendance;
 	} catch (error) {
-		console.error("Clock-out error:", error);
+		logger.error("Clock-out error:", error);
 		throw new ApiError(
 			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
 			error.message || "An unexpected error occurred.",
@@ -556,10 +541,9 @@ const applyForLeave = async (reqBody, headers) => {
 		// Insert new leave requests
 		await Attendance.bulkCreate(leaveRequests);
 
-		console.log(`Leave applied from ${start_date} to ${end_date}`);
 		return { success: true, message: "Leave request submitted successfully." };
 	} catch (error) {
-		console.error("Leave application error:", error);
+		logger.error("Leave application error:", error);
 		throw new ApiError(
 			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
 			error.message || "An unexpected error occurred.",
@@ -1027,7 +1011,7 @@ const getAllAttendance = async (reqBody) => {
 			a.user_name.localeCompare(b.user_name),
 		);
 	} catch (error) {
-		console.error("Attendance Fetch Error:", error);
+		logger.error("Attendance Fetch Error:", error);
 		throw ApiError.from(error);
 	}
 };
@@ -1286,14 +1270,13 @@ const getDailyPresenceForMonth = async (reqBody) => {
 
 		return result;
 	} catch (error) {
-		console.error("Fetch Monthly Presence Error:", error);
+		logger.error("Fetch Monthly Presence Error:", error);
 		throw ApiError.from(error);
 	}
 };
 
 const autoClockOutEmployees = async () => {
 	try {
-		console.log("helloo this is working fine");
 		const now = new Date();
 
 		const incomplete = await Attendance.findAll({
@@ -1324,7 +1307,7 @@ const autoClockOutEmployees = async () => {
 
 
 		if (!incomplete.length) {
-			console.log("✅ No pending clock-outs found.");
+			logger.debug("No pending clock-outs found.");
 			return;
 		}
 
@@ -1381,8 +1364,8 @@ const autoClockOutEmployees = async () => {
 		);
 
 		if (employeesWithoutClockOut.length) {
-			console.log(
-				`✅ Auto clocked-out ${employeesWithoutClockOut.length} employees.`,
+			logger.info(
+				`Auto clocked-out ${employeesWithoutClockOut.length} employees.`,
 			);
 
 			// 🔔 Send Email
@@ -1392,7 +1375,7 @@ const autoClockOutEmployees = async () => {
 			});
 		}
 	} catch (error) {
-		console.error("❌ Auto clock-out failed:", error);
+		logger.error("Auto clock-out failed:", error);
 	}
 };
 
@@ -1412,21 +1395,18 @@ const syncClockInData = async () => {
 		const driversData = driversSnapshot.val();
 
 		if (!driversData) {
-			console.log("❌ No drivers data found in Firebase");
+			logger.debug("No drivers data found in Firebase");
 			return;
 		}
 
 		for (const userId in driversData) {
 			const { clockIn } = driversData[userId];
 
-			console.log(`\n➡️ Checking user: ${userId}`);
 
 			if (!clockIn?.timestamp || !clockIn?.latitude || !clockIn?.longitude) {
-				console.log("⚠️ Missing clockIn data, skipping...");
 				continue;
 			}
 
-			console.log(`🕒 Firebase clockIn: ${new Date(clockIn.timestamp)}`);
 
 			// Attempt to find today's unclocked-out attendance record
 			const attendance = await Attendance.findOne({
@@ -1443,18 +1423,13 @@ const syncClockInData = async () => {
 			});
 
 			if (!attendance) {
-				console.log(`❌ No matching attendance found in DB for user ${userId}`);
 				continue;
 			}
 
 			// Skip if clock_in_lat and clock_in_lng are already set
 			if (attendance.clock_in_lat && attendance.clock_in_lng) {
-				console.log("✅ Lat/Lng already set, skipping update.");
 				continue;
 			}
-			console.log(
-				`Updating lat/lng → lat: ${clockIn.latitude}, lng: ${clockIn.longitude}`,
-			);
 
 			await attendance.update({
 				clock_in_lat: clockIn.latitude,
@@ -1462,9 +1437,9 @@ const syncClockInData = async () => {
 			});
 		}
 
-		console.log("🎉 Clock-in sync completed.");
+		logger.debug("Clock-in sync completed.");
 	} catch (error) {
-		console.error("❌ Error syncing clock-in data:", error);
+		logger.error("Error syncing clock-in data:", error);
 	}
 };
 
@@ -1474,22 +1449,17 @@ const syncClockOutData = async () => {
 		const driversData = driversSnapshot.val();
 
 		if (!driversData) {
-			console.log("❌ No drivers data found in Firebase");
+			logger.debug("No drivers data found in Firebase");
 			return;
 		}
 
 		for (const userId in driversData) {
 			const { clockOut } = driversData[userId];
 
-			console.log(`\n➡️ Checking user: ${userId}`);
 
 			if (!clockOut?.timestamp || !clockOut?.latitude || !clockOut?.longitude) {
-				console.log("⚠️ Missing clockOut data, skipping...");
 				continue;
 			}
-
-			const clockOutDate = new Date(Number(clockOut.timestamp));
-			console.log(`🕒 Firebase clockOut: ${clockOutDate}`);
 
 			// Find latest attendance record that hasn't been clocked out yet
 			const attendance = await Attendance.findOne({
@@ -1502,18 +1472,16 @@ const syncClockOutData = async () => {
 			});
 
 			if (!attendance) {
-				console.log(`❌ No matching attendance found in DB for user ${userId}`);
 				continue;
 			}
 
 			// Skip if clock_out_lat and clock_out_lng are already set
 			if (attendance.clock_out_lat && attendance.clock_out_lng) {
-				console.log("✅ Clock-out Lat/Lng already set, skipping update.");
 				continue;
 			}
 
-			console.log(
-				`✅ Found attendance ID ${attendance.id} — Updating clock-out lat/lng`,
+			logger.debug(
+				`Clock-out location synced for attendance ${attendance.id}`,
 			);
 
 			await attendance.update({
@@ -1521,12 +1489,11 @@ const syncClockOutData = async () => {
 				clock_out_lng: clockOut.longitude,
 			});
 
-			console.log(`🎯 Clock-out synced for user ${userId}`);
 		}
 
-		console.log("🎉 Clock-out sync completed.");
+		logger.debug("Clock-out sync completed.");
 	} catch (error) {
-		console.error("❌ Error syncing clock-out data:", error);
+		logger.error("Error syncing clock-out data:", error);
 	}
 };
 
@@ -1542,7 +1509,7 @@ const autoCompleteExpiredBreaks = async () => {
 			},
 		});
 
-		console.log(`Found ${activeBreaks.length} expired active breaks`);
+		logger.debug(`Found ${activeBreaks.length} expired active breaks`);
 
 		if (activeBreaks.length === 0) return;
 
@@ -1553,14 +1520,8 @@ const autoCompleteExpiredBreaks = async () => {
 		for (const b of activeBreaks) {
 			const userId = b.user_id;
 
-			console.log(`Processing break ID ${b.id} for user ${userId}`);
 
 			const userLocations = driversData?.[userId]?.locations;
-			console.log(userLocations, "userLocations");
-
-			if (!userLocations) {
-				console.log(`⚠️ No location data found for user ${userId}`);
-			}
 
 			await b.update({
 				status: breakStatusTypes.COMPLETED,
@@ -1570,9 +1531,9 @@ const autoCompleteExpiredBreaks = async () => {
 
 		}
 
-		console.log(`✅ Breaks auto-completed: ${activeBreaks.length}`);
+		logger.debug(`Breaks auto-completed: ${activeBreaks.length}`);
 	} catch (error) {
-		console.error("❌ Error in auto-completing breaks:", error);
+		logger.error("Error in auto-completing breaks:", error);
 	}
 };
 
@@ -1640,7 +1601,7 @@ const getAllBreaks = async (reqBody) => {
 
 		return result.sort((a, b) => a.user_name.localeCompare(b.user_name));
 	} catch (error) {
-		console.error("Breaks Fetch Error:", error);
+		logger.error("Breaks Fetch Error:", error);
 		throw new ApiError(
 			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
 			error.message || "Something went wrong while fetching breaks",
@@ -1700,7 +1661,6 @@ const manualClockInOut = async (reqBody) => {
 			},
 		});
 
-		console.log(record, "record");
 
 		if (record) {
 			// If no clock_in passed, use existing one from DB

@@ -1,6 +1,7 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
+const logger = require("../../config/logger");
 const { attendanceStatusTypes, bookingListFilterTypes, bookingTypes, paymentStatusTypes } = require("../../config/types");
 const {
   dayjs,
@@ -535,7 +536,7 @@ async function updateRecurringBookingWithEditMode(
 
     throw new Error("Unknown edit_mode");
   } catch (err) {
-    console.error("❌ Error in updateRecurringBookingWithEditMode:", err);
+    logger.error("Error in updateRecurringBookingWithEditMode:", err);
     return {
       success: false,
       status: 500,
@@ -577,10 +578,9 @@ const updateBookingStatus = async (reqBody) => {
   try {
     const bookingDoc = await Booking.findByPk(booking_id);
     if (!bookingDoc) {
-      console.error("❌ Booking not found with ID:", booking_id);
+      logger.error("Booking not found with ID:", booking_id);
       throw new ApiError(httpStatus.NOT_FOUND, "Booking not found");
     }
-    console.log("✅ Booking found:", bookingDoc.toJSON());
 
     // If date & time are being updated, compute UTC versions
     let updateData = {
@@ -590,10 +590,7 @@ const updateBookingStatus = async (reqBody) => {
       booking_name,
       end_time_by_admin,
     };
-    console.log("🧪 Initial updateData:", updateData);
 
-    console.log("INPUT TIME:", time);
-    console.log("time_zone:", bookingDoc.time_zone);
 
     const formatDate = (inputDate) => toCalendarDate(inputDate);
 
@@ -601,8 +598,6 @@ const updateBookingStatus = async (reqBody) => {
       date || (bookingDoc.date ? formatDate(bookingDoc.date) : null);
     let effectiveTime = time || bookingDoc.time;
 
-    console.log("📆 Effective Date:", effectiveDate);
-    console.log("⏱️ Effective Time:", effectiveTime);
 
     if (effectiveDate && effectiveTime && bookingDoc.time_zone) {
       const { date_in_utc, time_in_utc } = bookingUtcParts(
@@ -611,7 +606,6 @@ const updateBookingStatus = async (reqBody) => {
         bookingDoc.time_zone,
       );
 
-      console.log("✅ Computed UTC:", { date_in_utc, time_in_utc });
 
       updateData = {
         ...updateData,
@@ -632,8 +626,6 @@ const updateBookingStatus = async (reqBody) => {
       updateData.booking_name = booking_name;
     }
 
-    console.log("🔍 Type of repeat_on_days:", typeof repeat_on_days);
-    console.log("🧾 repeat_on_days:", repeat_on_days);
 
     // 🧹 Prepare update payload
     let updatePayload = {
@@ -654,8 +646,8 @@ const updateBookingStatus = async (reqBody) => {
         try {
           parsedRepeatDays = JSON.parse(repeat_on_days);
         } catch (e) {
-          console.warn(
-            "⚠️ Failed to parse repeat_on_days, defaulting to empty array",
+          logger.warn(
+            "Failed to parse repeat_on_days, defaulting to empty array",
           );
           parsedRepeatDays = [];
         }
@@ -682,16 +674,12 @@ const updateBookingStatus = async (reqBody) => {
       updatePayload.recurrence_end_value = recurrence_end_value;
     }
 
-    console.log("🛠️ Update Payload:", updatePayload);
     const editMode = reqBody.edit_mode || "this";
 
-    console.log("✏️ Edit Mode:", editMode);
 
     if (!bookingDoc.recurrence_id || editMode === "this") {
-      console.log("📌 Updating single booking...");
       await Booking.update(updatePayload, { where: { id: booking_id } });
     } else {
-      console.log("🔁 Updating recurring bookings via utility function...");
       // Use the new, correct logic for recurring edits
       const result = await updateRecurringBookingWithEditMode(
         booking_id,
@@ -749,23 +737,19 @@ const updateBookingStatus = async (reqBody) => {
       booking_status === bookingTypes.ACCEPTED ||
       bookingDoc.booking_status === bookingTypes.ACCEPTED
     ) {
-      console.log("✅ Booking accepted, assigning employees...");
       const assignments = [];
 
       if (Array.isArray(cleaners) && cleaners.length > 0) {
-        console.log("🧼 Cleaners:", cleaners);
         cleaners.forEach((id) =>
           assignments.push({ booking_id, employee_id: id, role_id: ROLE.CLEANER }),
         );
       }
       if (Array.isArray(supervisors) && supervisors.length > 0) {
-        console.log("👷 Supervisors:", supervisors);
         supervisors.forEach((id) =>
           assignments.push({ booking_id, employee_id: id, role_id: ROLE.SUPERVISOR }),
         );
       }
       if (Array.isArray(quality_inspectors) && quality_inspectors.length > 0) {
-        console.log("🔍 Quality Inspectors:", quality_inspectors);
 
         quality_inspectors.forEach((id) =>
           assignments.push({ booking_id, employee_id: id, role_id: ROLE.QUALITY_INSPECTOR }),
@@ -773,7 +757,6 @@ const updateBookingStatus = async (reqBody) => {
       }
 
       if (assignments.length > 0) {
-        console.log("📥 Bulk creating assignments...");
 
         // Remove duplicates inside the same request
         const uniqueAssignments = assignments.filter(
@@ -805,13 +788,10 @@ const updateBookingStatus = async (reqBody) => {
 
         if (newAssignments.length > 0) {
           await BookingAssignment.bulkCreate(newAssignments);
-          console.log("✅ Saved new assignments:", newAssignments.length);
-        } else {
-          console.log("⚠️ No new unique assignments to save.");
+          logger.debug("Saved new assignments:", newAssignments.length);
         }
       }
 
-      console.log("💬 Creating group chat...");
       // Firebase group chat creation
       const allMembers = new Set([
         ...(cleaners || []).map((id) => `employee_${id}`),
@@ -868,7 +848,6 @@ const updateBookingStatus = async (reqBody) => {
       const isRecurringBooking =
         is_recurring === true && bookingDoc.type === "Recurring Booking";
 
-      console.log("🔁 Is Recurring Booking:", isRecurringBooking);
 
       if (typeof is_recurring === "string") {
         is_recurring = toBoolean(is_recurring);
@@ -891,14 +870,10 @@ const updateBookingStatus = async (reqBody) => {
           recurrence_end_value === undefined;
 
         if (isRecurrenceInputMissing) {
-          console.log(
-            "⚠️ Recurring is true but recurrence values are missing — skipping update and recurring booking creation.",
-          );
           // Skip everything
         } else {
           const recurrence_id = uuidv4();
 
-          console.log("📆 Creating recurring booking instance...");
 
           await Booking.update(
             {
@@ -917,7 +892,6 @@ const updateBookingStatus = async (reqBody) => {
           );
 
           if (bookingDoc.user_id === null) {
-            console.log("👥 Creating recurring bookings for guest user...");
             await createRecurringGuestBookings({
               baseBooking: bookingDoc,
               recurring_every,
@@ -928,9 +902,6 @@ const updateBookingStatus = async (reqBody) => {
               recurrence_id,
             });
           } else {
-            console.log(
-              "👤 Creating recurring bookings for registered user...",
-            );
             await createRecurringBookings({
               baseBooking: bookingDoc,
               user_id: bookingDoc.user_id,
@@ -966,7 +937,7 @@ const updateBookingStatus = async (reqBody) => {
       };
     }
   } catch (error) {
-    console.error("❌ Exception caught in updateBookingStatus:", error);
+    logger.error("Exception caught in updateBookingStatus:", error);
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
   }
 };
@@ -1016,13 +987,11 @@ const createRecurringBookings = async ({
 
     async function createOneBooking(dateMoment) {
       const nextDateStr = dateMoment.format(DATE_FORMAT);
-      console.log("🛠 Creating one booking at:", nextDateStr);
 
       const newBookingId = await generateBookingId(
         baseBooking.service_id,
         nextDateStr,
       );
-      console.log("🆔 Generated booking ID:", newBookingId);
 
       const { date_in_utc, time_in_utc } = bookingUtcParts(
         nextDateStr,
@@ -1064,36 +1033,25 @@ const createRecurringBookings = async ({
       }
 
       recurrenceList.push(newBooking);
-      console.log("✅ Booking created and added to list.");
     }
 
     // ---------------------------
     // WEEKLY
     // ---------------------------
     if (recurring_type === "week" && repeatOnIndexes.length > 0) {
-      console.log("🗓 Starting weekly recurrence logic...");
 
       let cursor = originalMoment.clone().add(1, "day");
       let weekCounter = 0;
 
       while (true) {
-        console.log(
-          "📅 Week loop:",
-          weekCounter,
-          "cursor:",
-          cursor.format(DATE_FORMAT),
-        );
 
         if (recurrence_end_type === "after" && count >= recurrence_end_value) {
-          console.log("⏹️ Reached 'after' count limit");
           break;
         }
         if (recurrence_end_type === "never" && count >= 100) {
-          console.log("⏹️ Reached 'never' safety limit");
           break;
         }
         if (endMoment && cursor.isAfter(endMoment)) {
-          console.log("⏹️ cursor passed endDate, stopping weekly loop");
           break;
         }
 
@@ -1105,10 +1063,6 @@ const createRecurringBookings = async ({
           if (candidate.isSameOrBefore(originalMoment, "day")) continue;
           if (endMoment && candidate.isAfter(endMoment)) continue;
 
-          console.log(
-            "✅ Creating booking for:",
-            candidate.format(DATE_FORMAT),
-          );
           await createOneBooking(candidate);
           count++;
 
@@ -1122,12 +1076,11 @@ const createRecurringBookings = async ({
 
         if (endMoment && cursor.isAfter(endMoment)) break;
         if (weekCounter > 10000) {
-          console.warn("⚠️ Week loop exceeded safe iteration count, breaking");
+          logger.warn("Week loop exceeded safe iteration count, breaking");
           break;
         }
       }
 
-      console.log("🎉 All weekly recurring bookings created.");
       return {
         success: true,
         message: `${recurrenceList.length} recurring bookings created.`,
@@ -1157,52 +1110,38 @@ const createRecurringBookings = async ({
           candidate = candidate.add(recurring_every, "years");
         }
 
-        console.log(
-          "🔄 Iteration:",
-          iter,
-          "candidate:",
-          candidate.format(DATE_FORMAT),
-        );
 
         if (recurrence_end_type === "after" && count >= recurrence_end_value) {
-          console.log("⏹️ Reached 'after' count limit");
           break;
         }
         if (recurrence_end_type === "never" && count >= 100) {
-          console.log("⏹️ Reached 'never' safety limit");
           break;
         }
         if (endMoment && candidate.isAfter(endMoment)) {
-          console.log("⏹️ candidate passed endDate, stopping loop");
           break;
         }
 
         if (candidate.isAfter(originalMoment, "day")) {
-          console.log(
-            "✅ Creating booking for:",
-            candidate.format(DATE_FORMAT),
-          );
           await createOneBooking(candidate.clone());
           count++;
         }
 
         if (iter > 20000) {
-          console.warn(
-            "⚠️ Exceeded safe iterations for date generation, breaking",
+          logger.warn(
+            "Exceeded safe iterations for date generation, breaking",
           );
           break;
         }
       }
     }
 
-    console.log("🎉 All recurring bookings created.");
     return {
       success: true,
       message: `${recurrenceList.length} recurring bookings created.`,
       firstBookingId: recurrenceList[0]?.id || null,
     };
   } catch (error) {
-    console.error("❌ Error in createRecurringBookings:", error);
+    logger.error("Error in createRecurringBookings:", error);
     return {
       success: false,
       message: error.message || "Something went wrong",
@@ -1378,7 +1317,7 @@ const adminCreateBooking = async (reqBody, headers) => {
       message: "Booking created successfully by admin",
     };
   } catch (error) {
-    console.error("Admin Booking Error:", error);
+    logger.error("Admin Booking Error:", error);
     throw ApiError.from(error);
   }
 };
@@ -1529,7 +1468,7 @@ const adminCreateBookingForGuest = async (reqBody) => {
       message: "Booking created successfully by admin",
     };
   } catch (error) {
-    console.error("Admin Booking Error:", error);
+    logger.error("Admin Booking Error:", error);
     throw ApiError.from(error);
   }
 };
@@ -1640,29 +1579,19 @@ const createRecurringGuestBookings = async ({
     // WEEKLY
     // ---------------------------
     if (recurring_type === "week" && repeatOnIndexes.length > 0) {
-      console.log("🗓 Starting weekly recurrence logic...");
 
       let cursor = originalMoment.clone().add(1, "day");
       let weekCounter = 0;
 
       while (true) {
-        console.log(
-          "📅 Week loop:",
-          weekCounter,
-          "cursor:",
-          cursor.format(DATE_FORMAT),
-        );
 
         if (recurrence_end_type === "after" && count >= recurrence_end_value) {
-          console.log("⏹️ Reached 'after' count limit");
           break;
         }
         if (recurrence_end_type === "never" && count >= 100) {
-          console.log("⏹️ Reached 'never' safety limit");
           break;
         }
         if (endMoment && cursor.isAfter(endMoment)) {
-          console.log("⏹️ cursor passed endDate, stopping weekly loop");
           break;
         }
 
@@ -1674,10 +1603,6 @@ const createRecurringGuestBookings = async ({
           if (candidate.isSameOrBefore(originalMoment, "day")) continue;
           if (endMoment && candidate.isAfter(endMoment)) continue;
 
-          console.log(
-            "✅ Creating booking for:",
-            candidate.format(DATE_FORMAT),
-          );
           await createOneBooking(candidate);
           count++;
 
@@ -1691,12 +1616,11 @@ const createRecurringGuestBookings = async ({
 
         if (endMoment && cursor.isAfter(endMoment)) break;
         if (weekCounter > 10000) {
-          console.warn("⚠️ Week loop exceeded safe iteration count, breaking");
+          logger.warn("Week loop exceeded safe iteration count, breaking");
           break;
         }
       }
 
-      console.log("🎉 All weekly recurring bookings created.");
       return {
         success: true,
         message: `${recurrenceList.length} recurring bookings created.`,
@@ -1726,38 +1650,25 @@ const createRecurringGuestBookings = async ({
           candidate = candidate.add(recurring_every, "years");
         }
 
-        console.log(
-          "🔄 Iteration:",
-          iter,
-          "candidate:",
-          candidate.format(DATE_FORMAT),
-        );
 
         if (recurrence_end_type === "after" && count >= recurrence_end_value) {
-          console.log("⏹️ Reached 'after' count limit");
           break;
         }
         if (recurrence_end_type === "never" && count >= 100) {
-          console.log("⏹️ Reached 'never' safety limit");
           break;
         }
         if (endMoment && candidate.isAfter(endMoment)) {
-          console.log("⏹️ candidate passed endDate, stopping loop");
           break;
         }
 
         if (candidate.isAfter(originalMoment, "day")) {
-          console.log(
-            "✅ Creating booking for:",
-            candidate.format(DATE_FORMAT),
-          );
           await createOneBooking(candidate.clone());
           count++;
         }
 
         if (iter > 20000) {
-          console.warn(
-            "⚠️ Exceeded safe iterations for date generation, breaking",
+          logger.warn(
+            "Exceeded safe iterations for date generation, breaking",
           );
           break;
         }
@@ -1770,7 +1681,7 @@ const createRecurringGuestBookings = async ({
       parentBookingId,
     };
   } catch (error) {
-    console.error("Error creating recurring bookings:", error);
+    logger.error("Error creating recurring bookings:", error);
     return {
       success: false,
       message: "Failed to create recurring bookings.",
@@ -1904,7 +1815,7 @@ const getMonthlyBookingCalendar = async (reqBody) => {
 
     return calendar;
   } catch (error) {
-    console.error("Error in getMonthlyBookingCalendar:", error);
+    logger.error("Error in getMonthlyBookingCalendar:", error);
     throw new ApiError(
       error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
       error.message || "Failed to get monthly booking calendar",
@@ -1970,15 +1881,12 @@ const sendAttendanceAlerts = async () => {
       ],
     });
 
-    console.log("📦 Bookings found:", bookings.length);
 
     for (const booking of bookings) {
-      console.log("🔹 Checking Booking:", booking.booking_name, booking.time);
 
       const { booking_employee_details } = booking;
 
       if (!booking_employee_details?.length) {
-        console.log("⛔ No employees assigned");
         continue;
       }
 
@@ -1989,7 +1897,6 @@ const sendAttendanceAlerts = async () => {
       for (const assignment of booking_employee_details) {
         const employeeId = assignment.employee_id;
 
-        console.log("👤 Checking employee:", employeeId);
 
         const attendanceEntry = await Attendance.findOne({
           where: {
@@ -2000,7 +1907,6 @@ const sendAttendanceAlerts = async () => {
           },
         });
 
-        console.log("📍 Attendance entry:", attendanceEntry);
 
         const status = attendanceStatus({
           bookingStart,
@@ -2011,7 +1917,6 @@ const sendAttendanceAlerts = async () => {
         // only late and absent employees are reported
         if (status !== attendanceStatusTypes.LATE && status !== attendanceStatusTypes.ABSENT) continue;
 
-        console.log("🚨 Final Status:", status);
 
         const user = await User.findByPk(employeeId, {
           include: [{ model: Profile, as: "user_profile" }],
@@ -2024,10 +1929,8 @@ const sendAttendanceAlerts = async () => {
         });
       }
 
-      console.log("📢 Employees to notify:", employeesToNotify);
 
       if (!employeesToNotify.length) {
-        console.log("❌ No one to notify");
         continue;
       }
 
@@ -2035,10 +1938,9 @@ const sendAttendanceAlerts = async () => {
         (e) => e.status === attendanceStatusTypes.ABSENT,
       );
 
-      console.log("🔴 Absent Employees:", absentEmployees.length);
 
       if (absentEmployees.length && !booking.absent_alert_sent) {
-        console.log("📧 Sending ABSENT email");
+        logger.info("Sending absent alert for booking", booking.id);
 
         await sendGroupedAttendanceEmail({
           booking,
@@ -2051,9 +1953,9 @@ const sendAttendanceAlerts = async () => {
       }
     }
 
-    console.log("✅ Attendance alerts processed.");
+    logger.debug("Attendance alerts processed.");
   } catch (error) {
-    console.error("❌ Error:", error);
+    logger.error("Error:", error);
   }
 };
 
@@ -2152,10 +2054,8 @@ const notifyAdminIfClockoutFar = async () => {
             // roleId: assignment.role_id,
           });
 
-          console.log(
-            `📩 Sent clock-out alert for ${employee.email} (~${distance.toFixed(
-              2,
-            )} km)`,
+          logger.info(
+            `Sent clock-out distance alert for employee ${employee.id} (~${distance.toFixed(2)} km)`,
           );
 
           // ✅ Update alert flag per employee
@@ -2164,9 +2064,9 @@ const notifyAdminIfClockoutFar = async () => {
       }
     }
 
-    console.log("✅ Clock-out distance checks completed.");
+    logger.debug("Clock-out distance checks completed.");
   } catch (error) {
-    console.error("❌ Error in notifyAdminIfClockoutFar:", error);
+    logger.error("Error in notifyAdminIfClockoutFar:", error);
   }
 };
 
@@ -2276,7 +2176,6 @@ const getDayOverview = async (reqBody, res) => {
           });
 
           let breaks = null;
-          console.log(attendance?.id, "attendance?.id");
           if (attendance?.id) {
             const breakRecords = await Break.findAll({
               where: { attendance_id: attendance.id },
@@ -2292,7 +2191,6 @@ const getDayOverview = async (reqBody, res) => {
               ],
               order: [["break_start_est", "ASC"]],
             });
-            console.log(breakRecords, "breakRecords");
 
             if (breakRecords.length > 0) {
               breaks = breakRecords.map((b) => ({
@@ -2434,7 +2332,6 @@ const getBookingOverviewById = async (id) => {
       ],
     });
 
-    console.log(booking, "booking");
 
     if (!booking) {
       throw new ApiError(httpStatus.NOT_FOUND, "Booking not found");
@@ -2569,11 +2466,10 @@ const getBookingOverviewById = async (id) => {
 const deleteBooking = async (reqBody) => {
   const booking_id = reqBody.booking_id; // use booking_id from form
   const delete_mode = reqBody.delete_mode; // optional, may be undefined
-  console.log("Deleting booking", booking_id, delete_mode);
+  logger.info("Deleting booking", booking_id, delete_mode);
 
   try {
     const booking = await Booking.findByPk(booking_id);
-    console.log(booking, "booking");
     if (!booking) {
       return {
         success: false,
@@ -2682,7 +2578,7 @@ const deleteFirebaseGroup = async (booking_id) => {
 
   if (snapshot.exists()) {
     await groupRef.remove();
-    console.log(`Firebase group for booking ${booking_id} deleted`);
+    logger.info(`Firebase group for booking ${booking_id} deleted`);
   }
 };
 

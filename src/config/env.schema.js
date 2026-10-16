@@ -20,6 +20,9 @@ const envSchema = Joi.object({
   APP_NAME: Joi.string().required().description("Application name"),
   NODE_ENV: Joi.string().valid("production", "development", "test").required(),
   PORT: optional(Joi.number()).default(5000).description("Port the API listens on"),
+  LOG_LEVEL: optional(Joi.string().valid("error", "warn", "info", "debug", "silent")).description(
+    "Least important log level written (default: debug in development, silent in tests, info otherwise)",
+  ),
   DEFAULT_TIMEZONE: optional(timeZone).default("UTC").description("Time zone of the server process (keep UTC)"),
   BUSINESS_TIMEZONE: optional(timeZone)
     .default("America/New_York")

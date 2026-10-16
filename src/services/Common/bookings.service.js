@@ -1,6 +1,7 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
+const logger = require("../../config/logger");
 const { IMAGE_FILE_URI } = require("../../config/storage");
 const { inZone, dateInTz, DATETIME_FORMAT, DATE_FORMAT, TIME_FORMAT, toBusinessDateTime, utcDate } = require("../../utils/time");
 const { Booking, Service, Profile, User, UserAttachment, ServiceAttachment, UserAddress, BookingAssignment, Country, State, City, BDMUser, Admin, BookingAttachment, ServiceChecklist, BookingServiceChecklist, ServiceChecklistMapping, Notification, ServiceChecklistHeading, GuestBookingAddress } = require("../../models");
@@ -178,7 +179,7 @@ const sendBookingNotification = async (user, receiverUniqueFCMTokensArray) => {
       const { title, body } = notificationObj;
       await sendPushNotification({ title, body }, receiverUniqueFCMTokensArray);
     } catch (error) {
-      console.error("Booking push notification not sent:", error.message);
+      logger.error("Booking push notification not sent:", error.message);
     }
   }
 
@@ -645,7 +646,6 @@ const getAllServiceCheckListByUserForBookingId = async (booking_id) => {
       ],
     });
 
-    console.log(headings, "headings");
 
     // Step 3: Format the response
     const formatted = headings.map((heading) => ({
@@ -780,8 +780,6 @@ const markChecklistItemAsCompleted = async (reqBody, id) => {
       throw new ApiError(httpStatus.BAD_REQUEST, "Booking ID is required.");
     }
 
-    console.log("Booking ID:", booking_id);
-    console.log("Checklist ID:", id);
 
     // Step 1: Check if the checklist item exists
     const serviceChecklistItem = await ServiceChecklist.findByPk(id);
@@ -797,7 +795,6 @@ const markChecklistItemAsCompleted = async (reqBody, id) => {
       where: { booking_id: booking_id, service_checklist_id: id },
     });
 
-    console.log("Found item in DB:", bookingChecklistItem?.toJSON());
 
     if (bookingChecklistItem) {
       // Toggle `is_completed` if the entry exists
@@ -825,7 +822,7 @@ const markChecklistItemAsCompleted = async (reqBody, id) => {
       },
     };
   } catch (error) {
-    console.error("Error marking checklist item:", error);
+    logger.error("Error marking checklist item:", error);
     throw new ApiError(
       error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
       error.message || "Internal server error.",

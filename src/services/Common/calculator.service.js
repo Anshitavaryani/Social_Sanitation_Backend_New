@@ -1,4 +1,5 @@
 const { status: httpStatus } = require("http-status");
+const logger = require("../../config/logger");
 const { Op } = require("sequelize");
 const ApiError = require("../../utils/ApiError");
 const { parsePagination } = require("../../utils/pagination");
@@ -214,7 +215,7 @@ const createCostCalculator = async (reqBody) => {
       ],
     });
   } catch (error) {
-    console.log("createCostCalculator error", error);
+    logger.error("createCostCalculator error", error);
 
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
   }
@@ -240,7 +241,7 @@ const getCostCalculationById = async (id) => {
 
     return calculation;
   } catch (error) {
-    console.log("getCostCalculationById error", error);
+    logger.error("getCostCalculationById error", error);
 
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
   }
@@ -285,7 +286,7 @@ const getAllCostCalculations = async (query) => {
       data: calculations.rows,
     };
   } catch (error) {
-    console.log("getAllCostCalculations error", error);
+    logger.error("getAllCostCalculations error", error);
 
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
   }
@@ -303,7 +304,7 @@ const deleteCostCalculation = async (id) => {
 
     return calculation;
   } catch (error) {
-    console.log("deleteCostCalculation error", error);
+    logger.error("deleteCostCalculation error", error);
 
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
   }
@@ -403,7 +404,7 @@ const createBidMaximizer = async (reqBody) => {
 
     return bid;
   } catch (error) {
-    console.log("createBidMaximizer error", error);
+    logger.error("createBidMaximizer error", error);
 
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, error.message);
   }

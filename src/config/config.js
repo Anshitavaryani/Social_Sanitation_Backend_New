@@ -22,6 +22,7 @@ module.exports = {
     app_name: envVars.APP_NAME,
     env: envVars.NODE_ENV,
     port: envVars.PORT,
+    logLevel: envVars.LOG_LEVEL || { development: 'debug', test: 'silent' }[envVars.NODE_ENV] || 'info',
     DEFAULT_TIMEZONE: envVars.DEFAULT_TIMEZONE,
     businessTimeZone: envVars.BUSINESS_TIMEZONE,
     accessDomains: envVars.ACCESSDOMAINS,

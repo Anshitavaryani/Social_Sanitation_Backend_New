@@ -201,6 +201,9 @@ test("Square payment links use the configured environment, token and location, a
   const printed = [];
   const { log, error } = console;
   console.log = console.error = (...args) => printed.push(util.format(...args));
+  const logger = loadFromRoot("src/config/logger.js");
+  const levels = { ...logger };
+  for (const level of Object.keys(levels)) logger[level] = (...args) => printed.push(util.format(...args));
   const original = { ...config.square };
   try {
     axiosCalls.length = 0;
@@ -210,6 +213,7 @@ test("Square payment links use the configured environment, token and location, a
     await squareService.generateSquarePaymentLink({ amount: 10, refNo: "Q-2", customerEmail: "c@example.com", user_id: 9 });
   } finally {
     Object.assign(console, { log, error });
+    Object.assign(logger, levels);
     Object.assign(config.square, original);
   }
 
