@@ -1,12 +1,9 @@
 const { formatDisplayDate } = require("../../utils/time");
+const hiringFormFields = require("./hiringFormFields");
 
 // The employment application (hiring form) as submitted, in English
 const hiringFormHtml = ({ formData, signatureBase64Url, driverLicenseNumber, signatureCompanyBase64Url }) => {
-  const veteranStatus = formData?.militaryService?.veteran;
-  const militaryRecords = Array.isArray(formData?.militaryService?.records)
-    ? formData.militaryService.records
-    : [];
-  const references = formData?.references || "[]";
+  const { veteranStatus, militaryRecords, references } = hiringFormFields(formData);
 
   return `
   <!DOCTYPE html>
