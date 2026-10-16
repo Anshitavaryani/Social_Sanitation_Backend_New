@@ -1,6 +1,7 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
+const { invoicePaymentStageTypes, invoicePaymentStatusTypes, jobStatusTypes, paymentPurposeTypes, paymentStatusTypes, squarePaymentStatusTypes } = require("../../config/types");
 const { createHash, randomUUID } = require("crypto");
 const { SquareClient, SquareEnvironment, WebhooksHelper } = require("square");
 const { Payment, Booking, ServiceQuote, Invoice } = require("../../models");
@@ -301,14 +302,14 @@ const handlePaymentWebhook = catchAsync(async (req, res) => {
 
     /* ================= FAILURE FLOW ================= */
 
-    const FINAL_FAILED_STATUSES = ["FAILED", "CANCELED"];
+    const FINAL_FAILED_STATUSES = [squarePaymentStatusTypes.FAILED, squarePaymentStatusTypes.CANCELED];
 
     if (FINAL_FAILED_STATUSES.includes(paymentStatus)) {
       // Do not overwrite a previously successful payment.
-      if (paymentRecord.payment_status !== "SUCCESS") {
+      if (paymentRecord.payment_status !== paymentStatusTypes.SUCCESS) {
         await paymentRecord.update({
           transaction_id: paymentId,
-          payment_status: "REJECTED",
+          payment_status: paymentStatusTypes.REJECTED,
           receipt_url: receiptUrl,
         });
       }
@@ -320,7 +321,7 @@ const handlePaymentWebhook = catchAsync(async (req, res) => {
 
     /* ================= WAIT FOR COMPLETED PAYMENT ================= */
 
-    if (paymentStatus !== "COMPLETED") {
+    if (paymentStatus !== squarePaymentStatusTypes.COMPLETED) {
       return res.status(200).json({
         message: "Payment not completed yet",
       });
@@ -333,7 +334,7 @@ const handlePaymentWebhook = catchAsync(async (req, res) => {
       paymentRecord.payment_purpose || "",
     ).toUpperCase();
 
-    if (!["DEPOSIT", "BALANCE", "FULL"].includes(paymentPurpose)) {
+    if (![paymentPurposeTypes.DEPOSIT, paymentPurposeTypes.BALANCE, paymentPurposeTypes.FULL].includes(paymentPurpose)) {
       console.error("Unknown or missing payment purpose:", {
         paymentId,
         paymentRecordId: paymentRecord.id,
@@ -367,9 +368,9 @@ const handlePaymentWebhook = catchAsync(async (req, res) => {
     /* ================= UPDATE INVOICE PAYMENT STAGE ================= */
 
     if (invoice) {
-      const currentStage = invoice.payment_stage || "FULL";
+      const currentStage = invoice.payment_stage || invoicePaymentStageTypes.FULL;
 
-      if (paymentPurpose === "DEPOSIT") {
+      if (paymentPurpose === paymentPurposeTypes.DEPOSIT) {
         if (!invoice.deposit_required) {
           console.error(
             "Deposit payment received for a non-deposit invoice:",
@@ -385,7 +386,7 @@ const handlePaymentWebhook = catchAsync(async (req, res) => {
           });
         }
 
-        if (currentStage === "COMPLETED") {
+        if (currentStage === invoicePaymentStageTypes.COMPLETED) {
           // Do not regress an already completed invoice.
           console.warn(
             "Deposit payment received for completed invoice:",
@@ -395,13 +396,13 @@ const handlePaymentWebhook = catchAsync(async (req, res) => {
             },
           );
         } else if (
-          currentStage === "DEPOSIT_PENDING" ||
-          currentStage === "DEPOSIT_PAID"
+          currentStage === invoicePaymentStageTypes.DEPOSIT_PENDING ||
+          currentStage === invoicePaymentStageTypes.DEPOSIT_PAID
         ) {
           await invoice.update({
-            payment_stage: "DEPOSIT_PAID",
+            payment_stage: invoicePaymentStageTypes.DEPOSIT_PAID,
             deposit_paid_at: invoice.deposit_paid_at || new Date(),
-            payment_status: "NOT_PAID",
+            payment_status: invoicePaymentStatusTypes.NOT_PAID,
           });
         } else {
           console.error("Unexpected stage for deposit payment:", {
@@ -415,14 +416,14 @@ const handlePaymentWebhook = catchAsync(async (req, res) => {
               "Unexpected invoice stage; payment requires review",
           });
         }
-      } else if (paymentPurpose === "BALANCE") {
-        if (currentStage === "COMPLETED") {
+      } else if (paymentPurpose === paymentPurposeTypes.BALANCE) {
+        if (currentStage === invoicePaymentStageTypes.COMPLETED) {
           // Invoice is already complete; leave it unchanged.
-        } else if (currentStage === "BALANCE_PENDING") {
+        } else if (currentStage === invoicePaymentStageTypes.BALANCE_PENDING) {
           await invoice.update({
-            payment_stage: "COMPLETED",
+            payment_stage: invoicePaymentStageTypes.COMPLETED,
             balance_paid_at: invoice.balance_paid_at || new Date(),
-            payment_status: "PAID",
+            payment_status: invoicePaymentStatusTypes.PAID,
           });
         } else {
           console.error("Unexpected stage for balance payment:", {
@@ -436,15 +437,15 @@ const handlePaymentWebhook = catchAsync(async (req, res) => {
               "Unexpected invoice stage; payment requires review",
           });
         }
-      } else if (paymentPurpose === "FULL") {
+      } else if (paymentPurpose === paymentPurposeTypes.FULL) {
         if (
-          currentStage === "FULL" ||
+          currentStage === invoicePaymentStageTypes.FULL ||
           !invoice.payment_stage ||
-          currentStage === "COMPLETED"
+          currentStage === invoicePaymentStageTypes.COMPLETED
         ) {
           await invoice.update({
-            payment_stage: "COMPLETED",
-            payment_status: "PAID",
+            payment_stage: invoicePaymentStageTypes.COMPLETED,
+            payment_status: invoicePaymentStatusTypes.PAID,
           });
         } else {
           console.error("Unexpected stage for full payment:", {
@@ -470,8 +471,8 @@ const handlePaymentWebhook = catchAsync(async (req, res) => {
 
       if (quote) {
         await quote.update({
-          payment_status: "PAID",
-          job_status: "BOOKED",
+          payment_status: invoicePaymentStatusTypes.PAID,
+          job_status: jobStatusTypes.BOOKED,
         });
       }
     }
@@ -485,7 +486,7 @@ const handlePaymentWebhook = catchAsync(async (req, res) => {
 
       if (bookingDoc) {
         await bookingDoc.update({
-          payment_status: "SUCCESS",
+          payment_status: paymentStatusTypes.SUCCESS,
         });
       }
     }
@@ -495,7 +496,7 @@ const handlePaymentWebhook = catchAsync(async (req, res) => {
     // Duplicate-payment handling intentionally remains unchanged.
     await paymentRecord.update({
       transaction_id: paymentId,
-      payment_status: "SUCCESS",
+      payment_status: paymentStatusTypes.SUCCESS,
       receipt_url: receiptUrl,
     });
 

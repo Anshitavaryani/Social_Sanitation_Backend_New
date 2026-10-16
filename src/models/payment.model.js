@@ -2,11 +2,7 @@
 
 const { Sequelize, DataTypes, Model } = require("sequelize");
 const sequelize = require("../config/central.db");
-const {
-  paymentStatusTypes,
-  paymentModeTypes,
-  currancyTypes,
-} = require("../config/types");
+const { paymentStatusTypes, paymentModeTypes, currancyTypes, paymentPurposeTypes } = require("../config/types");
 const config = require("../config/config");
 
 class Payment extends Model {}
@@ -60,9 +56,9 @@ Payment.init(
       allowNull: true,
     },
     payment_purpose: {
-  type: DataTypes.ENUM("FULL", "DEPOSIT", "BALANCE"),
+  type: DataTypes.ENUM(paymentPurposeTypes.FULL, paymentPurposeTypes.DEPOSIT, paymentPurposeTypes.BALANCE),
   allowNull: false,
-  defaultValue: "FULL",
+  defaultValue: paymentPurposeTypes.FULL,
 },
     amount: {
       type: DataTypes.INTEGER,

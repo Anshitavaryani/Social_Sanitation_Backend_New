@@ -1,6 +1,7 @@
 /** @format */
 
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { breakStatusTypes } = require("../config/types");
 const sequelize = require("../config/central.db");
 
 class Break extends Model {}
@@ -59,8 +60,8 @@ Break.init(
 			defaultValue: 0,
 		},
 		status: {
-			type: DataTypes.ENUM("active", "completed"),
-			defaultValue: "active",
+			type: DataTypes.ENUM(breakStatusTypes.ACTIVE, breakStatusTypes.COMPLETED),
+			defaultValue: breakStatusTypes.ACTIVE,
 		},
 		break_start_lat: {
 			type: DataTypes.STRING,

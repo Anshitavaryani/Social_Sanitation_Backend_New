@@ -1,5 +1,6 @@
 /** @format */
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { quoteRequestStatusTypes } = require("../config/types");
 const sequelize = require("../config/central.db");
 
 class QuoteRequest extends Model {}
@@ -16,8 +17,8 @@ QuoteRequest.init(
 			allowNull: false,
 		},
 		status: {
-			type: DataTypes.ENUM("pending", "accepted", "rejected"),
-			defaultValue: "pending",
+			type: DataTypes.ENUM(quoteRequestStatusTypes.PENDING, quoteRequestStatusTypes.ACCEPTED, quoteRequestStatusTypes.REJECTED),
+			defaultValue: quoteRequestStatusTypes.PENDING,
 		},
 		quoted_price: {
 			type: DataTypes.FLOAT,

@@ -1,6 +1,7 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
+const { contractStatusTypes, quoteStatusTypes } = require("../../config/types");
 const catchAsync = require("../../utils/catchAsync");
 const { serviceEstimateService } = require("../../services");
 const responseWrapper = require("../../config/responseWrapper");
@@ -216,7 +217,7 @@ const handleDocusignWebhook = async (req, res) => {
       console.log("Before update:", serviceRequest.status);
 
       await serviceRequest.update({
-        status: "SIGNED",
+        status: quoteStatusTypes.SIGNED,
         signed_file_name: signedFileName,
       });
 
@@ -263,7 +264,7 @@ const handleDocusignWebhook = async (req, res) => {
       fs.writeFileSync(savePath, signedPdfBuffer);
       const signedPublicUrl = `https://node.socialsanitation.com/api/v1/docs/${signedFileName}`;
       await document.update({
-        status: "signed",
+        status: contractStatusTypes.SIGNED,
         signed_file_name: signedFileName,
         file_url: signedPublicUrl,
       });

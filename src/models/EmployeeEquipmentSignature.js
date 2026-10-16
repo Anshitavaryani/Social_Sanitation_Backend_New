@@ -1,4 +1,5 @@
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { equipmentAssignmentStatusTypes, equipmentSignatureActionTypes } = require("../config/types");
 const sequelize = require("../config/central.db");
 
 class EmployeeEquipmentSignature extends Model {}
@@ -50,18 +51,18 @@ EmployeeEquipmentSignature.init(
 
     action: {
   type: DataTypes.ENUM(
-    "ASSIGNED",
-    "PARTIAL_RETURN",
-    "FULL_RETURN",
+    equipmentSignatureActionTypes.ASSIGNED,
+    equipmentSignatureActionTypes.PARTIAL_RETURN,
+    equipmentSignatureActionTypes.FULL_RETURN,
   ),
   allowNull: false,
 },
 
 status: {
   type: DataTypes.ENUM(
-    "ASSIGNED",
-    "PARTIALLY_RETURNED",
-    "RETURNED",
+    equipmentAssignmentStatusTypes.ASSIGNED,
+    equipmentAssignmentStatusTypes.PARTIALLY_RETURNED,
+    equipmentAssignmentStatusTypes.RETURNED,
   ),
   allowNull: false,
 },

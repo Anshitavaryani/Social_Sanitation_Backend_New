@@ -1,6 +1,7 @@
 /** @format */
 
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { invoicePaymentStageTypes, invoicePaymentStatusTypes, invoiceStatusTypes } = require("../config/types");
 const sequelize = require("../config/central.db");
 
 class Invoice extends Model {}
@@ -96,14 +97,14 @@ Invoice.init(
 
     payment_stage: {
       type: DataTypes.ENUM(
-        "FULL",
-        "DEPOSIT_PENDING",
-        "DEPOSIT_PAID",
-        "BALANCE_PENDING",
-        "COMPLETED",
+        invoicePaymentStageTypes.FULL,
+        invoicePaymentStageTypes.DEPOSIT_PENDING,
+        invoicePaymentStageTypes.DEPOSIT_PAID,
+        invoicePaymentStageTypes.BALANCE_PENDING,
+        invoicePaymentStageTypes.COMPLETED,
       ),
       allowNull: false,
-      defaultValue: "FULL",
+      defaultValue: invoicePaymentStageTypes.FULL,
     },
 
     balance_due_date: {
@@ -139,13 +140,13 @@ Invoice.init(
     },
     payment_status: {
       type: DataTypes.ENUM(
-        "NOT_PAID",
-        "PAID",
-        "CASH_PAID",
-        "CHECK_PAID",
-        "ACH_PAID",
+        invoicePaymentStatusTypes.NOT_PAID,
+        invoicePaymentStatusTypes.PAID,
+        invoicePaymentStatusTypes.CASH_PAID,
+        invoicePaymentStatusTypes.CHECK_PAID,
+        invoicePaymentStatusTypes.ACH_PAID,
       ),
-      defaultValue: "NOT_PAID",
+      defaultValue: invoicePaymentStatusTypes.NOT_PAID,
     },
     last_sent_at: {
       type: DataTypes.DATE,
@@ -156,8 +157,8 @@ Invoice.init(
       allowNull: true,
     },
     status: {
-      type: DataTypes.ENUM("ACTIVE", "CANCELLED"),
-      defaultValue: "ACTIVE",
+      type: DataTypes.ENUM(invoiceStatusTypes.ACTIVE, invoiceStatusTypes.CANCELLED),
+      defaultValue: invoiceStatusTypes.ACTIVE,
     },
     pdf_url: {
       type: DataTypes.TEXT,

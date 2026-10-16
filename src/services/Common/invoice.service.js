@@ -34,7 +34,7 @@ const config = require("../../config/config");
 const { ROLE } = require("../../config/roles");
 const { generateInvoicePaymentLink, deleteSquarePaymentLink } = require("./square.service");
 const sequelize = require("../../config/central.db");
-const { paymentStatusTypes } = require("../../config/types");
+const { paymentStatusTypes, invoicePaymentStageTypes, invoicePaymentStatusTypes, invoiceStatusTypes, paymentPurposeTypes, recurringInvoiceStatusTypes } = require("../../config/types");
 const { parse } = require("csv-parse/sync");
 
 const MAX_RECURRING_OCCURRENCES = 10;
@@ -228,10 +228,10 @@ const createInvoice = async (reqBody) => {
       : null;
 
     const initialPaymentStage = finalDepositRequired
-      ? "DEPOSIT_PENDING"
-      : "FULL";
+      ? invoicePaymentStageTypes.DEPOSIT_PENDING
+      : invoicePaymentStageTypes.FULL;
 
-    const paymentPurpose = finalDepositRequired ? "DEPOSIT" : "FULL";
+    const paymentPurpose = finalDepositRequired ? paymentPurposeTypes.DEPOSIT : paymentPurposeTypes.FULL;
 
     const finalBalanceDueDate = finalDepositRequired
       ? balance_date
@@ -387,7 +387,7 @@ const createInvoice = async (reqBody) => {
         occurrences_generated: 1,
         next_billing_date: nextBillingDate.format(DATE_FORMAT),
         auto_send: true,
-        status: "ACTIVE",
+        status: recurringInvoiceStatusTypes.ACTIVE,
       });
     }
 
@@ -864,9 +864,9 @@ const updateInvoice = async (invoice_id, body) => {
 
     // Do not change financial terms after payment has started.
     const paymentAlreadyStarted = [
-      "DEPOSIT_PAID",
-      "BALANCE_PENDING",
-      "COMPLETED",
+      invoicePaymentStageTypes.DEPOSIT_PAID,
+      invoicePaymentStageTypes.BALANCE_PENDING,
+      invoicePaymentStageTypes.COMPLETED,
     ].includes(invoice.payment_stage);
 
     const financialTermsChanged =
@@ -890,7 +890,7 @@ const updateInvoice = async (invoice_id, body) => {
       ? Number((finalTotalDue - calculatedDepositAmount).toFixed(2))
       : null;
 
-    const currentStage = invoice.payment_stage || "FULL";
+    const currentStage = invoice.payment_stage || invoicePaymentStageTypes.FULL;
 
     const depositUpdatePayload = {
       total_due: finalTotalDue,
@@ -902,10 +902,10 @@ const updateInvoice = async (invoice_id, body) => {
     };
 
     // Only invoices awaiting their initial payment can change stages here.
-    if (currentStage === "FULL" || currentStage === "DEPOSIT_PENDING") {
+    if (currentStage === invoicePaymentStageTypes.FULL || currentStage === invoicePaymentStageTypes.DEPOSIT_PENDING) {
       depositUpdatePayload.payment_stage = shouldUseDeposit
-        ? "DEPOSIT_PENDING"
-        : "FULL";
+        ? invoicePaymentStageTypes.DEPOSIT_PENDING
+        : invoicePaymentStageTypes.FULL;
     }
 
     await invoice.update(depositUpdatePayload, {
@@ -929,7 +929,7 @@ const updateInvoice = async (invoice_id, body) => {
           is_recurring === 1 ||
           is_recurring === "1" ||
           is_recurring === "true"
-        : Boolean(recurring && recurring.status === "ACTIVE");
+        : Boolean(recurring && recurring.status === recurringInvoiceStatusTypes.ACTIVE);
 
     if (effectiveIsRecurring) {
       if (!recurring_end_date && !recurring_max_occurrences) {
@@ -1020,7 +1020,7 @@ const updateInvoice = async (invoice_id, body) => {
         end_date: finalEndDate,
         max_occurrences: finalMaxOccurrences,
         next_billing_date: nextBillingDate.format(DATE_FORMAT),
-        status: "ACTIVE",
+        status: recurringInvoiceStatusTypes.ACTIVE,
       };
 
       if (recurring) {
@@ -1042,7 +1042,7 @@ const updateInvoice = async (invoice_id, body) => {
     } else if (recurring) {
       await recurring.update(
         {
-          status: "CANCELLED",
+          status: recurringInvoiceStatusTypes.CANCELLED,
         },
         { transaction: t },
       );
@@ -1080,15 +1080,15 @@ const updateInvoice = async (invoice_id, body) => {
     let paymentAmount = null;
     let paymentPurpose = null;
 
-    if (updatedInvoice.payment_stage === "DEPOSIT_PENDING") {
+    if (updatedInvoice.payment_stage === invoicePaymentStageTypes.DEPOSIT_PENDING) {
       paymentAmount = Number(updatedInvoice.deposit_amount || 0);
-      paymentPurpose = "DEPOSIT";
+      paymentPurpose = paymentPurposeTypes.DEPOSIT;
     } else if (
-      updatedInvoice.payment_stage === "FULL" ||
+      updatedInvoice.payment_stage === invoicePaymentStageTypes.FULL ||
       !updatedInvoice.payment_stage
     ) {
       paymentAmount = Number(updatedInvoice.total_due || 0);
-      paymentPurpose = "FULL";
+      paymentPurpose = paymentPurposeTypes.FULL;
     }
 
     // BALANCE_PENDING, DEPOSIT_PAID and COMPLETED are intentionally excluded.
@@ -1208,9 +1208,9 @@ const updateInvoice = async (invoice_id, body) => {
         Number(originalInvoice.deposit_percentage || 25);
 
     const isInitialPaymentStage = [
-      "FULL",
-      "DEPOSIT_PENDING",
-    ].includes(updatedInvoice.payment_stage || "FULL");
+      invoicePaymentStageTypes.FULL,
+      invoicePaymentStageTypes.DEPOSIT_PENDING,
+    ].includes(updatedInvoice.payment_stage || invoicePaymentStageTypes.FULL);
 
     /*
      * Only recalculate the initial email schedule if client-facing
@@ -1536,7 +1536,7 @@ const sendInvoiceCron = async () => {
 
     const invoices = await Invoice.findAll({
       where: {
-        status: "ACTIVE",
+        status: invoiceStatusTypes.ACTIVE,
         is_active: true,
         // Only send invoices whose billing date is today or in the future.
         // Historical invoices must never be emailed by this cron.
@@ -1592,7 +1592,7 @@ const sendInvoiceCron = async () => {
 
       if (invoice.deposit_required) {
         // The cron may send only the initial deposit.
-        if (invoice.payment_stage !== "DEPOSIT_PENDING") {
+        if (invoice.payment_stage !== invoicePaymentStageTypes.DEPOSIT_PENDING) {
           console.log(
             `Skipping invoice ${invoice.ref_no}: payment stage is ${invoice.payment_stage}`,
           );
@@ -1600,10 +1600,10 @@ const sendInvoiceCron = async () => {
         }
 
         paymentAmount = Number(invoice.deposit_amount || 0);
-        paymentPurpose = "DEPOSIT";
+        paymentPurpose = paymentPurposeTypes.DEPOSIT;
       } else {
         // Existing non-deposit invoices retain full-payment behavior.
-        if (invoice.payment_stage && invoice.payment_stage !== "FULL") {
+        if (invoice.payment_stage && invoice.payment_stage !== invoicePaymentStageTypes.FULL) {
           console.log(
             `Skipping invoice ${invoice.ref_no}: payment stage is ${invoice.payment_stage}`,
           );
@@ -1611,7 +1611,7 @@ const sendInvoiceCron = async () => {
         }
 
         paymentAmount = Number(invoice.total_due || 0);
-        paymentPurpose = "FULL";
+        paymentPurpose = paymentPurposeTypes.FULL;
       }
 
       if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) {
@@ -1700,7 +1700,7 @@ const generateRecurringInvoicesCron = async () => {
 
     const recurringInvoices = await InvoiceRecurring.findAll({
       where: {
-        status: "ACTIVE",
+        status: recurringInvoiceStatusTypes.ACTIVE,
         next_billing_date: today,
       },
     });
@@ -1744,7 +1744,7 @@ const generateRecurringInvoicesCron = async () => {
           console.log("Maximum occurrences reached.");
 
           await recurring.update({
-            status: "COMPLETED",
+            status: recurringInvoiceStatusTypes.COMPLETED,
           });
 
           continue;
@@ -1752,7 +1752,7 @@ const generateRecurringInvoicesCron = async () => {
 
         // ---------- CHECK TEMPLATE STATUS ----------
 
-        if (invoice.status !== "ACTIVE" || !invoice.is_active) {
+        if (invoice.status !== invoiceStatusTypes.ACTIVE || !invoice.is_active) {
           console.log("Template invoice is inactive.");
           continue;
         }
@@ -1781,7 +1781,7 @@ const generateRecurringInvoicesCron = async () => {
             );
 
             await recurring.update({
-              status: "COMPLETED",
+              status: recurringInvoiceStatusTypes.COMPLETED,
             });
 
             continue;
@@ -1987,7 +1987,7 @@ const generateRecurringInvoicesCron = async () => {
             user_id: invoice.user_id,
             billing_date: billingMoment.format(DATE_FORMAT),
             ref_type: invoice.ref_type,
-            status: "ACTIVE",
+            status: invoiceStatusTypes.ACTIVE,
             is_active: true,
           },
         });
@@ -2045,13 +2045,13 @@ const generateRecurringInvoicesCron = async () => {
 
           // Every generated invoice starts with a fresh payment lifecycle.
           payment_stage: recurringDepositRequired
-            ? "DEPOSIT_PENDING"
-            : "FULL",
+            ? invoicePaymentStageTypes.DEPOSIT_PENDING
+            : invoicePaymentStageTypes.FULL,
           deposit_paid_at: null,
           balance_sent_at: null,
           balance_paid_at: null,
 
-          status: "ACTIVE",
+          status: invoiceStatusTypes.ACTIVE,
           is_active: true,
         });
 
@@ -2100,7 +2100,7 @@ const generateRecurringInvoicesCron = async () => {
           recurring.max_occurrences &&
           finalCount >= Number(recurring.max_occurrences)
         ) {
-          updateData.status = "COMPLETED";
+          updateData.status = recurringInvoiceStatusTypes.COMPLETED;
         }
 
         if (
@@ -2110,7 +2110,7 @@ const generateRecurringInvoicesCron = async () => {
             "day",
           )
         ) {
-          updateData.status = "COMPLETED";
+          updateData.status = recurringInvoiceStatusTypes.COMPLETED;
         }
 
         await recurring.update(updateData);
@@ -2155,7 +2155,7 @@ const sendInvoiceBalance = async (invoice_id) => {
       );
     }
 
-    if (invoice.payment_stage !== "DEPOSIT_PAID") {
+    if (invoice.payment_stage !== invoicePaymentStageTypes.DEPOSIT_PAID) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
         "The deposit must be paid before sending the remaining balance.",
@@ -2210,7 +2210,7 @@ const sendInvoiceBalance = async (invoice_id) => {
       user_id: invoice.user_id,
       invoice_id: invoice.id,
       invoiceRefNo: invoice.custom_ref_no || invoice.ref_no,
-      paymentPurpose: "BALANCE",
+      paymentPurpose: paymentPurposeTypes.BALANCE,
     });
 
     if (!paymentUrl) {
@@ -2266,7 +2266,7 @@ const sendInvoiceBalance = async (invoice_id) => {
 
     // Mark the balance as sent only after the email service succeeds.
     await invoice.update({
-      payment_stage: "BALANCE_PENDING",
+      payment_stage: invoicePaymentStageTypes.BALANCE_PENDING,
       balance_sent_at: new Date(),
       last_sent_at: new Date(),
     });
@@ -2279,7 +2279,7 @@ const sendInvoiceBalance = async (invoice_id) => {
         total_due: Number(invoice.total_due),
         deposit_amount: Number(invoice.deposit_amount),
         balance_amount: balanceAmount,
-        payment_stage: "BALANCE_PENDING",
+        payment_stage: invoicePaymentStageTypes.BALANCE_PENDING,
         balance_sent_at: invoice.balance_sent_at,
         payment_url: paymentUrl,
       },
@@ -2370,15 +2370,15 @@ const markInvoicePaidByCheck = async (invoice_id) => {
     }
 
     const paidStatuses = [
-      "PAID",
-      "CHECK_PAID",
-      "CASH_PAID",
-      "ACH_PAID",
+      invoicePaymentStatusTypes.PAID,
+      invoicePaymentStatusTypes.CHECK_PAID,
+      invoicePaymentStatusTypes.CASH_PAID,
+      invoicePaymentStatusTypes.ACH_PAID,
     ];
 
     if (
       paidStatuses.includes(invoice.payment_status) ||
-      invoice.payment_stage === "COMPLETED"
+      invoice.payment_stage === invoicePaymentStageTypes.COMPLETED
     ) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
@@ -2389,8 +2389,8 @@ const markInvoicePaidByCheck = async (invoice_id) => {
     const now = new Date();
 
     const updatePayload = {
-      payment_status: "CHECK_PAID",
-      payment_stage: "COMPLETED",
+      payment_status: invoicePaymentStatusTypes.CHECK_PAID,
+      payment_stage: invoicePaymentStageTypes.COMPLETED,
     };
 
     // For deposit invoices, record both payment milestones as settled.
@@ -2426,15 +2426,15 @@ const markInvoicePaidByACH = async (invoice_id) => {
     }
 
     const paidStatuses = [
-      "PAID",
-      "CHECK_PAID",
-      "CASH_PAID",
-      "ACH_PAID",
+      invoicePaymentStatusTypes.PAID,
+      invoicePaymentStatusTypes.CHECK_PAID,
+      invoicePaymentStatusTypes.CASH_PAID,
+      invoicePaymentStatusTypes.ACH_PAID,
     ];
 
     if (
       paidStatuses.includes(invoice.payment_status) ||
-      invoice.payment_stage === "COMPLETED"
+      invoice.payment_stage === invoicePaymentStageTypes.COMPLETED
     ) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
@@ -2445,8 +2445,8 @@ const markInvoicePaidByACH = async (invoice_id) => {
     const now = new Date();
 
     const updatePayload = {
-      payment_status: "ACH_PAID",
-      payment_stage: "COMPLETED",
+      payment_status: invoicePaymentStatusTypes.ACH_PAID,
+      payment_stage: invoicePaymentStageTypes.COMPLETED,
     };
 
     // For deposit invoices, record both payment milestones as settled.
@@ -2667,7 +2667,7 @@ const getBusinessAnalytics = async ({ month }) => {
       /* ===================================================== */
 
       const isPaid =
-        status === "PAID" || status === "CHECK_PAID" || status === "CASH_PAID";
+        status === invoicePaymentStatusTypes.PAID || status === invoicePaymentStatusTypes.CHECK_PAID || status === invoicePaymentStatusTypes.CASH_PAID;
 
       const isOverdue =
         !isPaid &&
@@ -2687,9 +2687,9 @@ const getBusinessAnalytics = async ({ month }) => {
 
         /* ---------- PAYMENT METHOD ---------- */
 
-        if (status === "CHECK_PAID") {
+        if (status === invoicePaymentStatusTypes.CHECK_PAID) {
           checkRevenue += amount;
-        } else if (status === "CASH_PAID") {
+        } else if (status === invoicePaymentStatusTypes.CASH_PAID) {
           cashRevenue += amount;
         } else {
           onlineRevenue += amount;
@@ -2776,7 +2776,7 @@ const getBusinessAnalytics = async ({ month }) => {
       /* ================= PAYMENT ================= */
 
       const isPaid =
-        status === "PAID" || status === "CHECK_PAID" || status === "CASH_PAID";
+        status === invoicePaymentStatusTypes.PAID || status === invoicePaymentStatusTypes.CHECK_PAID || status === invoicePaymentStatusTypes.CASH_PAID;
 
       if (isPaid) {
         paidRevenue += amount;
@@ -2787,9 +2787,9 @@ const getBusinessAnalytics = async ({ month }) => {
 
         employeeMap[employeeId].paid_amount += amount;
 
-        if (status === "CHECK_PAID") {
+        if (status === invoicePaymentStatusTypes.CHECK_PAID) {
           checkRevenue += amount;
-        } else if (status === "CASH_PAID") {
+        } else if (status === invoicePaymentStatusTypes.CASH_PAID) {
           cashRevenue += amount;
         } else {
           onlineRevenue += amount;
@@ -2938,7 +2938,7 @@ const getBusinessAnalytics = async ({ month }) => {
             created_at: inv.created_at,
 
             is_overdue:
-              inv.payment_status === "NOT_PAID" &&
+              inv.payment_status === invoicePaymentStatusTypes.NOT_PAID &&
               inv.due_date &&
               toCalendarDate(inv.due_date) < dateInTz(),
           })),
@@ -2967,7 +2967,7 @@ const getBusinessAnalytics = async ({ month }) => {
             created_at: quote.created_at,
 
             is_overdue:
-              quote.payment_status === "NOT_PAID" &&
+              quote.payment_status === invoicePaymentStatusTypes.NOT_PAID &&
               quote.due_date &&
               toCalendarDate(quote.due_date) < dateInTz(),
           })),
@@ -3317,10 +3317,10 @@ const importHistoricalInvoicesCSV = async (fileBuffer) => {
         payment_url: null,
         square_payment_link_id: null,
         signature: null,
-        payment_status: "NOT_PAID",
+        payment_status: invoicePaymentStatusTypes.NOT_PAID,
         last_sent_at: null,
         scheduled_send_at: null,
-        status: "ACTIVE",
+        status: invoiceStatusTypes.ACTIVE,
         pdf_url: null,
         is_active: true,
       });
@@ -3431,10 +3431,10 @@ const sendDueBalancesCron = async () => {
 
     const invoices = await Invoice.findAll({
       where: {
-        status: "ACTIVE",
+        status: invoiceStatusTypes.ACTIVE,
         is_active: true,
         deposit_required: true,
-        payment_stage: "DEPOSIT_PAID",
+        payment_stage: invoicePaymentStageTypes.DEPOSIT_PAID,
         balance_sent_at: null,
 
         // The selected balance due date must have arrived.
@@ -3456,9 +3456,9 @@ const sendDueBalancesCron = async () => {
         if (
           !currentInvoice ||
           !currentInvoice.is_active ||
-          currentInvoice.status !== "ACTIVE" ||
+          currentInvoice.status !== invoiceStatusTypes.ACTIVE ||
           !currentInvoice.deposit_required ||
-          currentInvoice.payment_stage !== "DEPOSIT_PAID" ||
+          currentInvoice.payment_stage !== invoicePaymentStageTypes.DEPOSIT_PAID ||
           currentInvoice.balance_sent_at ||
           !currentInvoice.balance_due_date ||
           toCalendarDate(currentInvoice.balance_due_date) > todayNY

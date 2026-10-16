@@ -1,5 +1,6 @@
 /** @format */
 const { status: httpStatus } = require("http-status");
+const { attendanceStatusTypes } = require("../../config/types");
 const { formatDisplayDate, formatTime12h } = require("../../utils/time");
 const {
   forgotPasswordSendOTPFormat,
@@ -649,7 +650,7 @@ const sendGroupedAttendanceEmail = async ({
     const firstName = employees[0].name.split(" ")[0];
 
     const subject =
-      status === "ABSENT"
+      status === attendanceStatusTypes.ABSENT
         ? `Urgent Attendance Alert - Absent for ${firstName} at ${booking.booking_name}`
         : `Attendance Alert - Late for ${firstName} at ${booking.booking_name}`;
 

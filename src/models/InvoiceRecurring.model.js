@@ -1,4 +1,5 @@
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { recurringInvoiceStatusTypes } = require("../config/types");
 const sequelize = require("../config/central.db");
 
 class InvoiceRecurring extends Model {}
@@ -66,12 +67,12 @@ InvoiceRecurring.init(
 
     status: {
       type: DataTypes.ENUM(
-        "ACTIVE",
-        "PAUSED",
-        "COMPLETED",
-        "CANCELLED",
+        recurringInvoiceStatusTypes.ACTIVE,
+        recurringInvoiceStatusTypes.PAUSED,
+        recurringInvoiceStatusTypes.COMPLETED,
+        recurringInvoiceStatusTypes.CANCELLED,
       ),
-      defaultValue: "ACTIVE",
+      defaultValue: recurringInvoiceStatusTypes.ACTIVE,
     },
 
     created_at: {

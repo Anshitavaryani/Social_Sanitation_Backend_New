@@ -1,6 +1,7 @@
 /** @format */
 
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { inspectionStatusTypes } = require("../config/types");
 const sequelize = require("../config/central.db");
 
 class Inspection extends Model {}
@@ -44,15 +45,15 @@ Inspection.init(
 
     status: {
       type: DataTypes.ENUM(
-        "ASSIGNED",
-        "IN_PROGRESS",
-        "SUBMITTED",
-        "UNDER_REVIEW",
-        "COMPLETED",
-        "REOPENED",
-        "CANCELLED",
+        inspectionStatusTypes.ASSIGNED,
+        inspectionStatusTypes.IN_PROGRESS,
+        inspectionStatusTypes.SUBMITTED,
+        inspectionStatusTypes.UNDER_REVIEW,
+        inspectionStatusTypes.COMPLETED,
+        inspectionStatusTypes.REOPENED,
+        inspectionStatusTypes.CANCELLED,
       ),
-      defaultValue: "ASSIGNED",
+      defaultValue: inspectionStatusTypes.ASSIGNED,
     },
 
     reopen_count: {

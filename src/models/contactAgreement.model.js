@@ -1,6 +1,7 @@
 /** @format */
 
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { contractStatusTypes } = require("../config/types");
 const sequelize = require("../config/central.db");
 
 class ContractAgreement extends Model {}
@@ -78,14 +79,14 @@ ContractAgreement.init(
 
     status: {
       type: DataTypes.ENUM(
-        "draft",
-        "pending_signature",
-        "signed",
-        "declined",
-        "voided",
-        "failed",
+        contractStatusTypes.DRAFT,
+        contractStatusTypes.PENDING_SIGNATURE,
+        contractStatusTypes.SIGNED,
+        contractStatusTypes.DECLINED,
+        contractStatusTypes.VOIDED,
+        contractStatusTypes.FAILED,
       ),
-      defaultValue: "draft",
+      defaultValue: contractStatusTypes.DRAFT,
     },
 
     payment_url: {

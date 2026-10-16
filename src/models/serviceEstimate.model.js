@@ -1,6 +1,7 @@
 /** @format */
 
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { contractStatusTypes } = require("../config/types");
 const sequelize = require("../config/central.db");
 
 class ServiceEstimate extends Model {}
@@ -96,15 +97,15 @@ ServiceEstimate.init(
     },
     status: {
       type: DataTypes.ENUM(
-        "draft",
-        "pending_signature",
-        "signed",
-        "declined",
-        "voided",
-        "failed",
+        contractStatusTypes.DRAFT,
+        contractStatusTypes.PENDING_SIGNATURE,
+        contractStatusTypes.SIGNED,
+        contractStatusTypes.DECLINED,
+        contractStatusTypes.VOIDED,
+        contractStatusTypes.FAILED,
       ),
       allowNull: true,
-      defaultValue: "draft",
+      defaultValue: contractStatusTypes.DRAFT,
     },
     signature: {
       type: DataTypes.TEXT,

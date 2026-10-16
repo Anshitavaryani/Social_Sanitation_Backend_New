@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { status: httpStatus } = require("http-status");
+const { inspectionReviewStatusTypes, inspectionStatusTypes } = require("../../config/types");
 const ApiError = require("../../utils/ApiError");
 const { DATE_FORMAT, isValidDate } = require("../../utils/time");
 const { Op } = require("sequelize");
@@ -363,7 +364,7 @@ const createInspection = async (body) => {
         employee_completed: false,
         employee_note: null,
 
-        bdm_status: "PENDING",
+        bdm_status: inspectionReviewStatusTypes.PENDING,
         bdm_remark: null,
         bdm_reviewed_at: null,
       });
@@ -381,7 +382,7 @@ const createInspection = async (body) => {
         total_items: sectionItems.length,
         completed_items: 0,
 
-        status: "PENDING",
+        status: inspectionReviewStatusTypes.PENDING,
         score: null,
 
         remark: null,
@@ -428,7 +429,7 @@ const createInspection = async (body) => {
         name: inspectionName,
         inspection_date,
 
-        status: "ASSIGNED",
+        status: inspectionStatusTypes.ASSIGNED,
         score: null,
         overall_remark: null,
 
@@ -975,11 +976,11 @@ const getInspectionById = async (inspectionId) => {
     ).length;
 
     const approvedItems = items.filter(
-      (item) => item.bdm_status === "APPROVED",
+      (item) => item.bdm_status === inspectionReviewStatusTypes.APPROVED,
     ).length;
 
     const issueItems = items.filter(
-      (item) => item.bdm_status === "ISSUE",
+      (item) => item.bdm_status === inspectionReviewStatusTypes.ISSUE,
     ).length;
 
     /*
@@ -1086,7 +1087,7 @@ const updateInspectionItem = async (itemId, body) => {
      * actually clicks "Complete Inspection".
      */
 
-    if (["COMPLETED", "CANCELLED"].includes(inspection.status)) {
+    if ([inspectionStatusTypes.COMPLETED, inspectionStatusTypes.CANCELLED].includes(inspection.status)) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
         `Inspection items can no longer be edited — this inspection is ${inspection.status.toLowerCase()}.`,
@@ -1103,9 +1104,9 @@ const updateInspectionItem = async (itemId, body) => {
           : null,
     });
 
-    if (inspection.status === "ASSIGNED") {
+    if (inspection.status === inspectionStatusTypes.ASSIGNED) {
       await inspection.update({
-        status: "IN_PROGRESS",
+        status: inspectionStatusTypes.IN_PROGRESS,
         started_at: new Date(),
       });
     }
@@ -1164,28 +1165,28 @@ const submitInspection = async (body) => {
       );
     }
 
-    if (inspection.status === "SUBMITTED") {
+    if (inspection.status === inspectionStatusTypes.SUBMITTED) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
         "Inspection has already been submitted.",
       );
     }
 
-    if (inspection.status === "UNDER_REVIEW") {
+    if (inspection.status === inspectionStatusTypes.UNDER_REVIEW) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
         "Inspection is already under review.",
       );
     }
 
-    if (inspection.status === "COMPLETED") {
+    if (inspection.status === inspectionStatusTypes.COMPLETED) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
         "Inspection has already been completed.",
       );
     }
 
-    if (inspection.status === "CANCELLED") {
+    if (inspection.status === inspectionStatusTypes.CANCELLED) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
         "Cancelled inspection cannot be submitted.",
@@ -1218,7 +1219,7 @@ const submitInspection = async (body) => {
 
     await inspection.update(
       {
-        status: "SUBMITTED",
+        status: inspectionStatusTypes.SUBMITTED,
         employee_submitted_at: new Date(),
       },
       { transaction },
@@ -1292,7 +1293,7 @@ const reviewInspectionItem = async (body) => {
      * ==========================================
      */
 
-    const allowedStatuses = ["APPROVED", "ISSUE"];
+    const allowedStatuses = [inspectionReviewStatusTypes.APPROVED, inspectionReviewStatusTypes.ISSUE];
 
     if (!allowedStatuses.includes(bdm_status)) {
       throw new ApiError(
@@ -1308,7 +1309,7 @@ const reviewInspectionItem = async (body) => {
      */
 
     if (
-      bdm_status === "ISSUE" &&
+      bdm_status === inspectionReviewStatusTypes.ISSUE &&
       (!bdm_remark || String(bdm_remark).trim() === "")
     ) {
       throw new ApiError(
@@ -1362,28 +1363,28 @@ const reviewInspectionItem = async (body) => {
      * ==========================================
      */
 
-    if (inspection.status === "CANCELLED") {
+    if (inspection.status === inspectionStatusTypes.CANCELLED) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
         "Cancelled inspection cannot be reviewed.",
       );
     }
 
-    if (inspection.status === "COMPLETED") {
+    if (inspection.status === inspectionStatusTypes.COMPLETED) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
         "Completed inspection cannot be modified.",
       );
     }
 
-    if (inspection.status === "ASSIGNED") {
+    if (inspection.status === inspectionStatusTypes.ASSIGNED) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
         "Employee has not started this inspection yet.",
       );
     }
 
-    if (inspection.status === "IN_PROGRESS") {
+    if (inspection.status === inspectionStatusTypes.IN_PROGRESS) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
         "Inspection has not been submitted by the employee yet.",
@@ -1413,9 +1414,9 @@ const reviewInspectionItem = async (body) => {
      * ==========================================
      */
 
-    if (inspection.status === "SUBMITTED") {
+    if (inspection.status === inspectionStatusTypes.SUBMITTED) {
       await inspection.update({
-        status: "UNDER_REVIEW",
+        status: inspectionStatusTypes.UNDER_REVIEW,
       });
     }
 
@@ -1494,7 +1495,7 @@ const reviewInspectionSection = async (body) => {
      * ==========================================
      */
 
-    const allowedStatuses = ["APPROVED", "ISSUE"];
+    const allowedStatuses = [inspectionReviewStatusTypes.APPROVED, inspectionReviewStatusTypes.ISSUE];
 
     if (!allowedStatuses.includes(status)) {
       throw new ApiError(
@@ -1509,7 +1510,7 @@ const reviewInspectionSection = async (body) => {
      * ==========================================
      */
 
-    if (status === "ISSUE" && (!remark || String(remark).trim() === "")) {
+    if (status === inspectionReviewStatusTypes.ISSUE && (!remark || String(remark).trim() === "")) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
         "A remark is required when marking a section as an issue.",
@@ -1564,28 +1565,28 @@ const reviewInspectionSection = async (body) => {
      * ==========================================
      */
 
-    if (inspection.status === "CANCELLED") {
+    if (inspection.status === inspectionStatusTypes.CANCELLED) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
         "Cancelled inspection cannot be reviewed.",
       );
     }
 
-    if (inspection.status === "COMPLETED") {
+    if (inspection.status === inspectionStatusTypes.COMPLETED) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
         "Completed inspection cannot be modified.",
       );
     }
 
-    if (inspection.status === "ASSIGNED") {
+    if (inspection.status === inspectionStatusTypes.ASSIGNED) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
         "Employee has not started this inspection yet.",
       );
     }
 
-    if (inspection.status === "IN_PROGRESS") {
+    if (inspection.status === inspectionStatusTypes.IN_PROGRESS) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
         "Inspection has not been submitted by the employee yet.",
@@ -1652,9 +1653,9 @@ const reviewInspectionSection = async (body) => {
      * ==========================================
      */
 
-    if (inspection.status === "SUBMITTED") {
+    if (inspection.status === inspectionStatusTypes.SUBMITTED) {
       await inspection.update({
-        status: "UNDER_REVIEW",
+        status: inspectionStatusTypes.UNDER_REVIEW,
       });
     }
 
@@ -1750,14 +1751,14 @@ const uploadInspectionItemImage = async (body, files, itemId) => {
       );
     }
 
-    if (inspection.status === "CANCELLED") {
+    if (inspection.status === inspectionStatusTypes.CANCELLED) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
         "Cannot upload image to a cancelled inspection.",
       );
     }
 
-    if (["COMPLETED", "CANCELLED"].includes(inspection.status)) {
+    if ([inspectionStatusTypes.COMPLETED, inspectionStatusTypes.CANCELLED].includes(inspection.status)) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
         "Employee cannot upload images after the inspection has been completed.",
@@ -1774,9 +1775,9 @@ const uploadInspectionItemImage = async (body, files, itemId) => {
 
     const images = await InspectionItemImage.bulkCreate(imageRecords);
 
-    if (inspection.status === "ASSIGNED") {
+    if (inspection.status === inspectionStatusTypes.ASSIGNED) {
       await inspection.update({
-        status: "IN_PROGRESS",
+        status: inspectionStatusTypes.IN_PROGRESS,
         started_at: new Date(),
       });
     }
@@ -1870,28 +1871,28 @@ const uploadBDMInspectionItemImage = async (body, files, itemId) => {
      * ==========================================
      */
 
-    if (inspection.status === "CANCELLED") {
+    if (inspection.status === inspectionStatusTypes.CANCELLED) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
         "Cannot upload image to a cancelled inspection.",
       );
     }
 
-    if (inspection.status === "COMPLETED") {
+    if (inspection.status === inspectionStatusTypes.COMPLETED) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
         "Cannot upload image to a completed inspection.",
       );
     }
 
-    if (inspection.status === "ASSIGNED") {
+    if (inspection.status === inspectionStatusTypes.ASSIGNED) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
         "Employee has not started this inspection yet.",
       );
     }
 
-    if (inspection.status === "IN_PROGRESS") {
+    if (inspection.status === inspectionStatusTypes.IN_PROGRESS) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
         "Employee has not submitted this inspection yet.",
@@ -1926,9 +1927,9 @@ const uploadBDMInspectionItemImage = async (body, files, itemId) => {
      * ==========================================
      */
 
-    if (inspection.status === "SUBMITTED") {
+    if (inspection.status === inspectionStatusTypes.SUBMITTED) {
       await inspection.update({
-        status: "UNDER_REVIEW",
+        status: inspectionStatusTypes.UNDER_REVIEW,
       });
     }
 
@@ -1951,7 +1952,7 @@ const uploadBDMInspectionItemImage = async (body, files, itemId) => {
   }
 };
 
-const COMPLETABLE_STATUSES = ["SUBMITTED", "UNDER_REVIEW", "REOPENED"];
+const COMPLETABLE_STATUSES = [inspectionStatusTypes.SUBMITTED, inspectionStatusTypes.UNDER_REVIEW, inspectionStatusTypes.REOPENED];
 
 const completeInspection = async (body) => {
   const transaction = await sequelize.transaction();
@@ -1994,14 +1995,14 @@ const completeInspection = async (body) => {
       );
     }
 
-    if (inspection.status === "COMPLETED") {
+    if (inspection.status === inspectionStatusTypes.COMPLETED) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
         "Inspection has already been completed.",
       );
     }
 
-    if (inspection.status === "CANCELLED") {
+    if (inspection.status === inspectionStatusTypes.CANCELLED) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
         "Cancelled inspection cannot be completed.",
@@ -2043,7 +2044,7 @@ const completeInspection = async (body) => {
     }
 
     const pendingSections = sectionReviews.filter(
-      (section) => section.status === "PENDING",
+      (section) => section.status === inspectionReviewStatusTypes.PENDING,
     );
 
     if (pendingSections.length > 0) {
@@ -2101,7 +2102,7 @@ const completeInspection = async (body) => {
 
     await inspection.update(
       {
-        status: "COMPLETED",
+        status: inspectionStatusTypes.COMPLETED,
         score: calculatedScore,
         overall_remark:
           overall_remark !== undefined &&
@@ -2246,7 +2247,7 @@ const sendInspectionToClient = async (body) => {
       throw new ApiError(httpStatus.NOT_FOUND, "Inspection not found.");
     }
 
-    if (inspection.status !== "COMPLETED") {
+    if (inspection.status !== inspectionStatusTypes.COMPLETED) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
         "Inspection must be completed before it can be sent to the client.",
@@ -2360,7 +2361,7 @@ const deleteInspectionItemImage = async (body, imageId) => {
      * photos.
      */
 
-    if (["COMPLETED", "CANCELLED"].includes(inspection.status)) {
+    if ([inspectionStatusTypes.COMPLETED, inspectionStatusTypes.CANCELLED].includes(inspection.status)) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
         `Images can no longer be deleted — this inspection is ${inspection.status.toLowerCase()}.`,
@@ -2482,7 +2483,7 @@ const reopenInspection = async (body) => {
       );
     }
 
-    if (inspection.status !== "COMPLETED") {
+    if (inspection.status !== inspectionStatusTypes.COMPLETED) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
         "Only completed inspections can be reopened.",
@@ -2508,7 +2509,7 @@ const reopenInspection = async (body) => {
 
     await inspection.update(
       {
-        status: "REOPENED",
+        status: inspectionStatusTypes.REOPENED,
 
         score: null,
         bdm_completed_at: null,

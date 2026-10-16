@@ -1,4 +1,5 @@
 const { status: httpStatus } = require("http-status");
+const { paymentStatusTypes } = require("../../config/types");
 const { Op } = require("sequelize");
 const { dayBoundsUtc } = require("../../utils/time");
 
@@ -12,7 +13,7 @@ const getNewPaymentCount = catchAsync(async (req, res) => {
         const { start, end } = dayBoundsUtc();
         const paymentDoc = await Payment.findAll({
             attributes: ['id'],
-            where: { created_at: { [Op.between]: [start, end] }, payment_status: 'SUCCESS' }
+            where: { created_at: { [Op.between]: [start, end] }, payment_status: paymentStatusTypes.SUCCESS }
         })
         if (!paymentDoc) throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to Fetch Count');
         return responseWrapper(res, paymentDoc.length ? paymentDoc.length : 0, "");
@@ -27,7 +28,7 @@ const getNewPaymentTotal = catchAsync(async (req, res) => {
         const { start, end } = dayBoundsUtc();
         const paymentDoc = await Payment.findAll({
             attributes: ['id', 'amount'],
-            where: { created_at: { [Op.between]: [start, end] }, payment_status: 'SUCCESS' }
+            where: { created_at: { [Op.between]: [start, end] }, payment_status: paymentStatusTypes.SUCCESS }
         })
         if (!paymentDoc) throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to Fetch Count');
         let totalPayment = paymentDoc.map(obj => obj.amount).reduce((a, b) => a + b, 0);;

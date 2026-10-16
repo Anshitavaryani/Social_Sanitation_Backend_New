@@ -1,4 +1,5 @@
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { equipmentAssignmentStatusTypes } = require("../config/types");
 const sequelize = require("../config/central.db");
 
 class EmployeeEquipmentAssignment extends Model {}
@@ -49,13 +50,13 @@ EmployeeEquipmentAssignment.init(
 
     status: {
       type: DataTypes.ENUM(
-        "ASSIGNED",
-        "PARTIALLY_RETURNED",
-        "RETURNED",
-        "OVERDUE",
-        "LOST",
+        equipmentAssignmentStatusTypes.ASSIGNED,
+        equipmentAssignmentStatusTypes.PARTIALLY_RETURNED,
+        equipmentAssignmentStatusTypes.RETURNED,
+        equipmentAssignmentStatusTypes.OVERDUE,
+        equipmentAssignmentStatusTypes.LOST,
       ),
-      defaultValue: "ASSIGNED",
+      defaultValue: equipmentAssignmentStatusTypes.ASSIGNED,
     },
 
     remarks: {

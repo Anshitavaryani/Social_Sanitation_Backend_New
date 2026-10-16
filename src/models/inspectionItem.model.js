@@ -1,6 +1,7 @@
 /** @format */
 
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { inspectionReviewStatusTypes } = require("../config/types");
 const sequelize = require("../config/central.db");
 
 class InspectionItem extends Model {}
@@ -78,8 +79,8 @@ InspectionItem.init(
 
     // BDM review
     bdm_status: {
-      type: DataTypes.ENUM("PENDING", "APPROVED", "ISSUE"),
-      defaultValue: "PENDING",
+      type: DataTypes.ENUM(inspectionReviewStatusTypes.PENDING, inspectionReviewStatusTypes.APPROVED, inspectionReviewStatusTypes.ISSUE),
+      defaultValue: inspectionReviewStatusTypes.PENDING,
     },
 
     bdm_remark: {

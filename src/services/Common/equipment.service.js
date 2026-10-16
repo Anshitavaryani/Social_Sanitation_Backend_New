@@ -1,4 +1,5 @@
 const { status: httpStatus } = require("http-status");
+const { equipmentAssignmentStatusTypes, equipmentSignatureActionTypes, equipmentSignatureStatusTypes } = require("../../config/types");
 const ApiError = require("../../utils/ApiError");
 const { EMPLOYEE_ROLE_IDS } = require("../../config/roles");
 const { Op } = require("sequelize");
@@ -143,7 +144,7 @@ const assignEquipment = async (body) => {
       assigned_quantity: body.assigned_quantity,
       returned_quantity: 0,
       expected_return_date: body.expected_return_date,
-      status: "ASSIGNED",
+      status: equipmentAssignmentStatusTypes.ASSIGNED,
 
       // Signature required
       signature_version: 1,
@@ -241,12 +242,12 @@ const updateAssignment = async (assignmentId, body) => {
      * ==========================================
      */
 
-    let status = "ASSIGNED";
+    let status = equipmentAssignmentStatusTypes.ASSIGNED;
 
     if (newReturned === assignedQuantity) {
-      status = "RETURNED";
+      status = equipmentAssignmentStatusTypes.RETURNED;
     } else if (newReturned > 0) {
-      status = "PARTIALLY_RETURNED";
+      status = equipmentAssignmentStatusTypes.PARTIALLY_RETURNED;
     }
 
     /*
@@ -280,7 +281,7 @@ const updateAssignment = async (assignmentId, body) => {
       status,
 
       actual_return_date:
-        status === "RETURNED"
+        status === equipmentAssignmentStatusTypes.RETURNED
           ? assignment.actual_return_date || new Date()
           : null,
 
@@ -430,7 +431,7 @@ const getAllAssignments = async (query) => {
         signature: {
           required: signatureRequired,
 
-          status: signatureRequired ? "PENDING" : "SIGNED",
+          status: signatureRequired ? equipmentSignatureStatusTypes.PENDING : equipmentSignatureStatusTypes.SIGNED,
 
           current_version: item.signature_version,
 
@@ -481,7 +482,7 @@ const assignmentOverview = async () => {
     const assignedRecords = await EmployeeEquipmentAssignment.findAll({
       where: {
         status: {
-          [Op.in]: ["ASSIGNED", "PARTIALLY_RETURNED"],
+          [Op.in]: [equipmentAssignmentStatusTypes.ASSIGNED, equipmentAssignmentStatusTypes.PARTIALLY_RETURNED],
         },
       },
       attributes: ["assigned_quantity", "returned_quantity"],
@@ -497,7 +498,7 @@ const assignmentOverview = async () => {
     const overdueAssignments = await EmployeeEquipmentAssignment.count({
       where: {
         status: {
-          [Op.ne]: "RETURNED",
+          [Op.ne]: equipmentAssignmentStatusTypes.RETURNED,
         },
         expected_return_date: {
           [Op.lt]: new Date(),
@@ -676,8 +677,8 @@ const getAssignmentEquipmentHistory = async (assignmentId) => {
 
           status:
             signatureVersion !== signedVersion
-              ? "PENDING"
-              : "SIGNED",
+              ? equipmentSignatureStatusTypes.PENDING
+              : equipmentSignatureStatusTypes.SIGNED,
 
           total_signatures:
             signatures.length,
@@ -1201,8 +1202,8 @@ const sendEmployeeEquipmentForm = async (
           Number(
             assignment.signed_version || 0,
           )
-            ? "PENDING"
-            : "SIGNED",
+            ? equipmentSignatureStatusTypes.PENDING
+            : equipmentSignatureStatusTypes.SIGNED,
 
         history:
           signatures.map(
@@ -1353,7 +1354,7 @@ const getMyEquipment = async (body, query) => {
         signed_version: item.signed_version,
 
         status:
-          item.signature_version === item.signed_version ? "SIGNED" : "PENDING",
+          item.signature_version === item.signed_version ? equipmentSignatureStatusTypes.SIGNED : equipmentSignatureStatusTypes.PENDING,
       },
     }));
 
@@ -1428,12 +1429,12 @@ const signEquipment = async (body, assignmentId) => {
 
     let action;
 
-    if (assignment.status === "ASSIGNED") {
-      action = "ASSIGNED";
-    } else if (assignment.status === "PARTIALLY_RETURNED") {
-      action = "PARTIAL_RETURN";
-    } else if (assignment.status === "RETURNED") {
-      action = "FULL_RETURN";
+    if (assignment.status === equipmentAssignmentStatusTypes.ASSIGNED) {
+      action = equipmentSignatureActionTypes.ASSIGNED;
+    } else if (assignment.status === equipmentAssignmentStatusTypes.PARTIALLY_RETURNED) {
+      action = equipmentSignatureActionTypes.PARTIAL_RETURN;
+    } else if (assignment.status === equipmentAssignmentStatusTypes.RETURNED) {
+      action = equipmentSignatureActionTypes.FULL_RETURN;
     } else {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
@@ -1447,9 +1448,9 @@ const signEquipment = async (body, assignmentId) => {
 
     let signedQuantity;
 
-    if (action === "ASSIGNED") {
+    if (action === equipmentSignatureActionTypes.ASSIGNED) {
       signedQuantity = assignedQuantity;
-    } else if (action === "PARTIAL_RETURN") {
+    } else if (action === equipmentSignatureActionTypes.PARTIAL_RETURN) {
       signedQuantity = returnedQuantity;
     } else {
       // FULL_RETURN
@@ -1669,8 +1670,8 @@ const getEquipmentByEmployeeId = async (employeeId, query) => {
         status:
           Number(item.signature_version || 0) ===
           Number(item.signed_version || 0)
-            ? "SIGNED"
-            : "PENDING",
+            ? equipmentSignatureStatusTypes.SIGNED
+            : equipmentSignatureStatusTypes.PENDING,
       },
     }));
 

@@ -1,5 +1,6 @@
 
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { productRequestStatusTypes } = require("../config/types");
 const sequelize = require("../config/central.db");
 
 class ProductRequest extends Model {}
@@ -24,8 +25,8 @@ ProductRequest.init(
 			allowNull: false,
 		},
 		status: {
-			type: DataTypes.ENUM("Pending", "Approved", "Rejected"),
-			defaultValue: "Pending",
+			type: DataTypes.ENUM(productRequestStatusTypes.PENDING, productRequestStatusTypes.APPROVED, productRequestStatusTypes.REJECTED),
+			defaultValue: productRequestStatusTypes.PENDING,
 		},
 		note: {
 			type: DataTypes.TEXT,

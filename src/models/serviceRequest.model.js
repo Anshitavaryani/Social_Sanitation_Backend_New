@@ -1,6 +1,7 @@
 /** @format */
 
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { invoicePaymentStatusTypes, jobStatusTypes, quoteStatusTypes } = require("../config/types");
 const sequelize = require("../config/central.db");
 
 class ServiceRequest extends Model {}
@@ -62,12 +63,12 @@ ServiceRequest.init(
       allowNull: true,
     },
     job_status: {
-      type: DataTypes.ENUM("NOT_BOOKED", "BOOKED", "EXPIRED"),
-      defaultValue: "NOT_BOOKED",
+      type: DataTypes.ENUM(jobStatusTypes.NOT_BOOKED, jobStatusTypes.BOOKED, jobStatusTypes.EXPIRED),
+      defaultValue: jobStatusTypes.NOT_BOOKED,
     },
     payment_status: {
-      type: DataTypes.ENUM("NOT_PAID", "PAID", "CASH_PAID"),
-      defaultValue: "NOT_PAID",
+      type: DataTypes.ENUM(invoicePaymentStatusTypes.NOT_PAID, invoicePaymentStatusTypes.PAID, invoicePaymentStatusTypes.CASH_PAID),
+      defaultValue: invoicePaymentStatusTypes.NOT_PAID,
     },
 
     square_payment_link_id: {
@@ -88,8 +89,8 @@ ServiceRequest.init(
       allowNull: true,
     },
     status: {
-      type: DataTypes.ENUM("DRAFT", "SAVED", "SIGNED"),
-      defaultValue: "DRAFT",
+      type: DataTypes.ENUM(quoteStatusTypes.DRAFT, quoteStatusTypes.SAVED, quoteStatusTypes.SIGNED),
+      defaultValue: quoteStatusTypes.DRAFT,
     },
     is_active: {
       type: DataTypes.BOOLEAN,

@@ -1,6 +1,7 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
+const { attendanceStatusTypes, bookingListFilterTypes, bookingTypes, paymentStatusTypes } = require("../../config/types");
 const {
   dayjs,
   inZone,
@@ -47,19 +48,19 @@ const getAllBookings = async (reqBody) => {
 
     let whereCondition = {};
 
-    if (booking_status === "ONGOING") {
+    if (booking_status === bookingTypes.ONGOING) {
       whereCondition = {
-        booking_status: "ONGOING",
+        booking_status: bookingTypes.ONGOING,
         is_active: true,
-        payment_status: "SUCCESS",
+        payment_status: paymentStatusTypes.SUCCESS,
       };
-    } else if (booking_status === "COMPLETED") {
+    } else if (booking_status === bookingListFilterTypes.COMPLETED) {
       const today = calendarDateUtc();
       if (period === "today") {
         whereCondition = {
-          booking_status: ["SUCCESS", "ACCEPTED", "PENDING", "RESCHEDULED"],
+          booking_status: [bookingTypes.SUCCESS, bookingTypes.ACCEPTED, bookingTypes.PENDING, bookingTypes.RESCHEDULED],
           is_active: true,
-          payment_status: "SUCCESS",
+          payment_status: paymentStatusTypes.SUCCESS,
           date: {
             [Op.gte]: today.toDate(),
             [Op.lt]: today.clone().add(1, "days").toDate(),
@@ -67,9 +68,9 @@ const getAllBookings = async (reqBody) => {
         };
       } else if (period === "past_30_days") {
         whereCondition = {
-          booking_status: ["SUCCESS", "ACCEPTED", "PENDING", "RESCHEDULED"],
+          booking_status: [bookingTypes.SUCCESS, bookingTypes.ACCEPTED, bookingTypes.PENDING, bookingTypes.RESCHEDULED],
           is_active: true,
-          payment_status: "SUCCESS",
+          payment_status: paymentStatusTypes.SUCCESS,
           date: {
             [Op.gte]: today.clone().subtract(30, "days").toDate(),
             [Op.lt]: today.toDate(),
@@ -77,9 +78,9 @@ const getAllBookings = async (reqBody) => {
         };
       } else if (period === "past_90_days") {
         whereCondition = {
-          booking_status: ["SUCCESS", "ACCEPTED", "PENDING", "RESCHEDULED"],
+          booking_status: [bookingTypes.SUCCESS, bookingTypes.ACCEPTED, bookingTypes.PENDING, bookingTypes.RESCHEDULED],
           is_active: true,
-          payment_status: "SUCCESS",
+          payment_status: paymentStatusTypes.SUCCESS,
           date: {
             [Op.gte]: today.clone().subtract(90, "days").toDate(),
             [Op.lt]: today.toDate(),
@@ -87,9 +88,9 @@ const getAllBookings = async (reqBody) => {
         };
       } else if (period === "all") {
         whereCondition = {
-          booking_status: ["SUCCESS", "ACCEPTED", "PENDING", "RESCHEDULED"],
+          booking_status: [bookingTypes.SUCCESS, bookingTypes.ACCEPTED, bookingTypes.PENDING, bookingTypes.RESCHEDULED],
           is_active: true,
-          payment_status: "SUCCESS",
+          payment_status: paymentStatusTypes.SUCCESS,
           date: {
             [Op.lt]: today.toDate(),
           },
@@ -100,19 +101,19 @@ const getAllBookings = async (reqBody) => {
           "Invalid period parameter for COMPLETED bookingStatus",
         );
       }
-    } else if (booking_status === "CANCELLED") {
+    } else if (booking_status === bookingTypes.CANCELLED) {
       whereCondition = {
-        booking_status: ["REJECTED", "DELETED", "CANCELLED"],
+        booking_status: [bookingTypes.REJECTED, bookingTypes.DELETED, bookingTypes.CANCELLED],
         is_active: true,
-        payment_status: "SUCCESS",
+        payment_status: paymentStatusTypes.SUCCESS,
       };
-    } else if (booking_status === "UPCOMING") {
+    } else if (booking_status === bookingListFilterTypes.UPCOMING) {
       if (period === "today") {
         const today = calendarDateUtc();
         whereCondition = {
-          booking_status: ["ACCEPTED"],
+          booking_status: [bookingTypes.ACCEPTED],
           is_active: true,
-          payment_status: "SUCCESS",
+          payment_status: paymentStatusTypes.SUCCESS,
           date: {
             [Op.gte]: today.toDate(),
             [Op.lt]: today.clone().add(1, "days").toDate(),
@@ -121,9 +122,9 @@ const getAllBookings = async (reqBody) => {
       } else if (period === "current_week") {
         const endOfWeek = calendarDateUtc(addDays(isoWeekStart(), 6)).endOf("day");
         whereCondition = {
-          booking_status: ["ACCEPTED"],
+          booking_status: [bookingTypes.ACCEPTED],
           is_active: true,
-          payment_status: "SUCCESS",
+          payment_status: paymentStatusTypes.SUCCESS,
           date: {
             [Op.gte]: today,
             [Op.lt]: endOfWeek.toDate(),
@@ -132,9 +133,9 @@ const getAllBookings = async (reqBody) => {
       } else if (period === "current_month") {
         const endOfMonth = calendarDateUtc().endOf("month");
         whereCondition = {
-          booking_status: ["ACCEPTED"],
+          booking_status: [bookingTypes.ACCEPTED],
           is_active: true,
-          payment_status: "SUCCESS",
+          payment_status: paymentStatusTypes.SUCCESS,
           date: {
             [Op.gte]: today,
             [Op.lt]: endOfMonth.toDate(),
@@ -142,9 +143,9 @@ const getAllBookings = async (reqBody) => {
         };
       } else if (period === "all") {
         whereCondition = {
-          booking_status: ["ACCEPTED"],
+          booking_status: [bookingTypes.ACCEPTED],
           is_active: true,
-          payment_status: "SUCCESS",
+          payment_status: paymentStatusTypes.SUCCESS,
           date: {
             [Op.gte]: today,
           },
@@ -155,11 +156,11 @@ const getAllBookings = async (reqBody) => {
           "Invalid period parameter for UPCOMING bookingStatus",
         );
       }
-    } else if (booking_status === "PENDING") {
+    } else if (booking_status === bookingTypes.PENDING) {
       whereCondition = {
-        booking_status: ["PENDING", "RESCHEDULED"],
+        booking_status: [bookingTypes.PENDING, bookingTypes.RESCHEDULED],
         is_active: true,
-        payment_status: "SUCCESS",
+        payment_status: paymentStatusTypes.SUCCESS,
         date: {
           [Op.gte]: today,
         },
@@ -415,9 +416,9 @@ const checkBookingRequest = async () => {
   try {
     // Define the condition for fetching pending and active bookings
     const whereCondition = {
-      booking_status: "PENDING",
+      booking_status: bookingTypes.PENDING,
       is_active: true,
-      payment_status: "SUCCESS",
+      payment_status: paymentStatusTypes.SUCCESS,
     };
 
     // Check the count of bookings matching the condition
@@ -727,10 +728,10 @@ const updateBookingStatus = async (reqBody) => {
       }
     }
 
-    if (booking_status === "REJECTED") {
+    if (booking_status === bookingTypes.REJECTED) {
       await Booking.update(
         {
-          booking_status: "REJECTED",
+          booking_status: bookingTypes.REJECTED,
           is_active: false,
         },
         { where: { id: booking_id } },
@@ -751,8 +752,8 @@ const updateBookingStatus = async (reqBody) => {
     }
 
     if (
-      booking_status === "ACCEPTED" ||
-      bookingDoc.booking_status === "ACCEPTED"
+      booking_status === bookingTypes.ACCEPTED ||
+      bookingDoc.booking_status === bookingTypes.ACCEPTED
     ) {
       console.log("✅ Booking accepted, assigning employees...");
       const assignments = [];
@@ -1051,8 +1052,8 @@ const createRecurringBookings = async ({
         date_in_utc,
         time_in_utc,
         bdm_id: baseBooking.bdm_id || null,
-        payment_status: "SUCCESS",
-        booking_status: "ACCEPTED",
+        payment_status: paymentStatusTypes.SUCCESS,
+        booking_status: bookingTypes.ACCEPTED,
         is_recurring: true,
         recurring_every,
         recurring_type,
@@ -1276,8 +1277,8 @@ const adminCreateBooking = async (reqBody, headers) => {
       date_in_utc,
       time_in_utc,
       bdm_id: bdmUser ? bdmUser.bdm_id : null,
-      payment_status: "SUCCESS",
-      booking_status: "ACCEPTED",
+      payment_status: paymentStatusTypes.SUCCESS,
+      booking_status: bookingTypes.ACCEPTED,
     };
 
     // 🧠 Decide if we skip base booking creation
@@ -1426,7 +1427,7 @@ const adminCreateBookingForGuest = async (reqBody) => {
       time_zone: timezone,
       date_in_utc,
       time_in_utc,
-      payment_status: "SUCCESS",
+      payment_status: paymentStatusTypes.SUCCESS,
       end_time_by_admin,
     };
 
@@ -1612,7 +1613,7 @@ const createRecurringGuestBookings = async ({
         date_in_utc,
         time_in_utc,
         bdm_id: baseBooking.bdm_id || null,
-        payment_status: "SUCCESS",
+        payment_status: paymentStatusTypes.SUCCESS,
         is_recurring: true,
         recurring_every,
         recurring_type,
@@ -1935,7 +1936,7 @@ const sendAttendanceAlerts = async () => {
 
     const bookings = await Booking.findAll({
       where: {
-        booking_status: "ACCEPTED",
+        booking_status: bookingTypes.ACCEPTED,
         absent_alert_sent: false,
         is_active: true,
         [Op.and]: Sequelize.where(
@@ -2033,9 +2034,9 @@ const sendAttendanceAlerts = async () => {
           console.log("⚠️ No attendance");
 
           if (nowEST >= absentThreshold) {
-            status = "ABSENT";
+            status = attendanceStatusTypes.ABSENT;
           } else if (nowEST >= lateThreshold) {
-            status = "LATE";
+            status = attendanceStatusTypes.LATE;
           } else {
             console.log("⏳ Too early, skipping");
             continue;
@@ -2046,7 +2047,7 @@ const sendAttendanceAlerts = async () => {
           console.log("🕒 Clock-in time:", clockInTime);
 
           if (clockInTime > lateThreshold) {
-            status = "LATE";
+            status = attendanceStatusTypes.LATE;
           } else {
             console.log("✅ On time, skipping");
             continue;
@@ -2074,7 +2075,7 @@ const sendAttendanceAlerts = async () => {
       }
 
       const absentEmployees = employeesToNotify.filter(
-        (e) => e.status === "ABSENT",
+        (e) => e.status === attendanceStatusTypes.ABSENT,
       );
 
       console.log("🔴 Absent Employees:", absentEmployees.length);
@@ -2085,7 +2086,7 @@ const sendAttendanceAlerts = async () => {
         await sendGroupedAttendanceEmail({
           booking,
           employees: absentEmployees,
-          status: "ABSENT",
+          status: attendanceStatusTypes.ABSENT,
           bookingAddress: booking.booking_address,
         });
 
@@ -2124,7 +2125,7 @@ const notifyAdminIfClockoutFar = async () => {
 
     const bookings = await Booking.findAll({
       where: {
-        booking_status: "SUCCESS",
+        booking_status: bookingTypes.SUCCESS,
         date_in_utc: todayUTC,
       },
       include: [
@@ -2245,7 +2246,7 @@ const getDayOverview = async (reqBody, res) => {
       where: {
 
         is_active: true,
-        payment_status: "SUCCESS",
+        payment_status: paymentStatusTypes.SUCCESS,
         date: {
           [Op.gte]: startOfDay,
           [Op.lt]: endOfDay,
@@ -2783,7 +2784,7 @@ const getDayOverviewForGantt = async (reqBody) => {
     const bookings = await Booking.findAll({
       where: {
         is_active: true,
-        payment_status: "SUCCESS",
+        payment_status: paymentStatusTypes.SUCCESS,
         date: { [Op.gte]: startOfDay, [Op.lt]: endOfDay },
       },
       include: [
@@ -2874,7 +2875,7 @@ const getEmployeeDayOverview = async ({ date }) => {
   const bookings = await Booking.findAll({
     where: {
       is_active: true,
-      payment_status: "SUCCESS",
+      payment_status: paymentStatusTypes.SUCCESS,
       date: {
         [Op.gte]: startOfDay,
         [Op.lt]: endOfDay,
@@ -3001,7 +3002,7 @@ const getEmployeeRangeOverview = async ({
   const bookings = await Booking.findAll({
     where: {
       is_active: true,
-      payment_status: "SUCCESS",
+      payment_status: paymentStatusTypes.SUCCESS,
       date: {
         [Op.gte]: startDate,
         [Op.lte]: endDate,
@@ -3286,7 +3287,7 @@ const sendEmployeeTwoWeekSchedule = async (employee_id) => {
 
     const bookings = await Booking.findAll({
       where: {
-        booking_status: "ACCEPTED",
+        booking_status: bookingTypes.ACCEPTED,
         is_active: true,
         date: {
           [Op.between]: [start, end],

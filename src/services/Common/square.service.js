@@ -1,5 +1,6 @@
 /** @format */
 const axios = require("axios");
+const { paymentPurposeTypes, paymentStatusTypes } = require("../../config/types");
 const { randomUUID: uuidv4 } = require("crypto");
 const { Payment } = require("../../models");
 const config = require("../../config/config");
@@ -85,7 +86,7 @@ async function generateSquarePaymentLink({
       amount: squareAmount,
       square_customer_id: customerEmail,
       description: `Service Quote #${refNo}`,
-      payment_status: "PENDING",
+      payment_status: paymentStatusTypes.PENDING,
       receipt_url: paymentUrl,
     });
 
@@ -171,7 +172,7 @@ async function generateContractPaymentLink({
       amount: Number(amount.toFixed(2)),
       square_customer_id: customerEmail,
       description: `Contract Payment - ${clientName}`,
-      payment_status: "PENDING",
+      payment_status: paymentStatusTypes.PENDING,
       receipt_url: paymentLink.url,
     });
 
@@ -198,7 +199,7 @@ async function generateInvoicePaymentLink({
   user_id,
   invoice_id,
   invoiceRefNo,
-  paymentPurpose = "FULL",
+  paymentPurpose = paymentPurposeTypes.FULL,
 }) {
   try {
     const actualAmount = Number(amount || 0);
@@ -210,7 +211,7 @@ async function generateInvoicePaymentLink({
       throw new Error("Payment amount must be greater than zero");
     }
 
-    const validPurposes = ["FULL", "DEPOSIT", "BALANCE"];
+    const validPurposes = [paymentPurposeTypes.FULL, paymentPurposeTypes.DEPOSIT, paymentPurposeTypes.BALANCE];
 
     if (!validPurposes.includes(paymentPurpose)) {
       throw new Error("Invalid payment purpose");
@@ -222,7 +223,7 @@ async function generateInvoicePaymentLink({
     const existingPayment = await Payment.findOne({
       where: {
         invoice_id,
-        payment_status: "PENDING",
+        payment_status: paymentStatusTypes.PENDING,
         payment_purpose: paymentPurpose,
       },
       order: [["created_at", "DESC"]],
@@ -293,7 +294,7 @@ async function generateInvoicePaymentLink({
       amount: actualAmount,
       square_customer_id: customerEmail,
       description: `Invoice #${invoiceRefNo} - ${paymentPurpose}`,
-      payment_status: "PENDING",
+      payment_status: paymentStatusTypes.PENDING,
       receipt_url: paymentLink.url,
     });
 

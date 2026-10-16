@@ -4,7 +4,7 @@ const { status: httpStatus } = require("http-status");
 const Attendance = require("../../models/attendance.model");
 const ApiError = require("../../utils/ApiError");
 const { EMPLOYEE_ROLE_IDS } = require("../../config/roles");
-const { leaveStatusTypes } = require("../../config/types");
+const { leaveStatusTypes, attendanceStatusTypes, breakStatusTypes } = require("../../config/types");
 const { Op, Sequelize } = require("sequelize");
 const {
 	User,
@@ -310,7 +310,7 @@ const applyBreak = async (reqBody, headers) => {
 			where: {
 				user_id: user.id,
 				attendance_id: attendance.id,
-				status: "active",
+				status: breakStatusTypes.ACTIVE,
 			},
 		});
 
@@ -327,7 +327,7 @@ const applyBreak = async (reqBody, headers) => {
 			break_end: breakEndUTC,
 			break_end_est: breakEndEST,
 			duration_minutes: duration,
-			status: "active",
+			status: breakStatusTypes.ACTIVE,
 			break_start_lng: break_start_lng || null,
 			break_start_lat: break_start_lat || null,
 		});
@@ -366,7 +366,7 @@ const checkIfOnBreak = async (reqBody, headers) => {
 			where: {
 				user_id: user.id,
 				attendance_id: attendance.id,
-				status: "active",
+				status: breakStatusTypes.ACTIVE,
 			},
 			attributes: [
 				"id",
@@ -656,7 +656,7 @@ const getAllLeaveRequest = async () => {
 			where: {
 				is_active: true,
 				is_on_leave: true,
-				leave_status: "PENDING",
+				leave_status: leaveStatusTypes.PENDING,
 			},
 			order: [["created_at", "DESC"]],
 			include: [
@@ -753,7 +753,7 @@ const getAttendanceByUserId = async (reqBody, id) => {
 		for (let dateKey = startDay; dateKey <= endDay; dateKey = addDays(dateKey, 1)) {
 			attendanceMap[dateKey] = {
 				date: dateKey,
-				status: "ABSENT",
+				status: attendanceStatusTypes.ABSENT,
 				clock_in: null,
 				clock_out: null,
 				clock_in_est: null,
@@ -779,7 +779,7 @@ const getAttendanceByUserId = async (reqBody, id) => {
 			if (dateKey && attendanceMap[dateKey]) {
 				attendanceMap[dateKey] = {
 					date: dateKey,
-					status: "PRESENT",
+					status: attendanceStatusTypes.PRESENT,
 					clock_in: record.clock_in_est,
 					clock_out: record.clock_out_est,
 					clock_in_est: clockInEST.toISOString(),
@@ -798,7 +798,7 @@ const getAttendanceByUserId = async (reqBody, id) => {
 
 			if (
 				attendanceMap[dateKey] &&
-				attendanceMap[dateKey].status === "ABSENT"
+				attendanceMap[dateKey].status === attendanceStatusTypes.ABSENT
 			) {
 				attendanceMap[dateKey] = {
 					date: dateKey,
@@ -936,7 +936,7 @@ const getAllAttendance = async (reqBody) => {
 								return {
 									date: day,
 									status:
-										day > utcDate(today) ? "--" : "ABSENT",
+										day > utcDate(today) ? "--" : attendanceStatusTypes.ABSENT,
 									clock_in: null,
 									clock_out: null,
 									total_hours: null,
@@ -946,7 +946,7 @@ const getAllAttendance = async (reqBody) => {
 							if (rec.clock_in) {
 								return {
 									date: day,
-									status: "PRESENT",
+									status: attendanceStatusTypes.PRESENT,
 									clock_in: rec.clock_in_est,
 									clock_out: rec.clock_out_est,
 									total_hours: rec.total_hours || "0",
@@ -965,14 +965,14 @@ const getAllAttendance = async (reqBody) => {
 								return {
 									date: day,
 									status:
-										rec.leave_status === "PENDING"
+										rec.leave_status === leaveStatusTypes.PENDING
 											? "APPLIED LEAVE"
 											: "ON LEAVE",
 									leave_reason: rec.leave_reason || null,
 								};
 							}
 
-							return { date: day, status: "ABSENT" };
+							return { date: day, status: attendanceStatusTypes.ABSENT };
 						}),
 					};
 				})
@@ -1075,8 +1075,8 @@ const getAttendanceStatusWithBooking = async ({
 
 	// ❌ No booking → fallback to old logic
 	if (!bookingAssignment || !bookingAssignment.employee_details_booking) {
-		if (attendanceRecord?.clock_in) return "PRESENT";
-		return "ABSENT";
+		if (attendanceRecord?.clock_in) return attendanceStatusTypes.PRESENT;
+		return attendanceStatusTypes.ABSENT;
 	}
 
 	const booking = bookingAssignment.employee_details_booking;
@@ -1097,15 +1097,15 @@ const getAttendanceStatusWithBooking = async ({
 	if (attendanceRecord?.clock_in_est) {
 		const clockIn = dayjs.utc(attendanceRecord.clock_in_est);
 
-		if (clockIn.isAfter(lateThreshold)) return "LATE";
-		return "PRESENT";
+		if (clockIn.isAfter(lateThreshold)) return attendanceStatusTypes.LATE;
+		return attendanceStatusTypes.PRESENT;
 	}
 
 	// ❌ No clock-in
-	if (now.isAfter(absentThreshold)) return "ABSENT";
-	if (now.isAfter(lateThreshold)) return "LATE";
+	if (now.isAfter(absentThreshold)) return attendanceStatusTypes.ABSENT;
+	if (now.isAfter(lateThreshold)) return attendanceStatusTypes.LATE;
 
-	return "PENDING";
+	return attendanceStatusTypes.PENDING;
 };
 
 // 	try {
@@ -1570,7 +1570,7 @@ const autoCompleteExpiredBreaks = async () => {
 		// find all expired active breaks
 		const activeBreaks = await Break.findAll({
 			where: {
-				status: "active",
+				status: breakStatusTypes.ACTIVE,
 				break_end: { [Op.lte]: now },
 			},
 		});
@@ -1596,7 +1596,7 @@ const autoCompleteExpiredBreaks = async () => {
 			}
 
 			await b.update({
-				status: "completed",
+				status: breakStatusTypes.COMPLETED,
 				break_end_lat: userLocations?.latitude ?? null,
 				break_end_lng: userLocations?.longitude ?? null,
 			});

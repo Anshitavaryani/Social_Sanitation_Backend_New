@@ -21,7 +21,7 @@ const {
 	sendEmailVerification,
 } = require("../Common/email.service");
 const { generateAuthTokens } = require("../Common/token.service");
-const { otpTypes } = require("../../config/types");
+const { otpTypes, userStatusTypes } = require("../../config/types");
 const otpGuard = require("../../utils/otpGuard");
 const generateRandomString = require("../../utils/randomStringGenrate");
 
@@ -115,7 +115,7 @@ const verifyOTP = async (email, otp, type, role_id) => {
 		let token = "";
 		if (type !== otpTypes.FORGOT_PASSWORD) {
 			isUpdate = await User.update(
-				{ status: "ACCEPTED" },
+				{ status: userStatusTypes.ACCEPTED },
 				{ where: { email: email, is_active: true } }
 			);
 		} else {
@@ -227,7 +227,7 @@ const login = async (reqBody, headers) => {
 			where: {
 				email: reqBody.email,
 				is_active: true,
-				status: "ACCEPTED",
+				status: userStatusTypes.ACCEPTED,
 				role_id: role_id,
 			},
 			include:[

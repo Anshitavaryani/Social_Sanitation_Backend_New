@@ -1,6 +1,7 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
+const { attendanceStatusTypes, bookingListFilterTypes, bookingTypes, invoicePaymentStatusTypes, jobStatusTypes, paymentStatusTypes, quoteStatusTypes, userStatusTypes } = require("../../config/types");
 const bcrypt = require("bcryptjs");
 const { Sequelize, Op } = require("sequelize");
 const path = require("path");
@@ -268,21 +269,21 @@ const getBookinsByUserId = async (reqBody) => {
 
     let whereCondition = {};
 
-    if (booking_status === "UPCOMING") {
+    if (booking_status === bookingListFilterTypes.UPCOMING) {
       whereCondition = {
-        booking_status: ["PENDING", "ACCEPTED", "ONGOING"],
+        booking_status: [bookingTypes.PENDING, bookingTypes.ACCEPTED, bookingTypes.ONGOING],
         is_active: true,
         user_id: id,
       };
-    } else if (booking_status === "ONGOING") {
+    } else if (booking_status === bookingTypes.ONGOING) {
       whereCondition = {
-        booking_status: ["ONGOING"],
+        booking_status: [bookingTypes.ONGOING],
         is_active: 1,
         user_id: id,
       };
-    } else if (booking_status === "COMPLETED") {
+    } else if (booking_status === bookingListFilterTypes.COMPLETED) {
       whereCondition = {
-        booking_status: ["SUCCESS", "REJECTED", "DELETED"],
+        booking_status: [bookingTypes.SUCCESS, bookingTypes.REJECTED, bookingTypes.DELETED],
         is_active: 1,
         user_id: id,
       };
@@ -411,19 +412,19 @@ const getBookingByEmployeeId = async (reqBody) => {
     let whereCondition = { is_active: true, employee_id: id };
 
     // ✅ Apply booking status filtering properly
-    if (booking_status === "UPCOMING") {
+    if (booking_status === bookingListFilterTypes.UPCOMING) {
       whereCondition["$employee_details_booking.booking_status$"] = [
-        "PENDING",
-        "ACCEPTED",
-        "ONGOING",
+        bookingTypes.PENDING,
+        bookingTypes.ACCEPTED,
+        bookingTypes.ONGOING,
       ];
-    } else if (booking_status === "ONGOING") {
-      whereCondition["$employee_details_booking.booking_status$"] = ["ONGOING"];
-    } else if (booking_status === "COMPLETED") {
+    } else if (booking_status === bookingTypes.ONGOING) {
+      whereCondition["$employee_details_booking.booking_status$"] = [bookingTypes.ONGOING];
+    } else if (booking_status === bookingListFilterTypes.COMPLETED) {
       whereCondition["$employee_details_booking.booking_status$"] = [
-        "SUCCESS",
-        "REJECTED",
-        "DELETED",
+        bookingTypes.SUCCESS,
+        bookingTypes.REJECTED,
+        bookingTypes.DELETED,
       ];
     } else if (booking_status !== "all" && booking_status) {
       throw new ApiError(
@@ -1425,7 +1426,7 @@ const adminAddUser = async (reqBody) => {
       password: bcrypt.hashSync(password, salt),
       role_id,
       sub_role_id,
-      status: "ACCEPTED",
+      status: userStatusTypes.ACCEPTED,
       client_type: finalClientType,
       employee_type: isEmployee ? employee_type : null,
       assigned_to: Number(role_id) === ROLE.CLIENT ? assigned_to : null,
@@ -1621,7 +1622,7 @@ const syncEmployeeRoleData = async (
         attributes: [],
         where: {
           booking_status: {
-            [Op.in]: ["PENDING", "ACCEPTED", "ONGOING"],
+            [Op.in]: [bookingTypes.PENDING, bookingTypes.ACCEPTED, bookingTypes.ONGOING],
           },
         },
       },
@@ -2605,7 +2606,7 @@ const getPendingBookingCount = async () => {
   const bookingCount = await Booking.count({
     where: {
       is_active: true,
-      booking_status: ["PENDING", "ACCEPTED", "ONGOING"],
+      booking_status: [bookingTypes.PENDING, bookingTypes.ACCEPTED, bookingTypes.ONGOING],
     },
   });
   return bookingCount;
@@ -2615,7 +2616,7 @@ const getCompletedBookingCount = async () => {
   const bookingCount = await Booking.count({
     where: {
       is_active: true,
-      booking_status: ["SUCCESS"],
+      booking_status: [bookingTypes.SUCCESS],
     },
   });
   return bookingCount;
@@ -2625,7 +2626,7 @@ const getDeletedBookingCount = async () => {
   const bookingCount = await Booking.count({
     where: {
       is_active: true,
-      booking_status: ["DELETED", "REJECTED"],
+      booking_status: [bookingTypes.DELETED, bookingTypes.REJECTED],
     },
   });
   return bookingCount;
@@ -2909,7 +2910,7 @@ const getAllCleanerByAdmin = async (id) => {
 const getAllTransactions = async () => {
   try {
     const userDocs = await Payment.findAll({
-      where: { payment_status: "SUCCESS", is_active: true },
+      where: { payment_status: paymentStatusTypes.SUCCESS, is_active: true },
       include: [
         {
           model: User,
@@ -3077,7 +3078,7 @@ const submitServiceQuote = async (reqBody) => {
         where: {
           id: quote_id,
           user_id,
-          status: "DRAFT",
+          status: quoteStatusTypes.DRAFT,
         },
       });
 
@@ -3099,9 +3100,9 @@ const submitServiceQuote = async (reqBody) => {
         square_payment_url: paymentUrl,
         square_payment_link_id: paymentLinkId,
         expires_at: expiresAt,
-        job_status: "NOT_BOOKED",
-        payment_status: "NOT_PAID",
-        status: "SAVED",
+        job_status: jobStatusTypes.NOT_BOOKED,
+        payment_status: invoicePaymentStatusTypes.NOT_PAID,
+        status: quoteStatusTypes.SAVED,
       });
 
       await QuoteItem.destroy({
@@ -3127,9 +3128,9 @@ const submitServiceQuote = async (reqBody) => {
         square_payment_url: paymentUrl,
         square_payment_link_id: paymentLinkId,
         expires_at: expiresAt,
-        job_status: "NOT_BOOKED",
-        payment_status: "NOT_PAID",
-        status: "SAVED",
+        job_status: jobStatusTypes.NOT_BOOKED,
+        payment_status: invoicePaymentStatusTypes.NOT_PAID,
+        status: quoteStatusTypes.SAVED,
       });
     }
 
@@ -3227,7 +3228,7 @@ Ref #: ${finalRefNo}`;
       message: "Quote saved and sent",
       data: {
         quote_id: quote.id,
-        status: "SAVED",
+        status: quoteStatusTypes.SAVED,
       },
     };
   } catch (error) {
@@ -3260,7 +3261,7 @@ const getLatestDraftQuote = async (userId) => {
     const draft = await ServiceQuote.findOne({
       where: {
         user_id: userId,
-        status: "DRAFT",
+        status: quoteStatusTypes.DRAFT,
       },
       order: [["updated_at", "DESC"]],
       include: [
@@ -3283,7 +3284,7 @@ const getAllDraftQuotesByUser = async (userId) => {
     const drafts = await ServiceQuote.findAll({
       where: {
         user_id: userId,
-        status: "DRAFT",
+        status: quoteStatusTypes.DRAFT,
       },
       attributes: ["id", "ref_type", "ref_no", "updated_at"],
       order: [["updated_at", "DESC"]],
@@ -3297,7 +3298,7 @@ const getAllDraftQuotesByUser = async (userId) => {
 
 const deleteDraftQuote = async (id) => {
   const quote = await ServiceQuote.findOne({
-    where: { id, status: "DRAFT" },
+    where: { id, status: quoteStatusTypes.DRAFT },
   });
 
   if (!quote) {
@@ -3380,7 +3381,7 @@ const saveDraftQuote = async (reqBody) => {
 
     if (quote_id) {
       quote = await ServiceQuote.findOne({
-        where: { id: quote_id, status: "DRAFT" },
+        where: { id: quote_id, status: quoteStatusTypes.DRAFT },
       });
       if (!quote) {
         throw new ApiError(httpStatus.NOT_FOUND, "Draft not found");
@@ -3413,7 +3414,7 @@ const saveDraftQuote = async (reqBody) => {
         date,
         signature,
         total_due, // ✅
-        status: "DRAFT",
+        status: quoteStatusTypes.DRAFT,
       });
     }
 
@@ -3584,7 +3585,7 @@ const getServiceQuotesByUserId = async (id) => {
   try {
     // Fetch all quotes for the user, including related items
     const quotes = await ServiceQuote.findAll({
-      where: { user_id: id, is_active: true, status: "SAVED" },
+      where: { user_id: id, is_active: true, status: quoteStatusTypes.SAVED },
       include: [
         {
           model: QuoteItem,
@@ -3723,9 +3724,9 @@ const editServiceQuote = async (reqBody) => {
       square_payment_url: paymentUrl,
       square_payment_link_id: paymentLinkId,
       expires_at: expiresAt,
-      payment_status: "NOT_PAID",
-      job_status: "NOT_BOOKED",
-      status: "SAVED",
+      payment_status: invoicePaymentStatusTypes.NOT_PAID,
+      job_status: jobStatusTypes.NOT_BOOKED,
+      status: quoteStatusTypes.SAVED,
     });
 
     /* ================= DELETE OLD ITEMS ================= */
@@ -3882,9 +3883,9 @@ const submitServiceRequest = async (reqBody) => {
       total_due,
       date,
       signature,
-      job_status: "NOT_BOOKED",
-      payment_status: "NOT_PAID",
-      status: "SAVED",
+      job_status: jobStatusTypes.NOT_BOOKED,
+      payment_status: invoicePaymentStatusTypes.NOT_PAID,
+      status: quoteStatusTypes.SAVED,
     });
 
     /* ================= ITEMS ================= */
@@ -3945,7 +3946,7 @@ const submitServiceRequest = async (reqBody) => {
       message: "Service Request created and sent for signature",
       data: {
         quote_id: serviceRequest.id,
-        status: "SAVED",
+        status: quoteStatusTypes.SAVED,
       },
     };
   } catch (error) {
@@ -4046,7 +4047,7 @@ const editServiceRequest = async (reqBody) => {
       signature,
 
       // reset signature status
-      status: "SAVED",
+      status: quoteStatusTypes.SAVED,
       docusign_envelope_id: null,
       signed_file_name: null,
       updated_at: new Date(),
@@ -4109,7 +4110,7 @@ const editServiceRequest = async (reqBody) => {
 
     await request.update({
       docusign_envelope_id: envelopeId,
-      status: "SAVED",
+      status: quoteStatusTypes.SAVED,
     });
 
     return {
@@ -4414,7 +4415,7 @@ const markQuoteAsBooked = async (quoteId) => {
     throw new ApiError(httpStatus.NOT_FOUND, "Quote not found");
   }
 
-  if (quote.job_status === "EXPIRED") {
+  if (quote.job_status === jobStatusTypes.EXPIRED) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
       "Expired quotes cannot be booked",
@@ -4422,8 +4423,8 @@ const markQuoteAsBooked = async (quoteId) => {
   }
 
   await quote.update({
-    job_status: "BOOKED",
-    payment_status: "NOT_PAID",
+    job_status: jobStatusTypes.BOOKED,
+    payment_status: invoicePaymentStatusTypes.NOT_PAID,
   });
 
   return {
@@ -4445,8 +4446,8 @@ const markQuoteAsCheckPaid = async (quoteId) => {
   }
 
   if (
-    quote.payment_status === "PAID" ||
-    quote.payment_status === "CHECK_PAID"
+    quote.payment_status === invoicePaymentStatusTypes.PAID ||
+    quote.payment_status === invoicePaymentStatusTypes.CHECK_PAID
   ) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
@@ -4467,7 +4468,7 @@ const markQuoteAsCheckPaid = async (quoteId) => {
   /* ================= UPDATE QUOTE ================= */
 
   await quote.update({
-    payment_status: "CHECK_PAID",
+    payment_status: invoicePaymentStatusTypes.CHECK_PAID,
 
     paid_at: new Date(),
 
@@ -4475,7 +4476,7 @@ const markQuoteAsCheckPaid = async (quoteId) => {
 
     square_payment_link_id: null,
 
-    job_status: quote.job_status === "NOT_BOOKED" ? "BOOKED" : quote.job_status,
+    job_status: quote.job_status === jobStatusTypes.NOT_BOOKED ? jobStatusTypes.BOOKED : quote.job_status,
   });
 
   return {
@@ -4487,9 +4488,9 @@ const markQuoteAsCheckPaid = async (quoteId) => {
       id: quote.id,
 
       job_status:
-        quote.job_status === "NOT_BOOKED" ? "BOOKED" : quote.job_status,
+        quote.job_status === jobStatusTypes.NOT_BOOKED ? jobStatusTypes.BOOKED : quote.job_status,
 
-      payment_status: "CHECK_PAID",
+      payment_status: invoicePaymentStatusTypes.CHECK_PAID,
     },
   };
 };
@@ -4502,10 +4503,10 @@ const markQuoteAsACHPaid = async (quoteId) => {
   }
 
   if (
-    quote.payment_status === "PAID" ||
-    quote.payment_status === "CHECK_PAID" ||
-    quote.payment_status === "CASH_PAID" ||
-    quote.payment_status === "ACH_PAID"
+    quote.payment_status === invoicePaymentStatusTypes.PAID ||
+    quote.payment_status === invoicePaymentStatusTypes.CHECK_PAID ||
+    quote.payment_status === invoicePaymentStatusTypes.CASH_PAID ||
+    quote.payment_status === invoicePaymentStatusTypes.ACH_PAID
   ) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
@@ -4526,7 +4527,7 @@ const markQuoteAsACHPaid = async (quoteId) => {
   /* ================= UPDATE QUOTE ================= */
 
   await quote.update({
-    payment_status: "ACH_PAID",
+    payment_status: invoicePaymentStatusTypes.ACH_PAID,
 
     paid_at: new Date(),
 
@@ -4534,7 +4535,7 @@ const markQuoteAsACHPaid = async (quoteId) => {
 
     square_payment_link_id: null,
 
-    job_status: quote.job_status === "NOT_BOOKED" ? "BOOKED" : quote.job_status,
+    job_status: quote.job_status === jobStatusTypes.NOT_BOOKED ? jobStatusTypes.BOOKED : quote.job_status,
   });
 
   return {
@@ -4546,9 +4547,9 @@ const markQuoteAsACHPaid = async (quoteId) => {
       id: quote.id,
 
       job_status:
-        quote.job_status === "NOT_BOOKED" ? "BOOKED" : quote.job_status,
+        quote.job_status === jobStatusTypes.NOT_BOOKED ? jobStatusTypes.BOOKED : quote.job_status,
 
-      payment_status: "ACH_PAID",
+      payment_status: invoicePaymentStatusTypes.ACH_PAID,
     },
   };
 };
@@ -4605,7 +4606,7 @@ const getAllInvoices = async ({ month } = {}) => {
 const expireQuotesJob = async () => {
   const expiredQuotes = await ServiceQuote.findAll({
     where: {
-      job_status: "NOT_BOOKED",
+      job_status: jobStatusTypes.NOT_BOOKED,
       expires_at: { [Op.lt]: new Date() },
     },
   });
@@ -4616,7 +4617,7 @@ const expireQuotesJob = async () => {
     }
 
     await quote.update({
-      job_status: "EXPIRED",
+      job_status: jobStatusTypes.EXPIRED,
       // square_payment_url: null,
       // square_payment_link_id: null,
     });
@@ -4737,7 +4738,7 @@ const getMonthlyInvoicesSummary = async ({ month }) => {
       where: {
         is_active: true,
         payment_status: {
-          [Op.in]: ["PAID", "CASH_PAID", "CHECK_PAID", "ACH_PAID"],
+          [Op.in]: [invoicePaymentStatusTypes.PAID, invoicePaymentStatusTypes.CASH_PAID, invoicePaymentStatusTypes.CHECK_PAID, invoicePaymentStatusTypes.ACH_PAID],
         },
         created_at: {
           [Op.gte]: startDate,
@@ -4820,7 +4821,7 @@ const getLiveWorkingEmployees = async (reqBody) => {
     const bookings = await Booking.findAll({
       where: {
         is_active: true,
-        payment_status: "SUCCESS",
+        payment_status: paymentStatusTypes.SUCCESS,
         date: {
           [Op.gte]: startOfDay,
           [Op.lt]: endOfDay,
@@ -4909,7 +4910,7 @@ const getLateAbsentEmployees = async (reqBody) => {
 
     const bookings = await Booking.findAll({
       where: {
-        booking_status: "ACCEPTED",
+        booking_status: bookingTypes.ACCEPTED,
         is_active: true,
         [Op.and]: Sequelize.where(
           Sequelize.fn("DATE", Sequelize.col("date")),
@@ -4960,9 +4961,9 @@ const getLateAbsentEmployees = async (reqBody) => {
           delayMinutes = Math.max(Math.floor(diffMs / 60000), 0);
 
           if (nowEST >= absentThreshold) {
-            status = "ABSENT";
+            status = attendanceStatusTypes.ABSENT;
           } else if (nowEST >= lateThreshold) {
-            status = "LATE";
+            status = attendanceStatusTypes.LATE;
           }
         } else {
           // ✅ Has clock-in
@@ -4972,13 +4973,13 @@ const getLateAbsentEmployees = async (reqBody) => {
           delayMinutes = Math.max(Math.floor(diffMs / 60000), 0);
 
           if (clockIn >= absentThreshold) {
-            status = "ABSENT";
+            status = attendanceStatusTypes.ABSENT;
           } else if (clockIn >= lateThreshold) {
-            status = "LATE";
+            status = attendanceStatusTypes.LATE;
           }
         }
 
-        if (status === "LATE" || status === "ABSENT") {
+        if (status === attendanceStatusTypes.LATE || status === attendanceStatusTypes.ABSENT) {
           const user = await User.findByPk(employeeId, {
             include: [
               {
@@ -5027,9 +5028,9 @@ const getUpcomingScheduledBookings = async () => {
       where: {
         is_active: true,
 
-        payment_status: "SUCCESS",
+        payment_status: paymentStatusTypes.SUCCESS,
 
-        booking_status: "ACCEPTED",
+        booking_status: bookingTypes.ACCEPTED,
 
         [Op.and]: [
           Sequelize.where(Sequelize.fn("DATE", Sequelize.col("date")), {

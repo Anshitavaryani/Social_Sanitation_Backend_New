@@ -1,6 +1,7 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
+const { contractStatusTypes } = require("../../config/types");
 const path = require("path");
 const { Op } = require("sequelize");
 const fs = require("fs");
@@ -337,7 +338,7 @@ const generateEstimatePDFService = async (reqBody) => {
 
       docusign_envelope_id: envelopeId,
 
-      status: "pending_signature",
+      status: contractStatusTypes.PENDING_SIGNATURE,
       scope_sections: cleanScopeSections,
     });
 
@@ -706,7 +707,7 @@ const updateServiceEstimate = async (reqBody) => {
 
       docusign_envelope_id: envelopeId,
 
-      status: "pending_signature",
+      status: contractStatusTypes.PENDING_SIGNATURE,
 
       signed_file_name: null,
 
@@ -910,7 +911,7 @@ const generateContractAgreementService = async (reqBody) => {
       square_payment_link_id: paymentLinkId,
 
       docusign_envelope_id: envelopeId,
-      status: "pending_signature",
+      status: contractStatusTypes.PENDING_SIGNATURE,
     });
 
     return {
@@ -1070,7 +1071,7 @@ const updateContractAgreement = async (reqBody) => {
 
       docusign_envelope_id: envelopeId,
 
-      status: "pending_signature",
+      status: contractStatusTypes.PENDING_SIGNATURE,
     });
 
     await contract.reload();

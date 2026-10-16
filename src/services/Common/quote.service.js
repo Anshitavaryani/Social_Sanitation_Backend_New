@@ -9,7 +9,7 @@ const {
 	QuoteRequest,
 	QuoteFormAnswer,
 } = require("../../models");
-const { quoteQuestionTypes } = require("../../config/types");
+const { quoteQuestionTypes, quoteRequestStatusTypes } = require("../../config/types");
 
 const createQuestions = async (reqBody) => {
 	try {
@@ -162,7 +162,7 @@ const updateStatus = async (reqBody, id) => {
 	try {
 		const { status, quoted_price } = reqBody;
 
-		if (!["accepted", "rejected"].includes(status)) {
+		if (![quoteRequestStatusTypes.ACCEPTED, quoteRequestStatusTypes.REJECTED].includes(status)) {
 			throw new ApiError(
 				httpStatus.BAD_REQUEST,
 				"Invalid status. Use 'accepted' or 'rejected'."
@@ -176,7 +176,7 @@ const updateStatus = async (reqBody, id) => {
 		}
 
 		if (
-			status === "accepted" &&
+			status === quoteRequestStatusTypes.ACCEPTED &&
 			(quoted_price === undefined || quoted_price === null)
 		) {
 			throw new ApiError(
@@ -187,7 +187,7 @@ const updateStatus = async (reqBody, id) => {
 
 		await quoteRequest.update({
 			status,
-			quoted_price: status === "accepted" ? quoted_price : null,
+			quoted_price: status === quoteRequestStatusTypes.ACCEPTED ? quoted_price : null,
 		});
 
 		return {
@@ -233,7 +233,7 @@ const submitForm = async (reqBody) => {
 		// ✅ Step 1: Create parent quote request
 		const quoteRequest = await QuoteRequest.create({
 			user_id: user.id,
-			status: "pending",
+			status: quoteRequestStatusTypes.PENDING,
 		});
 
 		// ✅ Step 2: Fetch valid active questions

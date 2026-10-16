@@ -1,6 +1,7 @@
 /** @format */
 
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { inspectionReviewStatusTypes } = require("../config/types");
 const sequelize = require("../config/central.db");
 
 class InspectionSectionReview extends Model {}
@@ -51,9 +52,9 @@ InspectionSectionReview.init(
 
     // BDM section review
     status: {
-      type: DataTypes.ENUM("PENDING", "APPROVED", "ISSUE"),
+      type: DataTypes.ENUM(inspectionReviewStatusTypes.PENDING, inspectionReviewStatusTypes.APPROVED, inspectionReviewStatusTypes.ISSUE),
       allowNull: false,
-      defaultValue: "PENDING",
+      defaultValue: inspectionReviewStatusTypes.PENDING,
     },
 
     // Score is the number of completed items in this section.

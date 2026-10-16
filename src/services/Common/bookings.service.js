@@ -11,7 +11,7 @@ const {
   getUserActiveFCMTokens,
 } = require("./notification.service");
 const { sendEmailToAdmin } = require("./email.service");
-const { notificationTypes } = require("../../config/types");
+const { notificationTypes, bookingListFilterTypes, bookingTypes, paymentStatusTypes } = require("../../config/types");
 
 const createBooking = async (reqBody, files, headers) => {
   const { user, address_id, service_id, date, time, type, notes } = reqBody;
@@ -75,11 +75,11 @@ const createBooking = async (reqBody, files, headers) => {
       date_in_utc,
       time_in_utc,
       bdm_id: bdmUser ? bdmUser.bdm_id : null,
-      payment_status: "SUCCESS",
+      payment_status: paymentStatusTypes.SUCCESS,
     };
 
     if (type === "Recurring Booking") {
-      bookingObj.payment_status = "SUCCESS";
+      bookingObj.payment_status = paymentStatusTypes.SUCCESS;
       bookingObj.is_recurring = true;
     }
 
@@ -207,19 +207,19 @@ const getAllUserBooking = async (body, booking_status) => {
     const { booking_status, user } = body;
     let whereCondition = {};
 
-    if (booking_status === "UPCOMING") {
+    if (booking_status === bookingListFilterTypes.UPCOMING) {
       whereCondition = {
-        booking_status: ["PENDING", "ACCEPTED", "ONGOING"],
+        booking_status: [bookingTypes.PENDING, bookingTypes.ACCEPTED, bookingTypes.ONGOING],
         is_active: 1,
         user_id: user.id,
-        payment_status: "SUCCESS",
+        payment_status: paymentStatusTypes.SUCCESS,
       };
-    } else if (booking_status === "COMPLETED") {
+    } else if (booking_status === bookingListFilterTypes.COMPLETED) {
       whereCondition = {
-        booking_status: ["SUCCESS", "REJECTED", "CANCELLED"],
+        booking_status: [bookingTypes.SUCCESS, bookingTypes.REJECTED, bookingTypes.CANCELLED],
         is_active: 1,
         user_id: user.id,
-        payment_status: "SUCCESS",
+        payment_status: paymentStatusTypes.SUCCESS,
       };
     } else if (booking_status) {
       throw new ApiError(
@@ -459,7 +459,7 @@ const cancelBookingbyUser = async (reqBody) => {
     }
 
     // Check if the booking is already ongoing or canceled
-    if (["ONGOING", "CANCELLED"].includes(bookingDoc.booking_status)) {
+    if ([bookingTypes.ONGOING, bookingTypes.CANCELLED].includes(bookingDoc.booking_status)) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
         `Booking cannot be canceled as it is already ${bookingDoc.booking_status}`,
@@ -468,7 +468,7 @@ const cancelBookingbyUser = async (reqBody) => {
 
     // Update the cancellation reason and status
     bookingDoc.cancellation_reason_by_user = reason;
-    bookingDoc.booking_status = "CANCELLED";
+    bookingDoc.booking_status = bookingTypes.CANCELLED;
 
     await bookingDoc.save();
   } catch (error) {
@@ -496,12 +496,12 @@ const updateBookingStatusByEmployee = async (reqBody) => {
       bookingDoc["booking_status"] = reqBody.booking_status;
 
       // Set start_time if the booking_status is "ONGOING"
-      if (reqBody.booking_status === "ONGOING") {
+      if (reqBody.booking_status === bookingTypes.ONGOING) {
         bookingDoc["start_time"] = new Date();
       }
 
       // Set end_time if the booking_status is "SUCCESS"
-      if (reqBody.booking_status === "SUCCESS") {
+      if (reqBody.booking_status === bookingTypes.SUCCESS) {
         bookingDoc["end_time"] = new Date();
       }
     }
@@ -855,14 +855,14 @@ const getAllEmployeeBooking = async (body, booking_status) => {
     const { user } = body;
     let whereCondition = {};
 
-    if (booking_status === "UPCOMING") {
+    if (booking_status === bookingListFilterTypes.UPCOMING) {
       whereCondition = {
-        booking_status: ["PENDING", "ACCEPTED", "ONGOING"],
+        booking_status: [bookingTypes.PENDING, bookingTypes.ACCEPTED, bookingTypes.ONGOING],
         is_active: true,
       };
-    } else if (booking_status === "COMPLETED") {
+    } else if (booking_status === bookingListFilterTypes.COMPLETED) {
       whereCondition = {
-        booking_status: ["SUCCESS", "REJECTED", "DELETED"],
+        booking_status: [bookingTypes.SUCCESS, bookingTypes.REJECTED, bookingTypes.DELETED],
         is_active: true,
       };
     } else if (booking_status) {
@@ -998,7 +998,7 @@ const getTodaysBooking = async (body) => {
     const bookingDoc = await Booking.findAndCountAll({
       where: {
         booking_status: {
-          [Op.in]: ["ACCEPTED", "ONGOING"], // Include accepted and ongoing bookings
+          [Op.in]: [bookingTypes.ACCEPTED, bookingTypes.ONGOING], // Include accepted and ongoing bookings
         },
         date: {
           [Op.between]: [todayStart, todayEnd], // Filter bookings for today
@@ -1045,7 +1045,7 @@ const getCompletedBooking = async (body) => {
     // Fetch completed bookings assigned to the employee
     const completedBookingDoc = await Booking.findAndCountAll({
       where: {
-        booking_status: "SUCCESS",
+        booking_status: bookingTypes.SUCCESS,
       },
       include: [
         {
