@@ -35,6 +35,7 @@ beforeEach(() => {
 
 test("direct chat uploads the multer file from disk and stores its URL on both messages", async () => {
   const filePath = tmpUpload("images-1.jpg");
+  models.User.findOne = async ({ where }) => ({ id: where.id, role_id: 6 });
   models.User.findByPk = async (id) => ({ id, role_id: 6, name: "Client" });
   models.UserToken.findAll = async () => [{ fcm_token: "device-token" }];
   const quiet = console.log;
@@ -43,7 +44,7 @@ test("direct chat uploads the multer file from disk and stores its URL on both m
   console.error = () => {};
   try {
     await chatService.sendMessage(
-      { user: { id: 3, role_id: 6 }, message: "hello", receiverUserId: 1, user_type: "USER" },
+      { user: { id: 1, role_id: 1 }, message: "hello", receiverUserId: 9, user_type: "ADMIN" },
       { images: [{ path: filePath, filename: "images-1.jpg", mimetype: "image/jpeg" }] },
       {},
     );
@@ -61,7 +62,7 @@ test("direct chat uploads the multer file from disk and stores its URL on both m
     assert.equal(write.value.imageUrls.length, 1);
     assert.match(write.value.imageUrls[0], /files%2Fimages%2Fimages-1\.jpg/);
   }
-  assert.equal(sent.length, 1, "receiver gets a push notification");
+  assert.equal(sent.length, 1, "the app user the admin wrote to gets a push notification");
   assert.deepEqual(sent[0].tokens, ["device-token"]);
 });
 

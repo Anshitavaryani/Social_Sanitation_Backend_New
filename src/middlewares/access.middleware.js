@@ -8,6 +8,8 @@
 // Admin tokens are signed with the hex-decoded JWT secret; app-user tokens with the secret
 // string and are also stored in user_tokens (deleted on logout). Failures return 401 (no,
 // invalid or expired token, or a deactivated account) or 403 (wrong kind of account).
+//
+// File uploads are parsed here, after the token is accepted (upload.middleware.js).
 const jwt = require("jsonwebtoken");
 const { status: httpStatus } = require("http-status");
 
@@ -16,6 +18,7 @@ const ApiError = require("../utils/ApiError");
 const catchAsync = require("../utils/catchAsync");
 const { tokenTypes } = require("../config/types");
 const { Admin, User, UserToken, Profile } = require("../models");
+const { parseUploads } = require("./upload.middleware");
 
 const TOKEN_HEADER = "x-access-token";
 
@@ -99,6 +102,7 @@ const requireAdmin = catchAsync(async (req, res, next) => {
   const loaded = await loadAdmin(payload);
   if (loaded.error) throw loaded.error;
 
+  await parseUploads(req, res);
   attachAdmin(req, payload, loaded.admin);
   next();
 });
@@ -127,6 +131,7 @@ const requireAuth = catchAsync(async (req, res, next) => {
   if (!asAdmin.error) {
     const loaded = await loadAdmin(asAdmin.payload);
     if (loaded.error) throw loaded.error;
+    await parseUploads(req, res);
     req.user = asAdmin.payload;
     req.admin = loaded.admin;
     req.body.user = loaded.admin;
@@ -141,6 +146,7 @@ const requireAuth = catchAsync(async (req, res, next) => {
 
   const loaded = await loadUser(token, asUser.payload);
   if (loaded.error) throw loaded.error;
+  await parseUploads(req, res);
   req.body.user = loaded.user;
   req.body.tokenDoc = loaded.tokenDoc;
   req.body.ip_address = req.ip;
@@ -149,7 +155,10 @@ const requireAuth = catchAsync(async (req, res, next) => {
 });
 
 // Explicitly public: no token needed
-const publicRoute = (req, res, next) => next();
+const publicRoute = catchAsync(async (req, res, next) => {
+  await parseUploads(req, res);
+  next();
+});
 
 module.exports = {
   publicRoute,

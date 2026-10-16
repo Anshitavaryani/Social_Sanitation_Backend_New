@@ -8,7 +8,6 @@ const sendPushNotification = async (notificationObj, registrationTokens, sound =
   if (!registrationTokens || registrationTokens.length === 0) {
     throw new Error("Registration tokens must be a non-empty array");
   }
-  console.log("objectregistrationTokens1111",registrationTokens.length)
   const message = {
     notification: {
       ...notificationObj,
@@ -32,8 +31,7 @@ const sendPushNotification = async (notificationObj, registrationTokens, sound =
 
 
   try {
-    const response = await getMessaging().sendEachForMulticast(message);
-    console.log("response",response)
+    await getMessaging().sendEachForMulticast(message);
  
     return "Notification sent successfully";
   } catch (error) {
@@ -42,6 +40,8 @@ const sendPushNotification = async (notificationObj, registrationTokens, sound =
   }
 };
 
+// Push tokens of the user's active sessions; empty when the user has none (notifications off,
+// or never signed in on a phone). Callers skip the push in that case.
 const getUserActiveFCMTokens = async (user) => {
 	if (!user?.id || !user?.role_id) {
 		throw new ApiError(httpStatus.BAD_REQUEST, "Invalid user object");
@@ -58,10 +58,6 @@ const getUserActiveFCMTokens = async (user) => {
 		},
 		attributes: ["fcm_token"],
 	});
-
-	if (!fcmTokenDocs || fcmTokenDocs.length === 0) {
-		throw new ApiError(httpStatus.BAD_REQUEST, "No active FCM tokens found for this user");
-	}
 
 	const receiverUniqueFCMTokensSet = new Set(
 		fcmTokenDocs.map((token) => token.fcm_token)

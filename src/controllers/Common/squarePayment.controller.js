@@ -1,6 +1,7 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
+const { createHash, randomUUID } = require("crypto");
 const { SquareClient, SquareEnvironment, WebhooksHelper } = require("square");
 const { Payment, Booking, ServiceQuote, Invoice } = require("../../models");
 const catchAsync = require("../../utils/catchAsync");
@@ -90,19 +91,59 @@ const createCustomer = async (userDoc) => {
   }
 };
 
+// Amount in cents for a positive dollar amount with at most two decimals, otherwise null
+const toCents = (amount) => {
+  const value = typeof amount === "string" ? amount.trim() : amount;
+  if ((typeof value !== "number" && typeof value !== "string") || value === "") return null;
+  const dollars = Number(value);
+  if (!Number.isFinite(dollars) || dollars <= 0) return null;
+  const cents = Math.round(dollars * 100);
+  return Math.abs(dollars * 100 - cents) < 1e-6 ? cents : null;
+};
+
+// Square charges once per idempotency key. When the app sends the same idempotency_key for
+// every retry of one payment, a retry after a timeout returns the first charge instead of
+// charging again. Without one, every request is a new charge (the previous behaviour).
+const paymentIdempotencyKey = (userId, bookingId, clientKey) =>
+  clientKey
+    ? createHash("sha256").update(`${userId}:${bookingId}:${clientKey}`).digest("base64url") // 43 chars; Square allows 45
+    : randomUUID();
+
+// In-app card payment for one of the caller's bookings. The app chooses the amount (bookings
+// have no stored price); the payment is recorded as PENDING for admin review.
 const createPayment = catchAsync(async (req, res) => {
   try {
-    const { user, booking_id, sourceId, amount } = req.body;
+    const { user, booking_id, sourceId, amount, idempotency_key } = req.body;
 
+    if (!sourceId || typeof sourceId !== "string") {
+      throw new ApiError(httpStatus.BAD_REQUEST, "sourceId is required.");
+    }
+    const cents = toCents(amount);
+    if (cents === null) {
+      throw new ApiError(httpStatus.BAD_REQUEST, "amount must be a positive dollar amount with at most 2 decimal places.");
+    }
+    if (idempotency_key !== undefined && (typeof idempotency_key !== "string" || !idempotency_key.trim() || idempotency_key.length > 100)) {
+      throw new ApiError(httpStatus.BAD_REQUEST, "idempotency_key must be a string of up to 100 characters.");
+    }
+    if (!booking_id) {
+      throw new ApiError(httpStatus.BAD_REQUEST, "booking_id is required.");
+    }
+    const booking = await Booking.findOne({ where: { id: booking_id, is_active: true } });
+    if (!booking) {
+      throw new ApiError(httpStatus.NOT_FOUND, "Booking not found.");
+    }
+    if (Number(booking.user_id) !== Number(user.id)) {
+      throw new ApiError(httpStatus.FORBIDDEN, "This booking does not belong to you.");
+    }
 
     // Create customer using the provided user information
     const customer = await createCustomer(user);
 
     // Prepare the payment object
     const paymentObj = {
-      idempotencyKey: `${Date.now()}-${Math.random()}`,
+      idempotencyKey: paymentIdempotencyKey(user.id, booking.id, idempotency_key),
       amountMoney: {
-        amount: BigInt(Math.round(Number(amount) * 100)),
+        amount: BigInt(cents),
         currency: "USD",
       },
       sourceId,
@@ -113,22 +154,20 @@ const createPayment = catchAsync(async (req, res) => {
     // Create payment through Square API
     const paymentResponse = await client.payments.create(paymentObj);
     const paymentIntent = convertBigIntToString(paymentResponse.payment);
-    console.log(paymentIntent, "paymentIntent");
 
-    // Prepare the payment record
-    const paymentRecord = {
-      transaction_id: paymentIntent.id,
-      amount: amount,
-      currency: paymentIntent.amountMoney.currency,
-      description: "Booking Payment",
-      user_id: user.id,
-      square_customer_id: customer.id,
-      booking_id: booking_id,
-    };
-
-    // Save payment record to database
-    await Payment.create(paymentRecord);
-    console.log(paymentRecord, "paymentRecord");
+    // A retry with the same idempotency key gets the same Square payment back: record it once
+    const alreadyRecorded = await Payment.findOne({ where: { transaction_id: paymentIntent.id } });
+    if (!alreadyRecorded) {
+      await Payment.create({
+        transaction_id: paymentIntent.id,
+        amount: cents / 100,
+        currency: paymentIntent.amountMoney.currency,
+        description: "Booking Payment",
+        user_id: user.id,
+        square_customer_id: customer.id,
+        booking_id: booking.id,
+      });
+    }
 
     // Prepare and return the response
     const response = {

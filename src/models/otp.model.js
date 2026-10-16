@@ -91,7 +91,11 @@ OTP.init({
     deletedAt: 'deleted_at'
 });
 
+// A new code is valid for 5 minutes. Later saves keep the expiry the row has (they used to push it
+// 5 minutes ahead on every save), so verifying a forgot-password code can give the reset token
+// its own lifetime.
 OTP.beforeValidate(async (OTP) => {
+    if (!OTP.isNewRecord || OTP.otp_expiration_time) return;
     const expirationTime = new Date();
     expirationTime.setMinutes(expirationTime.getMinutes() + 5);
     OTP.otp_expiration_time = expirationTime;

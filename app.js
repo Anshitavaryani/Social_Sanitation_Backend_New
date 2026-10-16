@@ -27,7 +27,6 @@ const corsConfigs = require("./src/config/corsConfigs.js");
 const credentials = require("./src/middlewares/credentials.js");
 
 const ApiError = require("./src/utils/ApiError.js");
-const upload = require("./src/config/multer.js");
 const errorHandler = require("./src/utils/errorHandler.js");
 const responseWrapper = require("./src/config/responseWrapper.js");
 const { adminAuthMiddleware } = require("./src/middlewares");
@@ -256,8 +255,9 @@ app.get("/test", (req, res, next) => {
   res.status(200).send("Hello World !!");
 });
 
-// Uploads are parsed before the route's access check runs, so files from a request that is then
-// rejected (401/403) are deleted instead of being left on disk
+// Uploads are parsed once the route's access check passes (src/middlewares/upload.middleware.js);
+// files from a request that is still refused afterwards (403 from a role check) are deleted
+// instead of being left on disk
 const discardFilesOfRejectedRequests = (req, res, next) => {
   res.on("finish", () => {
     if (res.statusCode !== 401 && res.statusCode !== 403) return;
@@ -269,16 +269,7 @@ const discardFilesOfRejectedRequests = (req, res, next) => {
   next();
 };
 
-// Global multer for v1 routes, except the CSV import which has its own parser
-app.use(
-  "/api/v1",
-  discardFilesOfRejectedRequests,
-  (req, res, next) => {
-    if (req.path === "/invoice/import-historical-csv") return next();
-    return upload(req, res, next);
-  },
-  routes,
-);
+app.use("/api/v1", discardFilesOfRejectedRequests, routes);
 
 // Admin-only access to the daily request logs written by src/config/morgan.js
 const LOG_DIR = path.join(__dirname, "logs");

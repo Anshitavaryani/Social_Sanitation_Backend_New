@@ -162,10 +162,9 @@ async function generateBookingId(serviceId, date) {
   return `${serviceDoc.abbreviation}${formattedDateString}${paddedCount}`;
 }
 
+// The booking is already saved: the push is skipped when the user has no push tokens and a
+// failed push is logged; the in-app notification is saved either way
 const sendBookingNotification = async (user, receiverUniqueFCMTokensArray) => {
-  if (!receiverUniqueFCMTokensArray) {
-    return;
-  }
   let clickAction = `anc`;
   let notificationObj = {
     title: "SERVICE BOOKED",
@@ -175,9 +174,15 @@ const sendBookingNotification = async (user, receiverUniqueFCMTokensArray) => {
 
   condition: clickAction;
 
-  console.log("notificationObj", notificationObj);
-
-  await sendPushNotification(notificationObj, receiverUniqueFCMTokensArray);
+  if (receiverUniqueFCMTokensArray?.length) {
+    try {
+      // FCM's notification object only takes title, body and image: an extra key fails the push
+      const { title, body } = notificationObj;
+      await sendPushNotification({ title, body }, receiverUniqueFCMTokensArray);
+    } catch (error) {
+      console.error("Booking push notification not sent:", error.message);
+    }
+  }
 
   const savenotificationObj = {
     user_id: user.id,

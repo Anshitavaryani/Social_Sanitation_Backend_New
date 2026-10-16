@@ -1,7 +1,13 @@
 const multer = require("multer");
 const path = require("path");
+const { randomBytes } = require("crypto");
+const { status: httpStatus } = require("http-status");
+const ApiError = require("../utils/ApiError");
 
 const PUBLIC_DIR = path.resolve(__dirname, "../../public");
+
+// Largest file accepted in one upload field (images, PDFs, documents); same as the JSON body limit
+const MAX_FILE_MB = 25;
 
 // Set storage engine
 const storage = multer.diskStorage({
@@ -23,7 +29,8 @@ const storage = multer.diskStorage({
 
   filename: function (req, file, cb) {
     const ext = getFileExtension(file);
-    cb(null, `${file.fieldname}-${Date.now()}.${ext}`);
+    // the random part keeps two files saved in the same millisecond from overwriting each other
+    cb(null, `${file.fieldname}-${Date.now()}-${randomBytes(4).toString("hex")}.${ext}`);
   },
 });
 
@@ -67,7 +74,10 @@ function checkFileType(file, cb) {
   }
 
   cb(
-    "Error: Images(.jpeg, .jpg, .png, .gif, .webp), videos(.mp4, .mov), Audio(.mp3), and File(.pdf, .doc, .docx) only allow!",
+    new ApiError(
+      httpStatus.BAD_REQUEST,
+      "Only images (.jpeg, .jpg, .png, .gif, .webp), videos (.mp4, .mov), audio (.mp3), documents (.pdf, .doc, .docx) and .csv files can be uploaded.",
+    ),
   );
 }
 
@@ -106,6 +116,7 @@ function getFileExtension(file) {
 // Init upload
 const upload = multer({
   storage: storage,
+  limits: { fileSize: MAX_FILE_MB * 1024 * 1024 },
 
   fileFilter: function (req, file, cb) {
     checkFileType(file, cb);
@@ -118,4 +129,4 @@ const upload = multer({
   { name: "audios", maxCount: 10 },
 ]);
 
-module.exports = upload;
+module.exports = { upload, MAX_FILE_MB };

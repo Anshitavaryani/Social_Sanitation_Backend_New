@@ -1,6 +1,7 @@
 const { status: httpStatus } = require('http-status');
 const jwt = require('jsonwebtoken');
 const { requireAuth } = require('./access.middleware');
+const { parseUploads } = require('./upload.middleware');
 
 const { User, OTP, UserToken, Profile } = require('../models');
 const validateEmail = require('../helpers/validateEmail');
@@ -92,6 +93,7 @@ const verifyAuthJWTToken = catchAsync(async (req, res, next) => {
         if (!user) {
             throw new ApiError(httpStatus.UNAUTHORIZED, 'This account is not active. Please log in again.');
         };
+        await parseUploads(req, res);
         req.body.user = user;
         req.body.tokenDoc = tokenDoc;
         req.body.ip_address = req.ip;
@@ -143,6 +145,9 @@ const validateForgetPassordToken = catchAsync(async (req, res, next) => {
         let otpDoc = await OTP.findOne({ where: { email: email, code: token, is_verified: true, type: otpTypes.FORGOT_PASSWORD } });
         if (!otpDoc) {
             return responseWrapper(res, '', 'Forget Password Token is not Valid.', httpStatus.BAD_REQUEST);
+        };
+        if (!otpDoc.otp_expiration_time || new Date(otpDoc.otp_expiration_time) < new Date()) {
+            throw new ApiError(httpStatus.BAD_REQUEST, 'Your password reset session has expired. Please request a new OTP.');
         };
         req.body.user = userDoc;
         req.body.otpDoc = otpDoc;

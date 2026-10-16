@@ -4,10 +4,8 @@
 const { TEST_JWT_SECRET } = require("./helpers/env");
 const { test, before, after } = require("node:test");
 const assert = require("node:assert/strict");
-const fs = require("fs");
-const path = require("path");
 const jwt = require("jsonwebtoken");
-const { ROOT, mockModule, mockPackage, mockDatabase, mockFirebase, loadFromRoot } = require("./helpers/mocks");
+const { mockModule, mockPackage, mockDatabase, mockFirebase, loadFromRoot } = require("./helpers/mocks");
 const { routeInventory } = require("./helpers/routeInventory");
 
 mockPackage("node-cron", { schedule: () => ({ stop() {} }) });
@@ -241,17 +239,3 @@ test("the log routes are admin-only", async () => {
   assert.equal((await call("GET", "/api/v1/logs", { token: adminToken() })).status, 200);
 });
 
-test("files uploaded with a rejected request are deleted", async () => {
-  const dir = path.join(ROOT, "public/uploads/images");
-  fs.mkdirSync(dir, { recursive: true });
-  const before = new Set(fs.readdirSync(dir));
-
-  const form = new FormData();
-  form.append("images", new Blob([Buffer.from("89504e470d0a1a0a", "hex")], { type: "image/png" }), "probe.png");
-  const res = await fetch(`${baseUrl}/api/v1/service/createService`, { method: "POST", body: form });
-  assert.equal(res.status, 401);
-
-  await new Promise((resolve) => setTimeout(resolve, 100)); // deletion runs after the response finishes
-  const leftover = fs.readdirSync(dir).filter((f) => !before.has(f));
-  assert.deepEqual(leftover, []);
-});

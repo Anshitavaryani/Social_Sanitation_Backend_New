@@ -36,8 +36,13 @@ const makeUser = (overrides = {}) => ({
   ...overrides,
 });
 
+// Booking 55 belongs to user 7, booking 56 to someone else
+const bookings = { 1: { id: 1, user_id: 7 }, 55: { id: 55, user_id: 7 }, 56: { id: 56, user_id: 8 } };
+
 beforeEach(() => {
   calls.length = 0;
+  models.Booking.findOne = async ({ where }) => bookings[where.id] || null;
+  models.Payment.findOne = async () => null;
   squareResponses = {
     "POST /v2/customers": { customer: { id: "CUST_NEW" } },
     "GET /v2/customers/CUST_OLD": { customer: { id: "CUST_OLD" } },
@@ -100,6 +105,72 @@ test("createPayment reuses an existing Square customer", async () => {
     ["GET /v2/customers/CUST_OLD", "POST /v2/payments"],
   );
   assert.equal(calls[1].body.amount_money.amount, 4000);
+});
+
+// Runs createPayment for user 7 and returns the status and message it answered with
+const pay = async (body) => {
+  const error = console.error;
+  console.error = () => {};
+  try {
+    const { res, err } = await runHandler(controller.createPayment, { body: { user: makeUser(), sourceId: "nonce", ...body } });
+    return err ? { status: err.statusCode, message: err.message } : { status: res.statusCode, body: res.body };
+  } finally {
+    console.error = error;
+  }
+};
+
+test("createPayment refuses a booking that is missing or belongs to someone else, before calling Square", async () => {
+  assert.deepEqual(await pay({ booking_id: 56, amount: 10 }), { status: 403, message: "This booking does not belong to you." });
+  assert.deepEqual(await pay({ booking_id: 999, amount: 10 }), { status: 404, message: "Booking not found." });
+  assert.deepEqual(await pay({ amount: 10 }), { status: 400, message: "booking_id is required." });
+  assert.equal(calls.length, 0);
+});
+
+test("createPayment refuses amounts that are not a positive dollar amount with 2 decimals", async () => {
+  for (const amount of [undefined, null, "", "abc", 0, -5, "-5", 10.001, "1e-3", Infinity, [10], { value: 10 }]) {
+    const result = await pay({ booking_id: 55, amount });
+    assert.equal(result.status, 400, `amount ${JSON.stringify(amount)}`);
+    assert.equal(result.message, "amount must be a positive dollar amount with at most 2 decimal places.");
+  }
+  assert.deepEqual(await pay({ booking_id: 55, amount: 10, sourceId: "" }), { status: 400, message: "sourceId is required." });
+  assert.equal(calls.length, 0);
+});
+
+test("createPayment accepts an amount sent as a string", async () => {
+  const recorded = [];
+  models.Payment.create = async (row) => recorded.push(row);
+  const result = await pay({ booking_id: 55, amount: " 125.50 " });
+  assert.equal(result.status, 200);
+  assert.equal(calls.find((c) => c.path === "/v2/payments").body.amount_money.amount, 12550);
+  assert.equal(recorded[0].amount, 125.5);
+});
+
+test("createPayment: a retry with the same idempotency_key reuses the Square key and records the payment once", async () => {
+  const recorded = [];
+  models.Payment.create = async (row) => recorded.push(row);
+  models.Payment.findOne = async ({ where }) => recorded.find((r) => r.transaction_id === where.transaction_id) || null;
+
+  await pay({ booking_id: 55, amount: 40, idempotency_key: "attempt-1" });
+  await pay({ booking_id: 55, amount: 40, idempotency_key: "attempt-1" });
+  await pay({ booking_id: 55, amount: 40, idempotency_key: "attempt-2" });
+
+  const keys = calls.filter((c) => c.path === "/v2/payments").map((c) => c.body.idempotency_key);
+  assert.equal(keys[0], keys[1], "the retry sends the same key, so Square returns the first charge");
+  assert.notEqual(keys[0], keys[2]);
+  assert.ok(keys.every((k) => k.length <= 45), "Square allows at most 45 characters");
+  assert.equal(recorded.length, 1, "the fake Square answers PAY_1 every time: one payment row");
+});
+
+test("createPayment without an idempotency_key uses a new key per request", async () => {
+  models.Payment.create = async (row) => row;
+  await pay({ booking_id: 55, amount: 40 });
+  await pay({ booking_id: 55, amount: 40 });
+  const keys = calls.filter((c) => c.path === "/v2/payments").map((c) => c.body.idempotency_key);
+  assert.notEqual(keys[0], keys[1]);
+  assert.deepEqual(await pay({ booking_id: 55, amount: 40, idempotency_key: 12 }), {
+    status: 400,
+    message: "idempotency_key must be a string of up to 100 characters.",
+  });
 });
 
 test("webhook looks up the order through the Square payments API when the event lacks it", async () => {

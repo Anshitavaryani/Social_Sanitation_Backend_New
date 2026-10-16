@@ -9,7 +9,6 @@ const { uploadFileToFirebase } = require("../../config/firebaseStorage");
 
 const sendMessage = async (body, files, headers) => {
 	try {
-		console.log("Files received:", files);
 		const { user, message, receiverUserId, user_type } = body;
 
 		let receiverType = "USER";
@@ -26,6 +25,9 @@ const sendMessage = async (body, files, headers) => {
 			const receiverDetails = await User.findOne({
 				where: { id: receiverUserId, is_active: true },
 			});
+			if (!receiverDetails) {
+				throw new ApiError(httpStatus.NOT_FOUND, "Receiver not found");
+			}
 			chatType =
 				receiverDetails.role_id === 6
 					? "USER_ADMIN_CHAT"
@@ -63,13 +65,21 @@ const sendMessage = async (body, files, headers) => {
 			imageUrls: imageUrls.length > 0 ? imageUrls : null,
 		});
 
-		// Send notification to receiver
-		await sendNotification({
-			message,
-			receiverUserId,
-			senderUserId: user.id,
-			senderType: user_type,
-		});
+		// Push to the app user an admin wrote to. Messages from app users go to the admin panel,
+		// which has no push tokens (receiverUserId is then an admin id, not a users row). The
+		// message is already saved, so a failed push is logged, not reported as a failed send.
+		if (user_type === "ADMIN") {
+			try {
+				await sendNotification({
+					message,
+					receiverUserId,
+					senderUserId: user.id,
+					senderType: user_type,
+				});
+			} catch (error) {
+				console.error("Chat push notification not sent:", error.message);
+			}
+		}
 	} catch (error) {
 		console.error(error);
 		throw error;
@@ -81,8 +91,6 @@ async function uploadImages(files) {
 
 	const imageArray = Array.isArray(files?.images) ? files.images : [];
 
-	console.log("files.images:", imageArray);
-
 	for (const file of imageArray) {
 		try {
 			const downloadURL = await uploadFileToFirebase(
@@ -90,7 +98,6 @@ async function uploadImages(files) {
 				`files/images/${file.filename}`,
 				file.mimetype
 			);
-			console.log("downloadUrl ===> ", downloadURL);
 			imageUrls.push(downloadURL);
 		} catch (error) {
 			console.error("Error uploading image:", error);
@@ -563,6 +570,9 @@ const sendNotification = async (body) => {
     try {
         const { message, receiverUserId, senderUserId, senderType } = body;
         const receiverUser = await User.findByPk(receiverUserId);
+        if (!receiverUser) {
+            throw new ApiError(httpStatus.NOT_FOUND, "Receiver not found");
+        }
 
         // Determine notification title based on sender type
         let notificationTitle = 'You have received a message';
@@ -572,13 +582,11 @@ const sendNotification = async (body) => {
             const sender = await User.findByPk(senderUserId);
             notificationTitle = `You have received a message from ${sender.name || 'User'}`;
         }
-		console.log(receiverUserId,message,senderType,notificationTitle,"kjdhwebdewd=wd=d=we=d=wd=w=dw=d=wqdd")
 
         // Fetch receiver's FCM tokens
         const fcmTokens = await getUserActiveFCMTokens(receiverUser);
         if (!fcmTokens.length) {
-            console.error("No FCM tokens found for the receiver user");
-            return;
+            throw new ApiError(httpStatus.BAD_REQUEST, "No active FCM tokens found for this user");
         }
 
         // Craft the notification payload

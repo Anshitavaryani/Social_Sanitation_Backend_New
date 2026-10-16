@@ -25,6 +25,9 @@ const { otpTypes } = require("../../config/types");
 const otpGuard = require("../../utils/otpGuard");
 const generateRandomString = require("../../utils/randomStringGenrate");
 
+// How long the forgot-password reset token from verifyOTP stays valid
+const RESET_TOKEN_TTL_MS = 30 * 60 * 1000;
+
 const sendOTP = async (body, headers) => {
 	try {
 		const { email, type } = body;
@@ -116,8 +119,10 @@ const verifyOTP = async (email, otp, type, role_id) => {
 				{ where: { email: email, is_active: true } }
 			);
 		} else {
+			// the reset token replaces the code and is valid for 30 minutes
 			token = generateRandomString(50);
 			otpDoc.code = token;
+			otpDoc.otp_expiration_time = new Date(Date.now() + RESET_TOKEN_TTL_MS);
 		}
 		await otpDoc.save();
 		return token ? { token } : isUpdate;
