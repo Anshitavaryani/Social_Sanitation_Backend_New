@@ -4,7 +4,7 @@ const { status: httpStatus } = require("http-status");
 const bcrypt = require("bcryptjs");
 const { Sequelize, Op } = require("sequelize");
 const path = require("path");
-const { dayjs, dateInTz, addDays, nowWallClock } = require("../../utils/time");
+const { dayjs, dateInTz, addDays, nowWallClock, DATETIME_FORMAT, formatDisplayDate } = require("../../utils/time");
 const fs = require("fs");
 const { Admin, User, Profile, UserAttachment, userLoginTiming, Service, Booking, ServiceAttachment, BookingAssignment, UserAddress, Payment, ClientChecklistDetail, ClientChecklist, QuoteItem, ServiceQuote, Country, State, City, ReviewLink, Attendance, Break, UserToken, UserOAuth, Invoice, FormSubmission, FormSection } = require("../../models");
 const ApiError = require("../../utils/ApiError");
@@ -4888,7 +4888,7 @@ const getLiveWorkingEmployees = async (reqBody) => {
               booking_name: booking.booking_name,
               booking_id: booking.id,
               clock_in: dayjs.utc(attendance.clock_in_est).format(
-                "YYYY-MM-DD HH:mm:ss",
+                DATETIME_FORMAT,
               ),
               clock_in_lat: attendance.clock_in_lat,
               clock_in_lng: attendance.clock_in_lng,
@@ -5177,9 +5177,7 @@ const getUpcomingScheduledBookings = async () => {
 
         /* ✅ DATEONLY SAFE */
 
-        date: booking.date
-          ? dayjs.utc(booking.date).format("MM-DD-YYYY")
-          : null,
+        date: booking.date ? formatDisplayDate(booking.date) : null,
 
         time: booking.time,
 

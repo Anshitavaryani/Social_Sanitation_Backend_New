@@ -1,7 +1,7 @@
 const { status: httpStatus } = require("http-status");
 const ApiError = require("../../utils/ApiError");
 const { Op } = require("sequelize");
-const { dayjs, monthBoundsUtc } = require("../../utils/time");
+const { dayjs, monthBoundsUtc, DATE_FORMAT, MONTH_FORMAT, formatDisplayMonth, isValidMonth } = require("../../utils/time");
 const {
   Equipment,
   EmployeeEquipmentAssignment,
@@ -740,10 +740,10 @@ const getMonthlyEmployeeEquipmentRecords = async (query) => {
       );
     }
 
-    if (!/^\d{4}-\d{2}$/.test(month)) {
+    if (!isValidMonth(month)) {
       throw new ApiError(
         httpStatus.BAD_REQUEST,
-        "Invalid month format. Please use YYYY-MM.",
+        `Invalid month format. Please use ${MONTH_FORMAT}.`,
       );
     }
 
@@ -969,11 +969,11 @@ const getMonthlyEmployeeEquipmentRecords = async (query) => {
       month: {
         value: month,
 
-        label: dayjs(`${month}-01`).format("MMMM YYYY"),
+        label: formatDisplayMonth(month),
 
         start_date: `${month}-01`,
 
-        end_date: dayjs(`${month}-01`).endOf("month").format("YYYY-MM-DD"),
+        end_date: dayjs(`${month}-01`).endOf("month").format(DATE_FORMAT),
       },
 
       records,

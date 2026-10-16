@@ -2,7 +2,7 @@ const morgan = require('morgan');
 const config = require('./config.js')
 const logger = require('./logger.js')
 
-const { dayjs } = require('../utils/time');
+const { dayjs, DATE_FORMAT } = require('../utils/time');
 const fs = require('fs');
 const path = require('path');
 
@@ -17,7 +17,7 @@ const successHandler = morgan(successResponseFormat, {
     stream: {
         write: (message) => {
 
-            const currentTime = dayjs().format('YYYY-MM-DD');
+            const currentTime = dayjs().format(DATE_FORMAT);
             const currentTime1 = dayjs().format();
             const logMessage = `${currentTime1}<=>${message.trim()}\n`;
             const logsDir = path.join(__dirname, '../../logs');
@@ -52,7 +52,7 @@ const errorHandler = morgan(errorResponseFormat, {
     skip: (req, res) => res.statusCode < 400,
     stream: {
         write: (message) => {
-            const currentTime = dayjs().format('YYYY-MM-DD');
+            const currentTime = dayjs().format(DATE_FORMAT);
             const currentTime1 = dayjs().format();
             const logMessage = `${currentTime1}<=> Error ${message.trim()}\n`;
             const logsDir = path.join(__dirname, '../../logs');

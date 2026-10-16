@@ -2,6 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const { status: httpStatus } = require("http-status");
 const ApiError = require("../../utils/ApiError");
+const { DATE_FORMAT, isValidDate } = require("../../utils/time");
 const { Op } = require("sequelize");
 const sequelize = require("../../config/central.db");
 const {
@@ -68,12 +69,10 @@ const createInspection = async (body) => {
    * ==========================================
    */
 
-  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-
-  if (!dateRegex.test(inspection_date)) {
+  if (!isValidDate(inspection_date)) {
     throw new ApiError(
       httpStatus.BAD_REQUEST,
-      "Inspection date must be in YYYY-MM-DD format.",
+      `Inspection date must be in ${DATE_FORMAT} format.`,
     );
   }
 

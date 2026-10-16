@@ -1,7 +1,7 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
-const { inZone, dateInTz } = require("../../utils/time");
+const { inZone, dateInTz, DATETIME_FORMAT, DATE_FORMAT, TIME_FORMAT, toBusinessDateTime, utcDate } = require("../../utils/time");
 const { Booking, Service, Profile, User, UserAttachment, ServiceAttachment, UserAddress, BookingAssignment, Country, State, City, BDMUser, Admin, BookingAttachment, ServiceChecklist, BookingServiceChecklist, ServiceChecklistMapping, Notification, ServiceChecklistHeading, GuestBookingAddress } = require("../../models");
 const ApiError = require("../../utils/ApiError");
 const { Op } = require("sequelize");
@@ -11,7 +11,6 @@ const {
 } = require("./notification.service");
 const { sendEmailToAdmin } = require("./email.service");
 const { notificationTypes } = require("../../config/types");
-const convertToEST = require("../../config/timeManagement");
 
 const createBooking = async (reqBody, files, headers) => {
   const { user, address_id, service_id, date, time, type, notes } = reqBody;
@@ -49,11 +48,11 @@ const createBooking = async (reqBody, files, headers) => {
       const localDateTime = inZone(
         `${date} ${time}`,
         timezone,
-        "YYYY-MM-DD HH:mm:ss",
+        DATETIME_FORMAT,
       );
       return {
-        date_in_utc: localDateTime.utc().format("YYYY-MM-DD"),
-        time_in_utc: localDateTime.utc().format("HH:mm:ss"),
+        date_in_utc: localDateTime.utc().format(DATE_FORMAT),
+        time_in_utc: localDateTime.utc().format(TIME_FORMAT),
       };
     };
 
@@ -140,7 +139,7 @@ async function generateBookingId(serviceId, date) {
   }
 
   const dateStr =
-    typeof date === "string" ? date : date.toISOString().split("T")[0];
+    typeof date === "string" ? date : utcDate(date);
   const parts = dateStr.split("-"); // [YYYY, MM, DD]
 
   const formattedDate = new Date(parts[0], parts[1] - 1, parts[2]);
@@ -739,7 +738,7 @@ const getAllServiceCheckListByBookingId = async (booking_id) => {
         let dateKey = null;
 
         if (checklist.booking_checklist?.created_at) {
-          estDateString = convertToEST(checklist.booking_checklist.created_at); // Implement your timezone logic
+          estDateString = toBusinessDateTime(checklist.booking_checklist.created_at);
           dateKey = estDateString.split(" ")[0]; // 'YYYY-MM-DD'
           uniqueDates.add(dateKey);
         }

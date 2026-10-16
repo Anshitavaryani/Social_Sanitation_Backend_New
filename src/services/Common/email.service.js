@@ -1,6 +1,6 @@
 /** @format */
 const { status: httpStatus } = require("http-status");
-const { dayjs } = require("../../utils/time");
+const { formatDisplayDate, formatTime12h } = require("../../utils/time");
 const {
   forgotPasswordSendOTPFormat,
   emailVerificationFormat,
@@ -222,21 +222,8 @@ const sendEmailToAdmin = async (user, bookingDoc, serviceDoc) => {
     const adminEmail = "socialsanitation@gmail.com";
     const subject = "New Booking Notification - Social Sanitation App";
 
-    const date = new Date(bookingDoc.date).toDateString();
-
-    const formatTimeTo12Hour = (timeStr) => {
-      if (!timeStr) return "";
-      const [hour, minute] = timeStr.split(":");
-      const d = new Date();
-      d.setHours(hour, minute);
-      return d.toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      });
-    };
-
-    const formattedTime = formatTimeTo12Hour(bookingDoc.time);
+    const date = formatDisplayDate(bookingDoc.date);
+    const formattedTime = formatTime12h(bookingDoc.time);
 
     const html = `
 			<p>Dear Admin,</p>
@@ -487,11 +474,9 @@ const sendInvoiceEmailWithPDF = async (user, invoice, pdfPath, senderEmail) => {
     if (invoice.service_dates) {
       const [start, end] = invoice.service_dates.split(" - ");
 
-      formattedStart = start
-        ? dayjs(start, "YYYY-MM-DD").format("MM/DD/YYYY")
-        : "";
+      formattedStart = formatDisplayDate(start);
 
-      formattedEnd = end ? dayjs(end, "YYYY-MM-DD").format("MM/DD/YYYY") : "";
+      formattedEnd = formatDisplayDate(end);
     }
 
     await sendMailViaGraphWithSender({
@@ -726,7 +711,7 @@ const sendClockOutDistanceEmail = async ({
     </p>
     <p>
       <strong>Booking ID:</strong> ${bookingId}<br/>
-      <strong>Date:</strong> ${new Date(date).toDateString()}<br/>
+      <strong>Date:</strong> ${formatDisplayDate(date)}<br/>
       <strong>Clock-out Location:</strong>
       ${employee.clockOutLat}, ${employee.clockOutLng}<br/>
       <strong>Expected Location:</strong>
@@ -746,7 +731,7 @@ const sendAutoClockOutEmail = async ({ date, employees }) => {
 
   const html = `
     <p>Dear Admin,</p>
-    <p>Employees who did not clock out on <strong>${date}</strong>:</p>
+    <p>Employees who did not clock out on <strong>${formatDisplayDate(date)}</strong>:</p>
     <ul>
       ${
         employees.length
@@ -758,7 +743,7 @@ const sendAutoClockOutEmail = async ({ date, employees }) => {
 
   await sendMailViaGraph({
     to: adminEmail,
-    subject: `Employees Who Did Not Clock Out – ${date}`,
+    subject: `Employees Who Did Not Clock Out – ${formatDisplayDate(date)}`,
     html,
   });
 };

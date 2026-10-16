@@ -1,5 +1,5 @@
-// The only place that configures dayjs. Every date/time operation in the app
-// imports dayjs from here so plugins are always loaded.
+// The only place that configures dayjs and the only place that spells a date format.
+// Every date/time operation in the app imports from here (tests/dateFormats.test.js checks it).
 //
 // Rules:
 // - The server process runs in UTC; instants are stored as UTC DATETIME.
@@ -27,7 +27,17 @@ dayjs.extend(isoWeek);
 
 const BUSINESS_TZ = config.businessTimeZone;
 
+// Formats for data: the database, API fields, query parameters, file names and logs
 const DATE_FORMAT = "YYYY-MM-DD";
+const MONTH_FORMAT = "YYYY-MM";
+const TIME_FORMAT = "HH:mm:ss";
+const SHORT_TIME_FORMAT = "HH:mm";
+const DATETIME_FORMAT = "YYYY-MM-DD HH:mm:ss";
+
+// Formats for people: every date shown in a PDF, email, message or display field
+const DISPLAY_DATE_FORMAT = "MM-DD-YYYY";
+const DISPLAY_TIME_FORMAT = "hh:mm A";
+const DISPLAY_MONTH_FORMAT = "MMMM YYYY";
 
 const isValidTimeZone = (tz) => {
   if (!tz || typeof tz !== "string") return false;
@@ -64,7 +74,7 @@ const dateInTz = (instant = new Date(), tz = BUSINESS_TZ) => dayjs(instant).tz(t
 // Interprets a wall-clock date and time in a timezone and returns that instant as a dayjs UTC object.
 // Example: zonedTimeToUtc("2026-03-08", "02:30:00", "America/New_York")
 const zonedTimeToUtc = (date, time = "00:00:00", tz = BUSINESS_TZ) => {
-  const parsed = dayjs.tz(`${date} ${time}`, "YYYY-MM-DD HH:mm:ss", tz);
+  const parsed = dayjs.tz(`${date} ${time}`, DATETIME_FORMAT, tz);
   return parsed.isValid() ? parsed.utc() : parsed;
 };
 
@@ -120,7 +130,7 @@ const bookingUtcParts = (date, time, tz) => {
   const utcInstant = local.utc();
   return {
     date_in_utc: utcInstant.format(DATE_FORMAT),
-    time_in_utc: utcInstant.format("HH:mm:ss"),
+    time_in_utc: utcInstant.format(TIME_FORMAT),
   };
 };
 
@@ -129,6 +139,54 @@ const bookingUtcParts = (date, time, tz) => {
 const parseDateInZone = (value, tz = BUSINESS_TZ) => {
   const day = typeof value === "string" ? (dayjs(value, DATE_FORMAT, true).isValid() ? value : null) : toCalendarDate(value);
   return day ? inZone(day, tz) : dayjs(null);
+};
+
+// True for a real calendar date written "YYYY-MM-DD" (2026-02-31 is not one).
+const isValidDate = (value) => typeof value === "string" && dayjs(value, DATE_FORMAT, true).isValid();
+
+// True for a real month written "YYYY-MM".
+const isValidMonth = (value) => typeof value === "string" && dayjs(value, MONTH_FORMAT, true).isValid();
+
+// UTC calendar date of an instant ("YYYY-MM-DD"); defaults to now.
+const utcDate = (instant = new Date()) => dayjs.utc(instant).format(DATE_FORMAT);
+
+// A date as people read it, "MM-DD-YYYY". Takes what toCalendarDate takes ("YYYY-MM-DD", an ISO
+// string, or a Date such as bookings.date) and keeps its calendar day; "" when missing or invalid.
+const formatDisplayDate = (value) => {
+  const day = toCalendarDate(value);
+  return day ? dayjs(day, DATE_FORMAT, true).format(DISPLAY_DATE_FORMAT) : "";
+};
+
+// A range written "YYYY-MM-DD - YYYY-MM-DD" (quote and invoice service dates) as
+// "MM-DD-YYYY - MM-DD-YYYY". A single date works too; a part that is not a date stays as written.
+const formatDisplayDateRange = (value) =>
+  value
+    ? String(value)
+        .split(" - ")
+        .map((part) => formatDisplayDate(part.trim()) || part.trim())
+        .join(" - ")
+    : "";
+
+// An instant as people read it in a timezone, "MM-DD-YYYY hh:mm AM"; "" when missing or invalid.
+const formatDisplayDateTime = (instant, tz = BUSINESS_TZ) => {
+  const parsed = instant ? inZone(instant, tz) : null;
+  return parsed && parsed.isValid() ? parsed.format(`${DISPLAY_DATE_FORMAT} ${DISPLAY_TIME_FORMAT}`) : "";
+};
+
+// A time of day ("16:00:41" or "16:00") as "04:00 PM"; "" when missing or invalid.
+const formatTime12h = (time) => {
+  const parsed = time ? dayjs(String(time).trim(), [TIME_FORMAT, SHORT_TIME_FORMAT], true) : null;
+  return parsed && parsed.isValid() ? parsed.format(DISPLAY_TIME_FORMAT) : "";
+};
+
+// A month ("YYYY-MM") as people read it, "October 2026".
+const formatDisplayMonth = (month) => dayjs(month, MONTH_FORMAT, true).format(DISPLAY_MONTH_FORMAT);
+
+// An instant (Date or ISO string) as New York wall-clock time, "YYYY-MM-DD HH:mm:ss"; null when invalid.
+const toBusinessDateTime = (value) => {
+  if (!value) return null;
+  const instant = dayjs(value);
+  return instant.isValid() ? instant.tz(BUSINESS_TZ).format(DATETIME_FORMAT) : null;
 };
 
 // Adds whole calendar days to a "YYYY-MM-DD" date (no timezone involved).
@@ -141,6 +199,20 @@ module.exports = {
   dayjs,
   BUSINESS_TZ,
   DATE_FORMAT,
+  MONTH_FORMAT,
+  TIME_FORMAT,
+  SHORT_TIME_FORMAT,
+  DATETIME_FORMAT,
+  DISPLAY_DATE_FORMAT,
+  isValidDate,
+  isValidMonth,
+  utcDate,
+  formatDisplayDate,
+  formatDisplayDateRange,
+  formatDisplayDateTime,
+  formatTime12h,
+  formatDisplayMonth,
+  toBusinessDateTime,
   isValidTimeZone,
   resolveTimeZone,
   inZone,

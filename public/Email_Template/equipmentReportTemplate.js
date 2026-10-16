@@ -1,4 +1,5 @@
 const emailBase = require("./emailBase");
+const { formatDisplayDate, formatDisplayDateTime } = require("../../src/utils/time");
 
 const STATUS_COLORS = {
   ASSIGNED: { bg: "#eef2ff", color: "#4338ca" },
@@ -32,7 +33,7 @@ const signatureHistoryBlock = (history = []) => {
         <div style="margin-bottom:8px; padding:8px 10px; background:#fafcfb; border:1px solid #eef0f2; border-radius:8px; font-size:12px; color:#4b5f58; line-height:1.5;">
           <strong style="color:#16324f;">${signature.action}</strong><br />
           Quantity: ${signature.quantity} &middot; Remaining: ${signature.remaining_quantity}<br />
-          Signed: ${new Date(signature.signed_at).toLocaleString()}
+          Signed: ${formatDisplayDateTime(signature.signed_at)}
         </div>
       `,
     )
@@ -114,9 +115,7 @@ const employeeEquipmentAssignmentFormat = ({
           <td style="padding:12px 10px; border-bottom:1px solid #eef0f2; font-size:12.5px; color:#4b5f58;">
             ${
               assignment.assigned_date
-                ? new Date(
-                    assignment.assigned_date,
-                  ).toLocaleDateString()
+                ? formatDisplayDate(assignment.assigned_date)
                 : "-"
             }
           </td>
@@ -124,9 +123,7 @@ const employeeEquipmentAssignmentFormat = ({
           <td style="padding:12px 10px; border-bottom:1px solid #eef0f2; font-size:12.5px; color:#4b5f58;">
             ${
               assignment.expected_return_date
-                ? new Date(
-                    assignment.expected_return_date,
-                  ).toLocaleDateString()
+                ? formatDisplayDate(assignment.expected_return_date)
                 : "-"
             }
           </td>

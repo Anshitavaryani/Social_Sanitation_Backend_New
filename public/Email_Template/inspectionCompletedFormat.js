@@ -1,4 +1,5 @@
 const emailBase = require("./emailBase");
+const { formatDisplayDate } = require("../../src/utils/time");
 
 const STATUS_COLORS = {
   APPROVED: { bg: "#ecfdf5", color: "#059669" },
@@ -225,10 +226,7 @@ const address =
       Your inspection <strong>${inspection.name}</strong> conducted on
       ${
         inspection.inspection_date
-          ? new Date(inspection.inspection_date).toLocaleDateString(
-              "en-US",
-              { month: "long", day: "numeric", year: "numeric" },
-            )
+          ? formatDisplayDate(inspection.inspection_date)
           : "-"
       } has been completed.
     </p>

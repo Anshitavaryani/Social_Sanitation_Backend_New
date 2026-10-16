@@ -7,7 +7,7 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = "1";
 
 const app = require("./app.js");
 const http = require("http");
-const { dayjs } = require("./src/utils/time.js");
+const { dayjs, DATETIME_FORMAT } = require("./src/utils/time.js");
 const logger = require("./src/config/logger.js");
 
 // Create HTTP server (Nginx handles SSL)
@@ -22,7 +22,7 @@ server.listen(config.port, "127.0.0.1", () => {
       config.port
     } | Default Timezone is: ${
       config.DEFAULT_TIMEZONE
-    } | Current date and time: ${currentTime.format("YYYY-MM-DD HH:mm:ss")}`
+    } | Current date and time: ${currentTime.format(DATETIME_FORMAT)}`
   );
 });
 

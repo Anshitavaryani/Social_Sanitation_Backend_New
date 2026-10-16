@@ -2,7 +2,7 @@
 
 const express = require("express");
 const helmet = require("helmet");
-const { dayjs, BUSINESS_TZ } = require("./src/utils/time.js");
+const { dayjs, BUSINESS_TZ, DATE_FORMAT } = require("./src/utils/time.js");
 const cors = require("cors");
 const compression = require("compression");
 const { status: httpStatus } = require("http-status");
@@ -269,7 +269,7 @@ app.use("/api/v1", discardFilesOfRejectedRequests, routes);
 const LOG_DIR = path.join(__dirname, "logs");
 
 app.get("/api/v1/logs", adminAuthMiddleware.validateJWTtoken, async (req, res) => {
-  const logFilePath = path.join(LOG_DIR, `${dayjs().format("YYYY-MM-DD")}.log`);
+  const logFilePath = path.join(LOG_DIR, `${dayjs().format(DATE_FORMAT)}.log`);
   try {
     const data = await fs.promises.readFile(logFilePath, "utf8");
     return responseWrapper(res, data.split("\n"), "success");

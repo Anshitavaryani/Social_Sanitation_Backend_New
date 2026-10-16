@@ -10,6 +10,8 @@ const {
   zonedTimeToUtc,
   toCalendarDate,
   parseDateInZone,
+  DATE_FORMAT,
+  isValidDate,
 } = require("../../utils/time");
 
 const timezone = BUSINESS_TZ;
@@ -166,15 +168,15 @@ const createInvoice = async (reqBody) => {
     /* ================= FINAL DATES ================= */
 
     const finalBillingDate = billing_date
-      ? inZone(billing_date, timezone).format("YYYY-MM-DD")
+      ? inZone(billing_date, timezone).format(DATE_FORMAT)
       : null;
 
     const finalDueDate = quote
       ? quote.due_date
-        ? inZone(quote.due_date, timezone).format("YYYY-MM-DD")
+        ? inZone(quote.due_date, timezone).format(DATE_FORMAT)
         : null
       : due_date
-        ? inZone(due_date, timezone).format("YYYY-MM-DD")
+        ? inZone(due_date, timezone).format(DATE_FORMAT)
         : null;
 
     // 9:00 AM New York on the billing date (exact on DST-change days too)
@@ -232,7 +234,7 @@ const createInvoice = async (reqBody) => {
 
     const finalBalanceDueDate = finalDepositRequired
       ? balance_date
-        ? inZone(balance_date, timezone).format("YYYY-MM-DD")
+        ? inZone(balance_date, timezone).format(DATE_FORMAT)
         : null
       : null;
 
@@ -273,7 +275,7 @@ const createInvoice = async (reqBody) => {
       billing_date: finalBillingDate,
 
       date: invoice_date
-        ? inZone(invoice_date, timezone).format("YYYY-MM-DD")
+        ? inZone(invoice_date, timezone).format(DATE_FORMAT)
         : dateInTz(),
 
       due_date: finalDueDate,
@@ -345,7 +347,7 @@ const createInvoice = async (reqBody) => {
         );
 
         if (dayjs(finalEndDate).isAfter(maxEndDate, "day")) {
-          finalEndDate = maxEndDate.format("YYYY-MM-DD");
+          finalEndDate = maxEndDate.format(DATE_FORMAT);
         }
       }
 
@@ -378,11 +380,11 @@ const createInvoice = async (reqBody) => {
         frequency: recurring_frequency,
         start_date: invoice.billing_date,
         end_date: finalEndDate
-          ? inZone(finalEndDate, timezone).format("YYYY-MM-DD")
+          ? inZone(finalEndDate, timezone).format(DATE_FORMAT)
           : null,
         max_occurrences: finalMaxOccurrences,
         occurrences_generated: 1,
-        next_billing_date: nextBillingDate.format("YYYY-MM-DD"),
+        next_billing_date: nextBillingDate.format(DATE_FORMAT),
         auto_send: true,
         status: "ACTIVE",
       });
@@ -583,9 +585,9 @@ const updateInvoice = async (invoice_id, body) => {
     const normalizeDate = (value) => {
       if (!value) return null;
 
-      const parsed = dayjs(value, "YYYY-MM-DD", true);
+      const parsed = dayjs(value, DATE_FORMAT, true);
 
-      return parsed.isValid() ? parsed.format("YYYY-MM-DD") : value;
+      return parsed.isValid() ? parsed.format(DATE_FORMAT) : value;
     };
 
     /* ================= UPDATE BASIC DETAILS ================= */
@@ -595,7 +597,7 @@ const updateInvoice = async (invoice_id, body) => {
         billing_date:
           billing_date !== undefined
             ? billing_date
-              ? inZone(billing_date, timezone).format("YYYY-MM-DD")
+              ? inZone(billing_date, timezone).format(DATE_FORMAT)
               : null
             : invoice.billing_date,
 
@@ -612,14 +614,14 @@ const updateInvoice = async (invoice_id, body) => {
         date:
           date !== undefined
             ? date
-              ? inZone(date, timezone).format("YYYY-MM-DD")
+              ? inZone(date, timezone).format(DATE_FORMAT)
               : null
             : invoice.date,
 
         due_date:
           due_date !== undefined
             ? due_date
-              ? inZone(due_date, timezone).format("YYYY-MM-DD")
+              ? inZone(due_date, timezone).format(DATE_FORMAT)
               : null
             : invoice.due_date,
 
@@ -811,18 +813,18 @@ const updateInvoice = async (invoice_id, body) => {
 
       const parsedBalanceDate = dayjs(
         requestedBalanceDate,
-        "YYYY-MM-DD",
+        DATE_FORMAT,
         true,
       );
 
       if (!parsedBalanceDate.isValid()) {
         throw new ApiError(
           httpStatus.BAD_REQUEST,
-          "Please provide a valid balance due date in YYYY-MM-DD format.",
+          `Please provide a valid balance due date in ${DATE_FORMAT} format.`,
         );
       }
 
-      finalBalanceDueDate = parsedBalanceDate.format("YYYY-MM-DD");
+      finalBalanceDueDate = parsedBalanceDate.format(DATE_FORMAT);
 
       const effectiveBillingDate =
         billing_date !== undefined
@@ -832,14 +834,14 @@ const updateInvoice = async (invoice_id, body) => {
       if (effectiveBillingDate) {
         const parsedBillingDate = dayjs(
           effectiveBillingDate,
-          "YYYY-MM-DD",
+          DATE_FORMAT,
           true,
         );
 
         if (!parsedBillingDate.isValid()) {
           throw new ApiError(
             httpStatus.BAD_REQUEST,
-            "Please provide a valid billing date in YYYY-MM-DD format.",
+            `Please provide a valid billing date in ${DATE_FORMAT} format.`,
           );
         }
 
@@ -977,10 +979,10 @@ const updateInvoice = async (invoice_id, body) => {
           .add(MAX_RECURRING_MONTHS, "months");
 
         if (inZone(finalEndDate, timezone).isAfter(maxEndDate, "day")) {
-          finalEndDate = maxEndDate.format("YYYY-MM-DD");
+          finalEndDate = maxEndDate.format(DATE_FORMAT);
         } else {
           finalEndDate = inZone(finalEndDate, timezone)
-            .format("YYYY-MM-DD");
+            .format(DATE_FORMAT);
         }
       }
 
@@ -1013,10 +1015,10 @@ const updateInvoice = async (invoice_id, body) => {
 
       const recurringPayload = {
         frequency: recurring_frequency || recurring?.frequency || "MONTHLY",
-        start_date: billingMoment.format("YYYY-MM-DD"),
+        start_date: billingMoment.format(DATE_FORMAT),
         end_date: finalEndDate,
         max_occurrences: finalMaxOccurrences,
-        next_billing_date: nextBillingDate.format("YYYY-MM-DD"),
+        next_billing_date: nextBillingDate.format(DATE_FORMAT),
         status: "ACTIVE",
       };
 
@@ -1230,13 +1232,13 @@ const updateInvoice = async (invoice_id, body) => {
         if (!billingMoment.isValid()) {
           throw new ApiError(
             httpStatus.BAD_REQUEST,
-            "Please provide a valid billing date in YYYY-MM-DD format.",
+            `Please provide a valid billing date in ${DATE_FORMAT} format.`,
           );
         }
 
         if (billingMoment.isSameOrBefore(now, "day")) {
           const nineAM = zonedTimeToUtc(
-            billingMoment.format("YYYY-MM-DD"),
+            billingMoment.format(DATE_FORMAT),
             "09:00:00",
             timezone,
           );
@@ -1251,7 +1253,7 @@ const updateInvoice = async (invoice_id, body) => {
           }
         } else {
           updatePayload.scheduled_send_at = zonedTimeToUtc(
-            billingMoment.format("YYYY-MM-DD"),
+            billingMoment.format(DATE_FORMAT),
             "09:00:00",
             timezone,
           ).toDate();
@@ -1818,13 +1820,13 @@ const generateRecurringInvoicesCron = async () => {
 
         const originalBillingMoment = dayjs(
           invoice.billing_date,
-          "YYYY-MM-DD",
+          DATE_FORMAT,
           true,
         );
 
         const originalDueMoment = dayjs(
           invoice.due_date,
-          "YYYY-MM-DD",
+          DATE_FORMAT,
           true,
         );
 
@@ -1843,9 +1845,9 @@ const generateRecurringInvoicesCron = async () => {
         const nextDueDate = billingMoment
           .clone()
           .add(dueGap, "days")
-          .format("YYYY-MM-DD");
+          .format(DATE_FORMAT);
 
-        const nextInvoiceDate = billingMoment.format("YYYY-MM-DD");
+        const nextInvoiceDate = billingMoment.format(DATE_FORMAT);
 
         // ---------- CALCULATE SERVICE DATES ----------
 
@@ -1855,13 +1857,13 @@ const generateRecurringInvoicesCron = async () => {
 
         const originalServiceStart = dayjs(
           serviceParts[0],
-          "YYYY-MM-DD",
+          DATE_FORMAT,
           true,
         );
 
         const originalServiceEnd = dayjs(
           serviceParts[1],
-          "YYYY-MM-DD",
+          DATE_FORMAT,
           true,
         );
 
@@ -1877,12 +1879,12 @@ const generateRecurringInvoicesCron = async () => {
           );
         }
 
-        const nextServiceStart = billingMoment.format("YYYY-MM-DD");
+        const nextServiceStart = billingMoment.format(DATE_FORMAT);
 
         const nextServiceEnd = billingMoment
           .clone()
           .add(serviceDuration, "days")
-          .format("YYYY-MM-DD");
+          .format(DATE_FORMAT);
 
         // ---------- PRESERVE DEPOSIT SETTINGS ----------
 
@@ -1936,7 +1938,7 @@ const generateRecurringInvoicesCron = async () => {
         if (recurringDepositRequired) {
           const originalBalanceDueMoment = dayjs(
             invoice.balance_due_date,
-            "YYYY-MM-DD",
+            DATE_FORMAT,
             true,
           );
 
@@ -1969,7 +1971,7 @@ const generateRecurringInvoicesCron = async () => {
           nextBalanceDueDate = billingMoment
             .clone()
             .add(balanceGap, "days")
-            .format("YYYY-MM-DD");
+            .format(DATE_FORMAT);
         }
 
         // ---------- GENERATE NEXT INVOICE REFERENCE ----------
@@ -1982,7 +1984,7 @@ const generateRecurringInvoicesCron = async () => {
         const existingInvoice = await Invoice.findOne({
           where: {
             user_id: invoice.user_id,
-            billing_date: billingMoment.format("YYYY-MM-DD"),
+            billing_date: billingMoment.format(DATE_FORMAT),
             ref_type: invoice.ref_type,
             status: "ACTIVE",
             is_active: true,
@@ -2090,7 +2092,7 @@ const generateRecurringInvoicesCron = async () => {
 
         const updateData = {
           occurrences_generated: finalCount,
-          next_billing_date: nextBillingMoment.format("YYYY-MM-DD"),
+          next_billing_date: nextBillingMoment.format(DATE_FORMAT),
         };
 
         if (
@@ -2113,7 +2115,7 @@ const generateRecurringInvoicesCron = async () => {
         await recurring.update(updateData);
 
         console.log(
-          `Recurring schedule ${recurring.id} updated. Next billing date: ${nextBillingMoment.format("YYYY-MM-DD")}`,
+          `Recurring schedule ${recurring.id} updated. Next billing date: ${nextBillingMoment.format(DATE_FORMAT)}`,
         );
       } catch (invoiceError) {
         console.error(
@@ -2292,7 +2294,7 @@ const sendInvoiceBalance = async (invoice_id) => {
 const getMonthlyAllInvoicesSummary = async ({ month }) => {
   try {
     const startDate = `${month}-01`;
-    const endDate = dayjs(startDate).add(1, "month").format("YYYY-MM-DD");
+    const endDate = dayjs(startDate).add(1, "month").format(DATE_FORMAT);
 
     const invoices = await Invoice.findAll({
       where: {
@@ -2345,7 +2347,7 @@ const getMonthlyAllInvoicesSummary = async ({ month }) => {
 
       userMap[user.id].invoices.push(invoice);
 
-      billingDates.add(dayjs(invoice.billing_date).format("YYYY-MM-DD"));
+      billingDates.add(dayjs(invoice.billing_date).format(DATE_FORMAT));
     });
 
     return {
@@ -2609,7 +2611,7 @@ const getBusinessAnalytics = async ({ month }) => {
 
       const status = inv.payment_status;
 
-      const billingDate = dayjs(inv.billing_date).format("YYYY-MM-DD");
+      const billingDate = dayjs(inv.billing_date).format(DATE_FORMAT);
 
       const employeeName = inv.invoices_user?.user_profile?.name || "Unknown";
 
@@ -3104,7 +3106,6 @@ const DATE_FIELDS = [
   "due_date",
   "signing_date",
 ];
-const ISO_DATE_FORMAT = "YYYY-MM-DD";
 const DOCS_DIR = path.resolve(__dirname, "../../../public/uploads/docs");
 const PUBLIC_DOCS_BASE = "https://node.socialsanitation.com/api/v1/docs/";
 
@@ -3113,8 +3114,6 @@ const cleanText = (value) =>
     ? ""
     : String(value).trim().replace(/\s+/g, " ");
 
-const isValidIsoDate = (value) =>
-  dayjs(value, ISO_DATE_FORMAT, true).isValid();
 
 const safeUnlink = async (filePath) => {
   if (!filePath) return;
@@ -3201,14 +3200,14 @@ const importHistoricalInvoicesCSV = async (fileBuffer) => {
 
     const badDateField = DATE_FIELDS.find((field) => {
       const value = cleanText(row[field]);
-      return value && !isValidIsoDate(value);
+      return value && !isValidDate(value);
     });
 
     if (badDateField) {
       errors.push({
         row: rowNumber,
         invoice_number: invoiceNumber,
-        message: `${badDateField} must be a real date in YYYY-MM-DD format`,
+        message: `${badDateField} must be a real date in ${DATE_FORMAT} format`,
       });
       continue;
     }
@@ -3421,7 +3420,7 @@ const uploadHistoricalInvoicePDF = async (invoice_id, file) => {
 const sendDueBalancesCron = async () => {
   try {
     const nowNY = dayjs().tz(timezone);
-    const todayNY = nowNY.format("YYYY-MM-DD");
+    const todayNY = nowNY.format(DATE_FORMAT);
 
     // The balance email must never be sent before 9:00 AM New York time.
     if (nowNY.hour() < 9) {

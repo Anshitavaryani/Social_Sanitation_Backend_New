@@ -3,7 +3,7 @@
 const { status: httpStatus } = require("http-status");
 const bcrypt = require("bcryptjs");
 const { randomInt } = require("crypto");
-const { dayjs, inZone, isValidTimeZone } = require("../../utils/time");
+const { dayjs, inZone, isValidTimeZone, DATETIME_FORMAT } = require("../../utils/time");
 
 const {
 	OTP,
@@ -399,7 +399,7 @@ const saveLoginTiming = async (user, token, reqBody, timezone) => {
 			role_id: user.role_id,
 			login_time_utc: loginTimeUTC.toDate(),
 			// Local wall-clock time, 24-hour (was "hh", which dropped AM/PM)
-			login_time_local: inZone(loginTimeUTC, timezone).format("YYYY-MM-DD HH:mm:ss"),
+			login_time_local: inZone(loginTimeUTC, timezone).format(DATETIME_FORMAT),
 			ip_address: reqBody.ip_address,
 			token_id: token.access.id,
 			time_zone: timeZoneDoc.id,
@@ -426,7 +426,7 @@ const saveLogoutTiming = async (tokenDoc, timezone) => {
 			loginTimingDocDoc.logout_time_utc = logoutTimeUTC.toDate();
 			// Local wall-clock time like login_time_local (was stored as the UTC instant)
 			loginTimingDocDoc.logout_time_local = inZone(logoutTimeUTC, timezone).format(
-				"YYYY-MM-DD HH:mm:ss"
+				DATETIME_FORMAT
 			);
 			await loginTimingDocDoc.save();
 			return loginTimingDocDoc;

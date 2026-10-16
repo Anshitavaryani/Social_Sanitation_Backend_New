@@ -1,6 +1,6 @@
 const jwt = require("jsonwebtoken");
 const { status: httpStatus } = require("http-status");
-const { dayjs } = require("../../utils/time");
+const { dayjs, DATETIME_FORMAT } = require("../../utils/time");
 const config = require("../../config/config");
 
 const { tokenTypes } = require("../../config/types");
@@ -79,7 +79,7 @@ const generateAuthTokens = async (user, fcm_token) => {
     let tokenDoc = await saveToken(
       accessToken,
       user.id,
-      dayjs.utc(accessTokenExpires).format("YYYY-MM-DD HH:mm:ss"),
+      dayjs.utc(accessTokenExpires).format(DATETIME_FORMAT),
       tokenTypes.ACCESS,
       user.role_id,
       fcm_token

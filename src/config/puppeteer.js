@@ -4,7 +4,7 @@ const puppeteer = require("puppeteer-core");
 const config = require("./config");
 const fs = require("fs");
 const path = require("path");
-const { dayjs } = require("../utils/time");
+const { formatDisplayDate, formatDisplayDateRange } = require("../utils/time");
 
 const getLayoutConfig = (itemCount) => {
   if (itemCount <= 5) {
@@ -65,16 +65,6 @@ const generateQuotePDF = async (data) => {
     square_payment_url,
   } = data;
 
-  const formatDate = (date) => {
-    if (!date) return "";
-
-    const d = new Date(date);
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
-    const yyyy = d.getFullYear();
-
-    return `${mm}/${dd}/${yyyy}`;
-  };
 
   const formatAmount = (value) => {
     if (value === null || value === undefined || value === "") {
@@ -90,8 +80,8 @@ const generateQuotePDF = async (data) => {
     return number.toFixed(6).replace(/\.?0+$/, "");
   };
 
-  const formattedServiceDates = formatDate(service_dates);
-  const formattedDueDate = formatDate(due_date);
+  const formattedServiceDates = formatDisplayDateRange(service_dates);
+  const formattedDueDate = formatDisplayDate(due_date);
 
   /* ================= TOTAL ================= */
 
@@ -452,11 +442,7 @@ const generateQuotePDF = async (data) => {
       >
         ${
           date
-            ? new Date(date).toLocaleDateString("en-US", {
-                month: "long",
-                day: "2-digit",
-                year: "numeric",
-              })
+            ? formatDisplayDate(date)
             : "Month-Day-Year"
         }
       </p>
@@ -1049,14 +1035,7 @@ const generatePDF = async (
         <div class="signature-line">
   ${
     formData?.personalInfo?.dateOfBirth
-      ? new Date(formData.personalInfo.dateOfBirth).toLocaleDateString(
-          "en-US",
-          {
-            month: "2-digit",
-            day: "2-digit",
-            year: "numeric",
-          },
-        )
+      ? formatDisplayDate(formData.personalInfo.dateOfBirth)
       : ""
   }
 </div>
@@ -1164,14 +1143,7 @@ const generatePDF = async (
      <div class="info-row">
   <strong>Date of Birth:</strong> ${
     formData?.personalInfo?.dateOfBirth
-      ? new Date(formData.personalInfo.dateOfBirth).toLocaleDateString(
-          "en-US",
-          {
-            month: "2-digit",
-            day: "2-digit",
-            year: "numeric",
-          },
-        )
+      ? formatDisplayDate(formData.personalInfo.dateOfBirth)
       : ""
   }
 </div>
@@ -1179,14 +1151,7 @@ const generatePDF = async (
 <div class="info-row">
   <strong>Date Available:</strong> ${
     formData?.personalInfo?.dateAvailable
-      ? new Date(formData.personalInfo.dateAvailable).toLocaleDateString(
-          "en-US",
-          {
-            month: "2-digit",
-            day: "2-digit",
-            year: "numeric",
-          },
-        )
+      ? formatDisplayDate(formData.personalInfo.dateAvailable)
       : ""
   }
 </div>
@@ -1462,11 +1427,7 @@ const generatePDF = async (
           <strong>From - To:</strong>
           ${
             Array.isArray(employer.duration)
-              ? `${new Date(
-                  employer.duration[0],
-                ).toLocaleDateString()} - ${new Date(
-                  employer.duration[1],
-                ).toLocaleDateString()}`
+              ? `${formatDisplayDate(employer.duration[0])} - ${formatDisplayDate(employer.duration[1])}`
               : ""
           }
         </div>
@@ -1808,13 +1769,7 @@ const generatePDF = async (
       parties hereto.
 
       In Witness Whereof, the parties hereto have agreed and signed this Non-Compete/Non-Disclosure Agreement on the
-      <strong>${new Date(
-        formData?.floridaAgreement?.agreement_date,
-      ).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      })}</strong>
+      <strong>${formatDisplayDate(formData?.floridaAgreement?.agreement_date)}</strong>
 
     </p>
 
@@ -2350,14 +2305,7 @@ const generateSpanishPDF = async (
                <div class="signature-line">
   ${
     formData?.personalInfo?.dateOfBirth
-      ? new Date(formData.personalInfo.dateOfBirth).toLocaleDateString(
-          "en-US",
-          {
-            month: "2-digit",
-            day: "2-digit",
-            year: "numeric",
-          },
-        )
+      ? formatDisplayDate(formData.personalInfo.dateOfBirth)
       : ""
   }
 </div>
@@ -2474,13 +2422,7 @@ const generateSpanishPDF = async (
             <div class="info-row">
                <strong>Fecha de nacimiento:</strong> ${
                  formData?.personalInfo?.dateOfBirth
-                   ? new Date(
-                       formData.personalInfo.dateOfBirth,
-                     ).toLocaleDateString("en-US", {
-                       month: "2-digit",
-                       day: "2-digit",
-                       year: "numeric",
-                     })
+                   ? formatDisplayDate(formData.personalInfo.dateOfBirth)
                    : ""
                }
             </div>
@@ -2488,14 +2430,7 @@ const generateSpanishPDF = async (
                <strong>Fecha de disponible:</strong>
 ${
   formData?.personalInfo?.dateAvailable
-    ? new Date(formData.personalInfo.dateAvailable).toLocaleDateString(
-        "en-US",
-        {
-          month: "2-digit",
-          day: "2-digit",
-          year: "numeric",
-        },
-      )
+    ? formatDisplayDate(formData.personalInfo.dateAvailable)
     : ""
 }
             </div>
@@ -2782,11 +2717,7 @@ ${
                     <strong>Período de empleo:</strong>
                     ${
                       Array.isArray(employer.duration)
-                        ? `${new Date(
-                            employer.duration[0],
-                          ).toLocaleDateString()} - ${new Date(
-                            employer.duration[1],
-                          ).toLocaleDateString()}`
+                        ? `${formatDisplayDate(employer.duration[0])} - ${formatDisplayDate(employer.duration[1])}`
                         : ""
                     }
                 </div>
@@ -3154,13 +3085,7 @@ ${
             firma de ambas partes.
 
             En fe de lo cual, las partes han acordado y firmado este Acuerdo de No Competencia/No Divulgación
-            <strong>${new Date(
-              formData?.floridaAgreement?.agreement_date,
-            ).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}</strong>
+            <strong>${formatDisplayDate(formData?.floridaAgreement?.agreement_date)}</strong>
 
         </p>
 
@@ -3669,21 +3594,13 @@ const generateInvoicePDF = async (data) => {
 
   /* ===== FORMAT DATES ===== */
 
-  const formattedServiceStart = service_start
-    ? dayjs(service_start, "YYYY-MM-DD").format("MM/DD/YYYY")
-    : "";
+  const formattedServiceStart = formatDisplayDate(service_start);
 
-  const formattedServiceEnd = service_end
-    ? dayjs(service_end, "YYYY-MM-DD").format("MM/DD/YYYY")
-    : "";
+  const formattedServiceEnd = formatDisplayDate(service_end);
 
-  const formattedBillingDate = billing_date
-    ? dayjs(billing_date, "YYYY-MM-DD").format("MM/DD/YYYY")
-    : "";
+  const formattedBillingDate = formatDisplayDate(billing_date);
 
-  const formattedDueDate = due_date
-    ? dayjs(due_date, "YYYY-MM-DD").format("MM/DD/YYYY")
-    : "";
+  const formattedDueDate = formatDisplayDate(due_date);
 
   const formatAmount = (value) => {
     const num = Number(value || 0);
@@ -4066,9 +3983,7 @@ const generateInvoicePDF = async (data) => {
 			<div class="date" style="width: 48%; text-align: center">
 				<p style="margin: 0; font-size: 12px; font-weight: bold; text-align: center">
 					${
-            invoice_date
-              ? dayjs(invoice_date, "YYYY-MM-DD").format("MMMM DD, YYYY")
-              : "Month-Day-Year"
+            invoice_date ? formatDisplayDate(invoice_date) : "Month-Day-Year"
           }
 				</p>
 				<div
@@ -4229,17 +4144,9 @@ const generateServiceRequestPDF = async (data) => {
     pdfPath,
   } = data;
 
-  const formatDate = (date) => {
-    if (!date) return "";
-    const d = new Date(date);
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
-    const yyyy = d.getFullYear();
-    return `${mm}/${dd}/${yyyy}`;
-  };
 
-  const formattedSignedDate = formatDate(date);
-  const formattedDueDate = formatDate(due_date);
+  const formattedSignedDate = formatDisplayDate(date);
+  const formattedDueDate = formatDisplayDate(due_date);
 
   const formatAmount = (value) => {
     const num = Number(value || 0);
@@ -4474,11 +4381,7 @@ const generateServiceRequestPDF = async (data) => {
 			<div style="font-size: 16px; font-weight: bold">
 				${
           date
-            ? new Date(date).toLocaleDateString("en-US", {
-                month: "2-digit",
-                day: "2-digit",
-                year: "numeric",
-              })
+            ? formatDisplayDate(date)
             : ""
         }
 			</div>

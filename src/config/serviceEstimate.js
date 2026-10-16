@@ -2,6 +2,7 @@
 
 const puppeteer = require("puppeteer-core");
 const config = require("./config");
+const { formatDisplayDate } = require("../utils/time");
 const axios = require("axios");
 
 const renderScopeTables = (sections) => {
@@ -121,7 +122,7 @@ const generateEstimatePDF = async (data, pdfPath) => {
   }
 
   const formattedSignedDate = signed_date
-    ? new Date(signed_date).toLocaleDateString("en-US")
+    ? formatDisplayDate(signed_date)
     : "";
 
   const fridgeImg = await getBase64(
@@ -3089,7 +3090,7 @@ const generateContractPDF = async (data, pdfPath) => {
 								display: inline-block;
 								width: 120px;
 							"
-							>${contract_date || ""}</span
+							>${formatDisplayDate(contract_date) || contract_date || ""}</span
 						>
 					</div>
 				</div>
