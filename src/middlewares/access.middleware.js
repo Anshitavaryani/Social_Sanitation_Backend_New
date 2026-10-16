@@ -39,8 +39,15 @@ const verify = (token, key, options) => {
   }
 };
 
-const verifyAdminToken = (token) =>
-  verify(token, Buffer.from(config.jwt.secret, "hex"), { algorithms: ["HS256"] });
+// An admin sign-in token. Password-reset tokens are signed with the same key but carry
+// type: reset_password and only open the reset endpoint.
+const verifyAdminToken = (token) => {
+  const result = verify(token, Buffer.from(config.jwt.secret, "hex"), { algorithms: ["HS256"] });
+  if (result.payload?.type && result.payload.type !== tokenTypes.ACCESS) {
+    return { error: new jwt.JsonWebTokenError("not an access token") };
+  }
+  return result;
+};
 
 const verifyUserToken = (token) => verify(token, config.jwt.secret);
 

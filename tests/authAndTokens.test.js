@@ -116,3 +116,23 @@ test("a login without an fcm_token stores NULL instead of the string 'undefined'
   await tokenService.generateAuthTokens({ id: 9, role_id: 6 }, undefined);
   assert.equal(queries[0].replacements.fcm_token, null);
 });
+
+test("admin forgot-password takes only a live reset token from verify-otp", async () => {
+  const { TEST_JWT_SECRET } = require("./helpers/env");
+  const jwt = require("jsonwebtoken");
+  const adminAuthService = loadFromRoot("src/services/Admin/adminAuth.service.js");
+  const key = Buffer.from(TEST_JWT_SECRET, "hex");
+  const updates = [];
+  models.Admin.findOne = async ({ where }) => (where.id === 4 ? { id: 4 } : null);
+  models.Admin.update = async (values) => updates.push(values) && [1];
+  const reset = (token) =>
+    adminAuthService.forgotAdminPassword({ email: "a@example.com", token, password: "Strong#Pass12", confirm_password: "Strong#Pass12" });
+  const expiredMessage = "Your password reset session has expired. Please request a new OTP.";
+  const signIn = jwt.sign({ id: 4, role_id: 1, department_id: 1, is_backlisted: false }, key, { algorithm: "HS256", expiresIn: "1d" });
+  await assert.rejects(reset(signIn), (err) => err.statusCode === 400 && err.message === expiredMessage, "a sign-in token");
+  const expired = jwt.sign({ id: 4, type: "reset_password" }, key, { algorithm: "HS256", expiresIn: -10 });
+  await assert.rejects(reset(expired), (err) => err.statusCode === 400 && err.message === expiredMessage, "an expired reset token");
+  assert.equal(updates.length, 0);
+  await reset(jwt.sign({ id: 4, type: "reset_password" }, key, { algorithm: "HS256", expiresIn: "1d" }));
+  assert.equal(updates.length, 1);
+});

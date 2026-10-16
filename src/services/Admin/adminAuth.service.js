@@ -6,7 +6,7 @@ const { Admin, Role, UserOAuth } = require("../../models");
 const ApiError = require("../../utils/ApiError");
 const config = require("../../config/config");
 const { emailService } = require("../Common");
-const { otpTypes } = require("../../config/types");
+const { otpTypes, tokenTypes } = require("../../config/types");
 const otpGuard = require("../../utils/otpGuard");
 const validatePassword = require("../../helpers/validatePassword");
 const { hashPassword } = require("../../utils/password");
@@ -192,13 +192,9 @@ const verifyOTP = async (email, otp, otp_type) => {
     otpGuard.clear(guardKey);
     let token = "";
     if (otp_type === otpTypes.FORGOT_PASSWORD) {
+      // only good for POST /admin/auth/forgot-password (requireAdmin refuses its type)
       token = jwt.sign(
-        {
-          id: user.id,
-          role_id: user.role_id,
-          department_id: user.department_id,
-          is_backlisted: false,
-        },
+        { id: user.id, type: tokenTypes.RESET_PASSWORD },
         Buffer.from(config.jwt.secret, "hex"),
         { algorithm: "HS256", expiresIn: `${config.jwt.adminResetExpirationDays}d` }
       );
@@ -222,8 +218,20 @@ const forgotAdminPassword = async (reqBody) => {
       );
     }
 
+    // the token verify-otp issued: signed here, not expired, a reset token
+    let reset = null;
+    try {
+      reset = jwt.verify(token, Buffer.from(config.jwt.secret, "hex"), { algorithms: ["HS256"] });
+    } catch {
+      reset = null;
+    }
+    if (reset?.type !== tokenTypes.RESET_PASSWORD) {
+      throw new ApiError(httpStatus.BAD_REQUEST, "Your password reset session has expired. Please request a new OTP.");
+    }
+
+    // and the one stored for this admin, so it works once
     const user = await Admin.findOne({
-      where: { email: email, remember_token: token, is_active: true },
+      where: { id: reset.id, email: email, remember_token: token, is_active: true },
     });
     if (!user) {
       throw new ApiError(httpStatus.NOT_FOUND, "Invalid Email or Token");

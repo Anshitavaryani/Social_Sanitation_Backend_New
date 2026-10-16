@@ -273,3 +273,15 @@ test("the logo emails link to is served by the API", async () => {
   assert.equal(res.status, 200);
   assert.equal(res.headers.get("content-type"), "image/jpeg");
 });
+
+test("a password-reset token opens only the reset endpoint, not admin routes (it worked as a sign-in token)", async () => {
+  const resetToken = jwt.sign({ id: 1, type: "reset_password" }, ADMIN_KEY, { algorithm: "HS256", expiresIn: "1d" });
+  for (const [method, url] of [
+    ["POST", "/api/v1/admin/booking/getAllBookings"],
+    ["GET", "/api/v1/booking/getBookingById/1"],
+  ]) {
+    const res = await call(method, url, { token: resetToken });
+    assert.deepEqual([res.status, res.json.message], [401, "Invalid access token. Please log in again."], url);
+  }
+  assert.equal((await call("POST", "/api/v1/admin/booking/getAllBookings", { token: adminToken() })).status, 200, "sign-in tokens still work");
+});

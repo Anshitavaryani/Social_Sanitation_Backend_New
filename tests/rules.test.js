@@ -1,6 +1,7 @@
 // Business rules live in src/config/rules.js: these tests pin their values and check that the
 // callers apply them (password policy everywhere, one page size, one hashing cost, one OTP shape).
-require("./helpers/env");
+const { TEST_JWT_SECRET } = require("./helpers/env");
+const jwt = require("jsonwebtoken");
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const bcrypt = require("bcryptjs");
@@ -82,14 +83,15 @@ test("admin password changes and resets follow the app password policy (they had
 
   const adminAuthService = loadFromRoot("src/services/Admin/adminAuth.service.js");
   models.Admin.findOne = async () => ({ id: 4 });
+  const resetToken = jwt.sign({ id: 4, type: "reset_password" }, Buffer.from(TEST_JWT_SECRET, "hex"), { algorithm: "HS256", expiresIn: "1d" });
   const updates = [];
   models.Admin.update = async (values) => updates.push(values) && [1];
   await assert.rejects(
-    adminAuthService.forgotAdminPassword({ email: "a@example.com", token: "t", password: "weakpass1", confirm_password: "weakpass1" }),
+    adminAuthService.forgotAdminPassword({ email: "a@example.com", token: resetToken, password: "weakpass1", confirm_password: "weakpass1" }),
     (err) => err.statusCode === 400 && err.message === POLICY_MESSAGE,
   );
   assert.equal(updates.length, 0);
-  await adminAuthService.forgotAdminPassword({ email: "a@example.com", token: "t", password: "Strong#Pass12", confirm_password: "Strong#Pass12" });
+  await adminAuthService.forgotAdminPassword({ email: "a@example.com", token: resetToken, password: "Strong#Pass12", confirm_password: "Strong#Pass12" });
   assert.equal(updates.length, 1);
   assert.ok(bcrypt.compareSync("Strong#Pass12", updates[0].password));
 });
