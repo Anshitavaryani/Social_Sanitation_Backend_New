@@ -17,6 +17,7 @@
     "dev": "cross-env NODE_ENV=development node --watch index.js",
     "auth": "cross-env NODE_ENV=development node src/config/createSuperAdmin.js",
     "migrate": "cross-env NODE_ENV=development node src/config/migrateTable.js",
+    "fix-file-uris": "node src/scripts/fixFileUris.js",
     "lint": "eslint .",
     "test": "node --test --test-timeout=120000 \"tests/**/*.test.js\""
   },

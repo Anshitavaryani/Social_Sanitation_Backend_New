@@ -29,6 +29,8 @@ module.exports = {
     // Public URLs, without a trailing slash (storage.js and company.js build links from them)
     apiBaseUrl: envVars.API_BASE_URL.replace(/\/+$/, ''),
     adminBaseUrl: envVars.ADMIN_BASE_URL.replace(/\/+$/, ''),
+    // Uploaded and generated files live in <storageDir>/uploads (default: public/uploads)
+    storageDir: envVars.STORAGE_DIR,
     DEFAULT_AMOUNT: envVars.DEFAULT_AMOUNT,
     PUPPETEER_EXECUTABLE_PATH: envVars.PUPPETEER_EXECUTABLE_PATH,
     GOOGLE_API_KEY: envVars.GOOGLE_API_KEY,

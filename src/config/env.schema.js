@@ -31,6 +31,9 @@ const envSchema = Joi.object({
   API_BASE_URL: optional(Joi.string().uri({ scheme: ["http", "https"] }))
     .default("https://node.socialsanitation.com/api/v1")
     .description("Public URL of this API, ending in /api/v1: document and logo links, the Twilio status callback"),
+  STORAGE_DIR: optional(Joi.string()).description(
+    "Folder for uploaded and generated files, outside the deploy folder (default: public/ in the code, as before)",
+  ),
   ADMIN_BASE_URL: optional(Joi.string().uri({ scheme: ["http", "https"] }))
     .default("https://admin.socialsanitation.com")
     .description("Public URL of the admin panel: links in emails, the Square checkout and DocuSign return pages"),

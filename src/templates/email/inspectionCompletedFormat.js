@@ -1,5 +1,6 @@
 const emailBase = require("./emailBase");
-const { formatDisplayDate } = require("../../src/utils/time");
+const { formatDisplayDate } = require("../../utils/time");
+const { inspectionReviewStatusTypes } = require("../../config/types");
 
 const STATUS_COLORS = {
   APPROVED: { bg: "#ecfdf5", color: "#059669" },
@@ -110,7 +111,7 @@ const sectionSummaryRows = (items = []) => {
         (i) => i.employee_completed,
       ).length;
       const issues = section.items.filter(
-        (i) => i.bdm_status === "ISSUE",
+        (i) => i.bdm_status === inspectionReviewStatusTypes.ISSUE,
       ).length;
 
       return `
@@ -122,7 +123,7 @@ const sectionSummaryRows = (items = []) => {
             ${completed}/${total}
           </td>
           <td style="padding:12px 10px; border-bottom:1px solid #eef0f2; text-align:center;">
-            ${issues > 0 ? statusBadge("ISSUE") : statusBadge("APPROVED")}
+            ${issues > 0 ? statusBadge(inspectionReviewStatusTypes.ISSUE) : statusBadge(inspectionReviewStatusTypes.APPROVED)}
           </td>
           <td style="padding:12px 10px; border-bottom:1px solid #eef0f2; font-size:12.5px; color:#4b5f58; text-align:center;">
             ${issues > 0 ? `${issues} flagged` : "—"}
@@ -135,7 +136,7 @@ const sectionSummaryRows = (items = []) => {
 
 const issueRemarksBlock = (items = []) => {
   const issueItems = items.filter(
-    (i) => i.bdm_status === "ISSUE" && i.bdm_remark,
+    (i) => i.bdm_status === inspectionReviewStatusTypes.ISSUE && i.bdm_remark,
   );
 
   if (!issueItems.length) {

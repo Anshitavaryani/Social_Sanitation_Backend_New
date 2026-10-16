@@ -6,21 +6,26 @@ const path = require("path");
 const config = require("./config");
 
 const PUBLIC_DIR = path.resolve(__dirname, "../../public");
-const UPLOADS_DIR = path.join(PUBLIC_DIR, "uploads");
 
-// Upload folders by form field. Only images and docs are used today; audio is saved to audios/
-// but app.js serves songs/, as before.
-const UPLOAD_DIRS = Object.freeze({
-  images: path.join(UPLOADS_DIR, "images"),
-  videos: path.join(UPLOADS_DIR, "videos"),
-  gifs: path.join(UPLOADS_DIR, "gifs"),
-  docs: path.join(UPLOADS_DIR, "docs"),
-  audios: path.join(UPLOADS_DIR, "audios"),
-  songs: path.join(UPLOADS_DIR, "songs"),
-});
+// Where files were kept before STORAGE_DIR existed; app.js still serves it as a fallback while
+// the files are copied across (audit: file storage migration)
+const LEGACY_UPLOADS_DIR = path.join(PUBLIC_DIR, "uploads");
 
-// Upload folders app.js serves at /api/v1/<folder> and /<folder>
-const SERVED_UPLOAD_FOLDERS = Object.freeze(["images", "videos", "gifs", "docs", "songs"]);
+// STORAGE_DIR keeps uploads outside the deploy folder; without it they stay in public/uploads
+const UPLOADS_DIR = config.storageDir ? path.join(path.resolve(config.storageDir), "uploads") : LEGACY_UPLOADS_DIR;
+
+// Upload folders by form field (only images and docs are used today)
+const UPLOAD_FOLDERS = Object.freeze(["images", "videos", "gifs", "docs", "audios"]);
+const UPLOAD_DIRS = Object.freeze(Object.fromEntries(UPLOAD_FOLDERS.map((folder) => [folder, path.join(UPLOADS_DIR, folder)])));
+const LEGACY_UPLOAD_DIRS = Object.freeze(Object.fromEntries(UPLOAD_FOLDERS.map((folder) => [folder, path.join(LEGACY_UPLOADS_DIR, folder)])));
+
+// URL path the whole uploads folder is also served at: /uploads/images/<file>
+const UPLOADS_URL_PATH = "/uploads";
+
+// Creates the upload folders (multer does not); run once at start-up
+const ensureUploadDirs = () => {
+  for (const dir of Object.values(UPLOAD_DIRS)) fs.mkdirSync(dir, { recursive: true });
+};
 
 // Fixed images used by PDFs and emails (the logo, estimate photos), kept in the repository and
 // served at /api/v1/assets
@@ -49,8 +54,13 @@ const assetDataUri = (fileName) => {
 
 module.exports = {
   PUBLIC_DIR,
+  UPLOADS_DIR,
+  LEGACY_UPLOADS_DIR,
+  UPLOADS_URL_PATH,
+  UPLOAD_FOLDERS,
   UPLOAD_DIRS,
-  SERVED_UPLOAD_FOLDERS,
+  LEGACY_UPLOAD_DIRS,
+  ensureUploadDirs,
   ASSETS_DIR,
   IMAGE_FILE_URI,
   docUrl,

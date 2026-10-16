@@ -1,5 +1,5 @@
 const emailBase = require("./emailBase");
-const { formatDisplayDate, formatDisplayDateTime } = require("../../src/utils/time");
+const { formatDisplayDate, formatDisplayDateTime } = require("../../utils/time");
 
 const STATUS_COLORS = {
   ASSIGNED: { bg: "#eef2ff", color: "#4338ca" },

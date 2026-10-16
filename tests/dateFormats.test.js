@@ -223,7 +223,7 @@ test("emails show MM-DD-YYYY dates and 12-hour times", async () => {
 });
 
 test("equipment and inspection email templates show MM-DD-YYYY (signature time in New York)", () => {
-  const equipmentEmail = loadFromRoot("public/Email_Template/equipmentReportTemplate.js");
+  const equipmentEmail = loadFromRoot("src/templates/email/equipmentReportTemplate.js");
   const html = equipmentEmail({
     name: "Sam",
     assignment: {
@@ -239,7 +239,7 @@ test("equipment and inspection email templates show MM-DD-YYYY (signature time i
   });
   assertDisplayed(html, ["10-01-2026", "10-31-2026", "10-01-2026 09:15 AM"], ["2026-10-01", "2026-10-31"]);
 
-  const inspectionEmail = loadFromRoot("public/Email_Template/inspectionCompletedFormat.js");
+  const inspectionEmail = loadFromRoot("src/templates/email/inspectionCompletedFormat.js");
   const inspectionHtml = inspectionEmail({ name: "Client", inspection: { name: "Monthly", inspection_date: "2026-10-16", score: 8, items: [] } });
   assertDisplayed(inspectionHtml, ["10-16-2026"], ["2026-10-16"]);
 });

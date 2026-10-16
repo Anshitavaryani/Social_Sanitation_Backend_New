@@ -7,14 +7,14 @@ const { formatDisplayDate, formatTime12h } = require("../../utils/time");
 const {
   forgotPasswordSendOTPFormat,
   emailVerificationFormat,
-} = require("../../../public/Email_Template");
+} = require("../../templates/email");
 const ApiError = require("../../utils/ApiError");
 const {
   sendMailViaGraph,
   sendMailViaGraphWithSender,
 } = require("../../config/microsoftGraph.helper");
-const employeeEquipmentAssignmentFormat = require("../../../public/Email_Template/equipmentReportTemplate");
-const inspectionCompletedFormat = require("../../../public/Email_Template/inspectionCompletedFormat");
+const employeeEquipmentAssignmentFormat = require("../../templates/email/equipmentReportTemplate");
+const inspectionCompletedFormat = require("../../templates/email/inspectionCompletedFormat");
 
 const sendEmailVerification = async (to, otp) => {
   try {

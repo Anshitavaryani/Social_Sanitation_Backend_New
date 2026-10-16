@@ -1,4 +1,4 @@
-const config = require('../../src/config/config');
+const config = require('../../config/config');
 const forgotPasswordSendOTPFormat = (otp) => {
     return `
     <!DOCTYPE html>

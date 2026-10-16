@@ -1,4 +1,4 @@
-const { LOGO_URL } = require("../../src/config/company");
+const { LOGO_URL } = require("../../config/company");
 
 const emailBase = ({ title, preheader = "", bodyHtml }) => `
 <!DOCTYPE html>

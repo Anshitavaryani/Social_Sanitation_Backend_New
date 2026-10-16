@@ -135,7 +135,8 @@ const COMPANY_DETAIL = /socialsanitation\.com|socialsanitation@|296-9695|apps\.a
 const UPLOAD_PATH = /(^|[/\\])(uploads|public)([/\\]|$)/;
 const ALLOWED = {
   company: ["src/config/company.js", "src/config/storage.js", "src/config/env.schema.js"],
-  storage: ["src/config/storage.js"],
+  // the one-off script names the old, broken file_uri values it rewrites
+  storage: ["src/config/storage.js", "src/scripts/fixFileUris.js"],
 };
 
 // String pieces of a file: literals and template text, with what surrounds them

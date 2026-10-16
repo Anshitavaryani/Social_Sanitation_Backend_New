@@ -33,7 +33,7 @@ const errorHandler = require("./src/utils/errorHandler.js");
 const responseWrapper = require("./src/config/responseWrapper.js");
 const { adminAuthMiddleware } = require("./src/middlewares");
 require("./src/models");
-const { PUBLIC_DIR, UPLOAD_DIRS, SERVED_UPLOAD_FOLDERS, ASSETS_DIR } = require("./src/config/storage");
+const { UPLOADS_DIR, LEGACY_UPLOADS_DIR, UPLOADS_URL_PATH, UPLOAD_FOLDERS, UPLOAD_DIRS, LEGACY_UPLOAD_DIRS, ASSETS_DIR, ensureUploadDirs } = require("./src/config/storage");
 
 const { initializeApp, cert } = require("firebase-admin/app");
 const {
@@ -215,7 +215,13 @@ if (config.env !== "test") {
   app.use(morgan.errorHandler);
 }
 
-app.use(express.static(PUBLIC_DIR));
+ensureUploadDirs();
+
+// Files people open by URL: uploads (from storage, then the old public/uploads while files move
+// across) and the fixed images emails link to. Nothing else in the code folder is served.
+const servedFrom = (dir, legacyDir) => (dir === legacyDir ? [express.static(dir)] : [express.static(dir), express.static(legacyDir)]);
+app.use(UPLOADS_URL_PATH, ...servedFrom(UPLOADS_DIR, LEGACY_UPLOADS_DIR));
+app.use("/assets", express.static(ASSETS_DIR));
 
 // CORS: only origins listed in ACCESSDOMAINS (credentials.js + corsConfigs.js)
 app.use(credentials);
@@ -299,13 +305,12 @@ app.delete("/api/v1/logs", adminAuthMiddleware.validateJWTtoken, async (req, res
 });
 
 // Uploaded files at /api/v1/<folder> and /<folder>, and the fixed images emails link to (storage.js)
-for (const folder of SERVED_UPLOAD_FOLDERS) {
-  app.use(`/api/v1/${folder}`, express.static(UPLOAD_DIRS[folder]));
+for (const folder of UPLOAD_FOLDERS) {
+  const dirs = servedFrom(UPLOAD_DIRS[folder], LEGACY_UPLOAD_DIRS[folder]);
+  app.use(`/api/v1/${folder}`, ...dirs);
+  app.use(`/${folder}`, ...dirs);
 }
 app.use("/api/v1/assets", express.static(ASSETS_DIR));
-for (const folder of SERVED_UPLOAD_FOLDERS) {
-  app.use(`/${folder}`, express.static(UPLOAD_DIRS[folder]));
-}
 
 // send back a 404 error for any unknown api request
 app.use((req, res, next) => {
