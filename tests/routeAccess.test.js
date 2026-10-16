@@ -285,3 +285,17 @@ test("a password-reset token opens only the reset endpoint, not admin routes (it
   }
   assert.equal((await call("POST", "/api/v1/admin/booking/getAllBookings", { token: adminToken() })).status, 200, "sign-in tokens still work");
 });
+
+test("public forms refuse input that would fail later, with a 400 that says what is wrong", async () => {
+  const submit = (formData) => call("POST", "/api/v1/form/submitForm", { body: { formData, language: "english" } });
+  const notJson = await submit("{not json");
+  assert.deepEqual([notJson.status, notJson.json.message], [400, "formData must be the hiring form as an object or JSON, with personalInfo.email"]);
+  assert.equal((await submit({ personalInfo: {} })).status, 400, "no applicant email");
+  assert.equal((await submit({ personalInfo: { email: "a@example.com" } })).status, 200);
+  assert.equal((await submit(JSON.stringify({ personalInfo: { email: "a@example.com" }, extra: 1 }))).status, 200, "JSON text from a multipart form");
+
+  const contact = (body) => call("POST", "/api/v1/contactUs/createContactUs", { body });
+  const badEmail = await contact({ email: "not-an-email" });
+  assert.deepEqual([badEmail.status, badEmail.json.message], [400, "email must be a valid email"]);
+  assert.equal((await contact({ email: "hello@example.com", contact_number: 8132969695, note: "extra fields are fine" })).status, 200);
+});
