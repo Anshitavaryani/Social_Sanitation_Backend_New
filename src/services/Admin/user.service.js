@@ -8,6 +8,7 @@ const { dayjs, dateInTz, addDays, nowWallClock } = require("../../utils/time");
 const fs = require("fs");
 const { Admin, User, Profile, UserAttachment, userLoginTiming, Service, Booking, ServiceAttachment, BookingAssignment, UserAddress, Payment, ClientChecklistDetail, ClientChecklist, QuoteItem, ServiceQuote, Country, State, City, ReviewLink, Attendance, Break, UserToken, UserOAuth, Invoice, FormSubmission, FormSection } = require("../../models");
 const ApiError = require("../../utils/ApiError");
+const { generateTemporaryPassword } = require("../../utils/temporaryPassword");
 const { sendUserCredentials, sendEmailWithPDF, sendReviewEmailWithPDF, sendServiceRequestEmailWithPDF, sendUpdatedUserCredentials } = require("../Common/email.service");
 const {
   generateQuotePDF,
@@ -1066,7 +1067,7 @@ const resetUserCredentials = async (reqBody) => {
 
     // 🔑 Generate new password
     const salt = bcrypt.genSaltSync(10);
-    const newPassword = Math.random().toString(36).substring(2, 12);
+    const newPassword = generateTemporaryPassword();
     const hashedPassword = bcrypt.hashSync(newPassword, salt);
 
     // ✅ Save new password
@@ -1429,7 +1430,7 @@ const adminAddUser = async (reqBody) => {
     // ============================
 
     const salt = bcrypt.genSaltSync(10);
-    const password = Math.random().toString(36).substring(2, 12);
+    const password = generateTemporaryPassword();
     const finalClientType = client_type || "commercial";
 
     const user = await User.create({

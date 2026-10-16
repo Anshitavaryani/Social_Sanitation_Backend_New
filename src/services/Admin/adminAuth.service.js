@@ -9,12 +9,13 @@ const config = require("../../config/config");
 const { emailService } = require("../Common");
 const { otpTypes } = require("../../config/types");
 const otpGuard = require("../../utils/otpGuard");
+const { generateTemporaryPassword } = require("../../utils/temporaryPassword");
 const { sendAdminCredentials } = require("../Common/email.service");
 
 
 const createAdminUser = async (userBody) => {
   try {
-    const password = Math.random().toString(36).substring(2, 12);
+    const password = generateTemporaryPassword();
     let salt = bcrypt.genSaltSync(10);
     const adminObj = {
       name: userBody.name,
