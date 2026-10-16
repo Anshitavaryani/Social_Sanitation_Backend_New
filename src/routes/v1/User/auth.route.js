@@ -3,17 +3,18 @@ const router = express.Router();
 
 const {userAuthController } = require('../../../controllers');
 const {userAuthMiddleware} = require('../../../middlewares');
+const { publicRoute } = require("../../../middlewares/access.middleware");
 
 router.use(userAuthMiddleware.setRoleIdIfNotPresent);
 
-router.post('/otp', userAuthController.sendOTP);
-router.post('/verify-otp', userAuthController.verifyOTP);
-router.post('/register', [userAuthMiddleware.validateRegisterUserBody], userAuthController.register);
-router.post('/login', [userAuthMiddleware.validateSignInReqBody],userAuthController.login);
+router.post('/otp', publicRoute, userAuthController.sendOTP);
+router.post('/verify-otp', publicRoute, userAuthController.verifyOTP);
+router.post('/register', publicRoute, [userAuthMiddleware.validateRegisterUserBody], userAuthController.register);
+router.post('/login', publicRoute, [userAuthMiddleware.validateSignInReqBody],userAuthController.login);
 router.post('/reset-password', [ userAuthMiddleware.verifyAuthJWTToken], userAuthController.resetPassword);
-router.post('/forgot-password',[userAuthMiddleware.validateForgetPassordToken], userAuthController.forgotPassword);
+router.post('/forgot-password', publicRoute,[userAuthMiddleware.validateForgetPassordToken], userAuthController.forgotPassword);
 router.get('/logout', [userAuthMiddleware.verifyAuthJWTToken], userAuthController.logout);
-router.post('/guestLogin', userAuthController.guestLogin);
+router.post('/guestLogin', publicRoute, userAuthController.guestLogin);
 
 
 module.exports = router;

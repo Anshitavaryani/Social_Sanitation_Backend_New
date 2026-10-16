@@ -20,6 +20,7 @@ global.fetch = async (url, init = {}) => {
   });
 };
 
+const crypto = require("crypto");
 const controller = loadFromRoot("src/controllers/Common/squarePayment.controller.js");
 
 const makeUser = (overrides = {}) => ({
@@ -123,4 +124,70 @@ test("webhook ignores unrelated event types without calling Square", async () =>
   const { res } = await runHandler(controller.handlePaymentWebhook, { body: { type: "refund.created" } });
   assert.equal(res.body.message, "Event ignored");
   assert.equal(calls.length, 0);
+});
+
+// Square signs webhooks with base64(HMAC-SHA256(signature key, notification URL + raw body))
+const signedWebhook = (body, { key = "test-signature-key", url = "https://api.example.com/api/v1/payment/square/webhooks", tamper = false } = {}) => {
+  const rawBody = JSON.stringify(body);
+  const signature = crypto.createHmac("sha256", key).update(url + rawBody).digest("base64");
+  const headers = { "x-square-hmacsha256-signature": tamper ? signature.replace(/^./, (c) => (c === "A" ? "B" : "A")) : signature };
+  return {
+    body,
+    rawBody,
+    originalUrl: "/api/v1/payment/square/webhooks",
+    protocol: "https",
+    get: (name) => headers[name.toLowerCase()] ?? (name.toLowerCase() === "host" ? "api.example.com" : undefined),
+  };
+};
+
+test("webhook with a valid Square signature is processed", async () => {
+  process.env.SQUARE_WEBHOOK_SIGNATURE_KEY = "test-signature-key";
+  process.env.SQUARE_WEBHOOK_URL = "https://api.example.com/api/v1/payment/square/webhooks";
+  try {
+    const { res } = await runHandler(controller.handlePaymentWebhook, signedWebhook({ type: "refund.created" }));
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body.message, "Event ignored");
+  } finally {
+    delete process.env.SQUARE_WEBHOOK_SIGNATURE_KEY;
+    delete process.env.SQUARE_WEBHOOK_URL;
+  }
+});
+
+test("webhook with a forged or missing signature is rejected with 401 before anything is touched", async () => {
+  process.env.SQUARE_WEBHOOK_SIGNATURE_KEY = "test-signature-key";
+  process.env.SQUARE_WEBHOOK_URL = "https://api.example.com/api/v1/payment/square/webhooks";
+  let lookedUp = false;
+  models.Payment.findOne = async () => {
+    lookedUp = true;
+    return null;
+  };
+  try {
+    const forgedPayment = { type: "payment.updated", data: { object: { payment: { id: "PAY_X", status: "COMPLETED", order_id: "O1" } } } };
+    for (const req of [
+      signedWebhook(forgedPayment, { tamper: true }),
+      signedWebhook(forgedPayment, { key: "attacker-key" }),
+      { ...signedWebhook(forgedPayment), get: () => undefined },
+    ]) {
+      const { res } = await runHandler(controller.handlePaymentWebhook, req);
+      assert.equal(res.statusCode, 401);
+      assert.equal(res.body.message, "Invalid webhook signature");
+    }
+    assert.equal(lookedUp, false, "no payment record was read or updated");
+  } finally {
+    delete process.env.SQUARE_WEBHOOK_SIGNATURE_KEY;
+    delete process.env.SQUARE_WEBHOOK_URL;
+  }
+});
+
+test("without a configured signature key the webhook keeps working (and warns)", async () => {
+  const warnings = [];
+  const warn = console.warn;
+  console.warn = (msg) => warnings.push(msg);
+  try {
+    const { res } = await runHandler(controller.handlePaymentWebhook, { body: { type: "refund.created" }, get: () => undefined });
+    assert.equal(res.body.message, "Event ignored");
+  } finally {
+    console.warn = warn;
+  }
+  assert.ok(warnings.some((w) => String(w).includes("SQUARE_WEBHOOK_SIGNATURE_KEY")));
 });

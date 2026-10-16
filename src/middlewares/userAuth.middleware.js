@@ -1,7 +1,8 @@
 const { status: httpStatus } = require('http-status');
 const jwt = require('jsonwebtoken');
+const { requireAuth } = require('./access.middleware');
 
-const { User, OTP, UserToken, Profile, Admin } = require('../models');
+const { User, OTP, UserToken, Profile } = require('../models');
 const validateEmail = require('../helpers/validateEmail');
 const validatePassword = require('../helpers/validatePassword');
 const { tokenTypes, otpTypes } = require('../config/types');
@@ -60,12 +61,9 @@ const verifyAuthJWTToken = catchAsync(async (req, res, next) => {
         const token = req.headers["x-access-token"];
         const role_id = req.headers['role_id'];
         if (!token) {
-            return responseWrapper(res, '', 'Please authenticate', httpStatus.UNAUTHORIZED);
+            throw new ApiError(httpStatus.UNAUTHORIZED, 'Authentication required. Send the access token in the x-access-token header.');
         };
         const payload = jwt.verify(token, config.jwt.secret);
-        if (!payload) {
-            return responseWrapper(res, '', 'Invalid Token', httpStatus.UNAUTHORIZED);
-        };
 
         const tokenDoc = await UserToken.findOne({
             where: {
@@ -78,7 +76,7 @@ const verifyAuthJWTToken = catchAsync(async (req, res, next) => {
         });
 
         if (!tokenDoc) {
-            return responseWrapper(res, '', 'Token Not Found', httpStatus.BAD_REQUEST);
+            throw new ApiError(httpStatus.UNAUTHORIZED, 'Your session has ended. Please log in again.');
         };
 
         const user = await User.findOne({ 
@@ -92,7 +90,7 @@ const verifyAuthJWTToken = catchAsync(async (req, res, next) => {
             ]
         });
         if (!user) {
-            return responseWrapper(res, '', 'User Not Found', httpStatus.NOT_FOUND);
+            throw new ApiError(httpStatus.UNAUTHORIZED, 'This account is not active. Please log in again.');
         };
         req.body.user = user;
         req.body.tokenDoc = tokenDoc;
@@ -100,6 +98,12 @@ const verifyAuthJWTToken = catchAsync(async (req, res, next) => {
         req.body.user_type = "USER";
         next();
     } catch (error) {
+        if (error instanceof jwt.TokenExpiredError) {
+            throw new ApiError(httpStatus.UNAUTHORIZED, 'Your session has expired. Please log in again.');
+        }
+        if (error instanceof jwt.JsonWebTokenError) {
+            throw new ApiError(httpStatus.UNAUTHORIZED, 'Invalid access token. Please log in again.');
+        }
         throw new ApiError(error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR, error.message);
     }
 });
@@ -162,82 +166,8 @@ const setRoleIdIfNotPresent = (req, res, next) => {
 };
 
 
-const verifyAnyAuthJWTToken = catchAsync(async (req, res, next) => {
-	try {
-		const token = req.header('x-access-token');
-		const role_id = req.header('role_id'); // required for users
-
-		if (!token) {
-			return responseWrapper(res, '', 'Access denied: No token provided', httpStatus.BAD_REQUEST);
-		}
-
-		// 1. Try verifying as Admin
-		try {
-			const decoded = jwt.verify(token, Buffer.from(config?.jwt?.secret, 'hex'), {
-				algorithm: 'HS256',
-			});
-
-			if (decoded?.is_backlisted) {
-				return responseWrapper(res, '', 'Invalid Token', httpStatus.UNAUTHORIZED);
-			}
-
-			const admin = await Admin.findOne({ where: { id: decoded.id, is_active: true } });
-
-			if (admin) {
-				req.body.user = admin;
-				req.body.user_type = "ADMIN";
-				return next();
-			}
-		} catch (adminError) {
-			// continue to check as User
-		}
-
-		// 2. Try verifying as User
-		try {
-			const payload = jwt.verify(token, config.jwt.secret);
-
-			const tokenDoc = await UserToken.findOne({
-				where: {
-					token: token,
-					role_id: role_id,
-					token_type: tokenTypes.ACCESS,
-					user_id: payload.sub,
-					is_active: true
-				}
-			});
-
-			if (!tokenDoc) {
-				return responseWrapper(res, '', 'Token Not Found', httpStatus.BAD_REQUEST);
-			}
-
-			const user = await User.findOne({
-				where: { id: tokenDoc.user_id, is_active: 1, role_id: role_id },
-				include: [
-					{
-						model: Profile,
-						as: 'user_profile',
-						attributes: ['name', 'dialing_code', 'mobile', 'is_active', 'created_at'],
-					},
-				]
-			});
-
-			if (!user) {
-				return responseWrapper(res, '', 'User Not Found', httpStatus.NOT_FOUND);
-			}
-
-			req.body.user = user;
-			req.body.tokenDoc = tokenDoc;
-			req.body.ip_address = req.ip;
-			req.body.user_type = "USER";
-			return next();
-		} catch (userError) {
-			// If both fail
-			return responseWrapper(res, '', 'Invalid Token', httpStatus.UNAUTHORIZED);
-		}
-	} catch (error) {
-		throw new ApiError(error.statusCode || httpStatus.INTERNAL_SERVER_ERROR, error.message);
-	}
-});
+// Admin or app-user token; same as access.middleware requireAuth
+const verifyAnyAuthJWTToken = requireAuth;
 
 
 module.exports = {

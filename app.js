@@ -12,6 +12,10 @@ const path = require("path");
 const app = express();
 
 app.set("trust proxy", 1);
+// Never send password hashes, OTPs or password-reset tokens in any JSON response, wherever an
+// Admin or User row ends up in a payload
+const HIDDEN_RESPONSE_KEYS = new Set(["password", "remember_token", "otp"]);
+app.set("json replacer", (key, value) => (HIDDEN_RESPONSE_KEYS.has(key) ? undefined : value));
 // Express 5 defaults to the "simple" query parser; keep nested query support (?a[b]=1)
 app.set("query parser", "extended");
 
@@ -184,8 +188,17 @@ cron.schedule(
 
 app.use(helmet());
 
-// parse json request body
-app.use(express.json({ limit: "25mb" }));
+// parse json request body; keep the raw bytes for the Square webhook signature check
+app.use(
+  express.json({
+    limit: "25mb",
+    verify: (req, res, buffer) => {
+      if (req.originalUrl.startsWith("/api/v1/payment/square/webhooks")) {
+        req.rawBody = buffer.toString("utf8");
+      }
+    },
+  }),
+);
 
 // parse urlencoded request body
 app.use(express.urlencoded({ extended: true, limit: "25mb" }));
@@ -209,20 +222,27 @@ app.use(express.static(PUBLIC_DIR));
 
 process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 1;
 
-app.use(function (req, res, next) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "*");
-  res.setHeader("Access-Control-Allow-Headers", "*");
-  next();
-});
-
+// CORS: only origins listed in ACCESSDOMAINS (credentials.js + corsConfigs.js)
 app.use(credentials);
 app.use(cors(corsConfigs));
 
 
-// limit repeated failed requests to auth endpoints
+// limit repeated failed sign-in, OTP and password-reset attempts (20 failures per 15 minutes per IP)
 if (config.env === "production") {
-  app.use("/v1/auth", authLimiter);
+  app.use(
+    [
+      "/api/v1/user/auth/login",
+      "/api/v1/user/auth/otp",
+      "/api/v1/user/auth/verify-otp",
+      "/api/v1/user/auth/forgot-password",
+      "/api/v1/user/auth/register",
+      "/api/v1/admin/auth/login",
+      "/api/v1/admin/auth/otp",
+      "/api/v1/admin/auth/verify-otp",
+      "/api/v1/admin/auth/forgot-password",
+    ],
+    authLimiter,
+  );
 }
 
 app.get("/api/healthcheck", function (req, res) {
@@ -236,9 +256,23 @@ app.get("/test", (req, res, next) => {
   res.status(200).send("Hello World !!");
 });
 
+// Uploads are parsed before the route's access check runs, so files from a request that is then
+// rejected (401/403) are deleted instead of being left on disk
+const discardFilesOfRejectedRequests = (req, res, next) => {
+  res.on("finish", () => {
+    if (res.statusCode !== 401 && res.statusCode !== 403) return;
+    const files = Array.isArray(req.files) ? req.files : Object.values(req.files || {}).flat();
+    for (const file of files) {
+      if (file && file.path) fs.promises.unlink(file.path).catch(() => {});
+    }
+  });
+  next();
+};
+
 // Global multer for v1 routes, except the CSV import which has its own parser
 app.use(
   "/api/v1",
+  discardFilesOfRejectedRequests,
   (req, res, next) => {
     if (req.path === "/invoice/import-historical-csv") return next();
     return upload(req, res, next);

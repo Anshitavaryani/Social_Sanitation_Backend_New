@@ -5,13 +5,14 @@ const router = express.Router();
 
 const { quoteController } = require("../../../controllers");
 const { userAuthMiddleware } = require("../../../middlewares");
+const { publicRoute, requireAdmin } = require("../../../middlewares/access.middleware");
 
-router.post("/createQuestions", quoteController.createQuestions);
-router.get("/getAllQuestions", quoteController.getAllQuestions);
-router.put("/editQuestion/:id", quoteController.editQuestion);
-router.delete("/delete/:id", quoteController.deleteQuestion);
-router.get("/getQuoteRequests", quoteController.getQuoteRequests);
-router.put("/updateStatus/:id", quoteController.updateStatus);
+router.post("/createQuestions", requireAdmin, quoteController.createQuestions);
+router.get("/getAllQuestions", publicRoute, quoteController.getAllQuestions);
+router.put("/editQuestion/:id", requireAdmin, quoteController.editQuestion);
+router.delete("/delete/:id", requireAdmin, quoteController.deleteQuestion);
+router.get("/getQuoteRequests", requireAdmin, quoteController.getQuoteRequests);
+router.put("/updateStatus/:id", requireAdmin, quoteController.updateStatus);
 
 
 

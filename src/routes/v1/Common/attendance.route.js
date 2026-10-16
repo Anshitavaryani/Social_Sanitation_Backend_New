@@ -3,6 +3,7 @@ const router = express.Router();
 
 const {attendanceController} = require('../../../controllers');
 const { userAuthMiddleware} = require('../../../middlewares');
+const { requireAdmin, requireAuth } = require("../../../middlewares/access.middleware");
 
 
 // attendence apis
@@ -18,14 +19,14 @@ router.post('/applyForLeave',[userAuthMiddleware.verifyAuthJWTToken],attendanceC
 router.get('/getAllUserLeaves',[userAuthMiddleware.verifyAuthJWTToken],attendanceController.getAllUserLeaves);
 
 // admin apis
-router.post('/updateLeaveStatus/:id',attendanceController.updateLeaveStatus);
-router.get('/getAllLeaveRequest',attendanceController.getAllLeaveRequest);
-router.post('/getAttendanceByUserId/:id',attendanceController.getAttendanceByUserId);
-router.post('/getAllAttendance',attendanceController.getAllAttendance);
-router.post('/getTodayAttendanceStats',attendanceController.getTodayAttendanceStats);
+router.post('/updateLeaveStatus/:id', requireAdmin,attendanceController.updateLeaveStatus);
+router.get('/getAllLeaveRequest', requireAdmin,attendanceController.getAllLeaveRequest);
+router.post('/getAttendanceByUserId/:id', requireAuth,attendanceController.getAttendanceByUserId);
+router.post('/getAllAttendance', requireAdmin,attendanceController.getAllAttendance);
+router.post('/getTodayAttendanceStats', requireAdmin,attendanceController.getTodayAttendanceStats);
 
-router.post('/getDailyPresenceForMonth',attendanceController.getDailyPresenceForMonth);
+router.post('/getDailyPresenceForMonth', requireAdmin,attendanceController.getDailyPresenceForMonth);
 
-router.post('/getAllBreaks',attendanceController.getAllBreaks);
-router.post('/manualClockInOut',attendanceController.manualClockInOut);
+router.post('/getAllBreaks', requireAdmin,attendanceController.getAllBreaks);
+router.post('/manualClockInOut', requireAdmin,attendanceController.manualClockInOut);
 module.exports = router;

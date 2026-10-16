@@ -5,30 +5,31 @@ const { aboutUSController } = require('../../../controllers');
 const { termsAndConditionsController } = require('../../../controllers');
 const { bannerController} = require("../../../controllers");
 const { roleMiddleware, adminAuthMiddleware } = require('../../../middlewares');
+const { publicRoute, requireAdmin } = require("../../../middlewares/access.middleware");
 
 
-router.post('/createAboutUs', aboutUSController.createAboutUs);
-router.get('/getAllAboutUs', aboutUSController.getAllAboutUs);
+router.post('/createAboutUs', requireAdmin, aboutUSController.createAboutUs);
+router.get('/getAllAboutUs', publicRoute, aboutUSController.getAllAboutUs);
 router.get('/getAllAboutUsByAdmin', [adminAuthMiddleware.validateJWTtoken,roleMiddleware.isAdminLevelOne], aboutUSController.getAllAboutUsByAdmin);
-router.get('/findAboutUsById/:id', aboutUSController.findAboutUsById);
-router.put('/updateAboutUs/:id', aboutUSController.updateAboutUs);
-router.delete('/deleteAboutUs/:id', aboutUSController.deleteAboutUs);
+router.get('/findAboutUsById/:id', publicRoute, aboutUSController.findAboutUsById);
+router.put('/updateAboutUs/:id', requireAdmin, aboutUSController.updateAboutUs);
+router.delete('/deleteAboutUs/:id', requireAdmin, aboutUSController.deleteAboutUs);
 
 
 
-router.post('/createTermsAndConditons', termsAndConditionsController.createTermsAndConditons);
-router.get('/getAllTermsAndConditons', termsAndConditionsController.getAllTermsAndConditons);
+router.post('/createTermsAndConditons', requireAdmin, termsAndConditionsController.createTermsAndConditons);
+router.get('/getAllTermsAndConditons', publicRoute, termsAndConditionsController.getAllTermsAndConditons);
 router.get('/getAllTermsAndConditonsByAdmin', [adminAuthMiddleware.validateJWTtoken,roleMiddleware.isAdminLevelOne], termsAndConditionsController.getAllTermsAndConditonsByAdmin);
-router.get('/findTermsAndConditonsById/:id', termsAndConditionsController.findTermsAndConditonsById);
-router.put('/updateTermsAndConditons/:id', termsAndConditionsController.updateTermsAndConditons);
-router.delete('/deleteTermsAndConditons/:id', termsAndConditionsController.deleteTermsAndConditons);
+router.get('/findTermsAndConditonsById/:id', publicRoute, termsAndConditionsController.findTermsAndConditonsById);
+router.put('/updateTermsAndConditons/:id', requireAdmin, termsAndConditionsController.updateTermsAndConditons);
+router.delete('/deleteTermsAndConditons/:id', requireAdmin, termsAndConditionsController.deleteTermsAndConditons);
 
 
-router.post('/createBanner', bannerController.createBanner);
-router.get('/getAllBannerImgae', bannerController.getAllBannerImgae);
-router.get('/findBannerImgaeById/:id', bannerController.findBannerImgaeById);
-router.put('/updateBannerImgaeById/:id', bannerController.updateBannerImgaeById);
-router.delete('/deleteBannerImgaeById/:id', bannerController.deleteBannerImgaeById);
+router.post('/createBanner', requireAdmin, bannerController.createBanner);
+router.get('/getAllBannerImgae', publicRoute, bannerController.getAllBannerImgae);
+router.get('/findBannerImgaeById/:id', publicRoute, bannerController.findBannerImgaeById);
+router.put('/updateBannerImgaeById/:id', requireAdmin, bannerController.updateBannerImgaeById);
+router.delete('/deleteBannerImgaeById/:id', requireAdmin, bannerController.deleteBannerImgaeById);
 router.get('/getAllBannerImgaeByAdmin',[adminAuthMiddleware.validateJWTtoken,roleMiddleware.isAdminLevelOne],  bannerController.getAllBannerImgaeByAdmin);
 
 module.exports = router;

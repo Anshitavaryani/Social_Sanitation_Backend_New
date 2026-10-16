@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 const { inspectionController } = require("../../../controllers");
+const { requireAuth } = require("../../../middlewares/access.middleware");
 const {
   adminAuthMiddleware,
   userAuthMiddleware,
@@ -33,7 +34,7 @@ router.post(
 );
 
 router.get(
-  "/getInspectionById/:inspectionId",
+  "/getInspectionById/:inspectionId", requireAuth,
   inspectionController.getInspectionById,
 );
 
@@ -92,7 +93,7 @@ router.delete(
 );
 
 router.get(
-  "/employee/:employeeId",
+  "/employee/:employeeId", requireAuth,
   inspectionController.getInspectionsByEmployeeId,
 );
 

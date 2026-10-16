@@ -3,6 +3,7 @@ const router = express.Router();
 
 const { invoiceController } = require("../../../controllers");
 const multer = require("multer");
+const { requireAdmin, requireAuth } = require("../../../middlewares/access.middleware");
 
 const csvUpload = multer({
   storage: multer.memoryStorage(),
@@ -33,50 +34,50 @@ const handleCsvUpload = (req, res, next) => {
 };
 
 router.post(
-  "/import-historical-csv",
+  "/import-historical-csv", requireAdmin,
   handleCsvUpload,
   invoiceController.importHistoricalInvoicesCSV,
 );
 
-router.post("/createInvoice", invoiceController.createInvoice);
+router.post("/createInvoice", requireAdmin, invoiceController.createInvoice);
 
-router.get("/getAllInvoices", invoiceController.getAllInvoices);
-router.get("/user/:user_id", invoiceController.getInvoicesByUserId);
-router.get("/getNextInvoiceRef", invoiceController.getNextInvoiceRef);
+router.get("/getAllInvoices", requireAdmin, invoiceController.getAllInvoices);
+router.get("/user/:user_id", requireAuth, invoiceController.getInvoicesByUserId);
+router.get("/getNextInvoiceRef", requireAdmin, invoiceController.getNextInvoiceRef);
 router.post(
-  "/getMonthlyAllInvoicesSummary",
+  "/getMonthlyAllInvoicesSummary", requireAdmin,
   invoiceController.getMonthlyAllInvoicesSummary,
 );
-router.delete("/deleteInvoice/:id", invoiceController.deleteInvoice);
+router.delete("/deleteInvoice/:id", requireAdmin, invoiceController.deleteInvoice);
 
-router.get("/upcoming", invoiceController.getUpcomingInvoices);
+router.get("/upcoming", requireAdmin, invoiceController.getUpcomingInvoices);
 
-router.get("/:id", invoiceController.getInvoiceById);
+router.get("/:id", requireAuth, invoiceController.getInvoiceById);
 
-router.put("/:id", invoiceController.updateInvoice);
+router.put("/:id", requireAdmin, invoiceController.updateInvoice);
 
 router.patch(
-  "/mark-paid-check/:invoice_id",
+  "/mark-paid-check/:invoice_id", requireAdmin,
   invoiceController.markInvoicePaidByCheck,
 );
 router.patch(
-  "/markInvoicePaidByACH/:invoice_id",
+  "/markInvoicePaidByACH/:invoice_id", requireAdmin,
   invoiceController.markInvoicePaidByACH,
 );
-router.post("/getBusinessAnalytics", invoiceController.getBusinessAnalytics);
+router.post("/getBusinessAnalytics", requireAdmin, invoiceController.getBusinessAnalytics);
 
 router.patch(
-  "/:invoice_id/reorder-items",
+  "/:invoice_id/reorder-items", requireAdmin,
   invoiceController.reorderInvoiceItems,
 );
 
 router.post(
-  "/:invoice_id/upload-pdf",
+  "/:invoice_id/upload-pdf", requireAdmin,
   invoiceController.uploadHistoricalInvoicePDF,
 );
 
 router.post(
-  "/:invoice_id/send-balance",
+  "/:invoice_id/send-balance", requireAdmin,
   invoiceController.sendInvoiceBalance,
 );
 

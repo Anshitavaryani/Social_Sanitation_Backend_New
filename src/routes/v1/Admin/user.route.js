@@ -3,94 +3,95 @@ const router = express.Router();
 
 const {userController} = require('../../../controllers');
 const {adminAuthMiddleware} = require('../../../middlewares');
+const { publicRoute, requireAdmin } = require("../../../middlewares/access.middleware");
 
 
 router.get('/getAllUsers',[adminAuthMiddleware.validateJWTtoken],userController.getAllUsers);
-router.get('/getUserById',userController.getUserById);
-router.post('/getBookinsByUserId',userController.getBookinsByUserId);
-router.post('/getBookingByEmployeeId',userController.getBookingByEmployeeId);
+router.get('/getUserById', requireAdmin,userController.getUserById);
+router.post('/getBookinsByUserId', requireAdmin,userController.getBookinsByUserId);
+router.post('/getBookingByEmployeeId', requireAdmin,userController.getBookingByEmployeeId);
 router.get('/getAllDrivers',[adminAuthMiddleware.validateJWTtoken],userController.getAllDrivers);
-router.post('/deleteUser',userController.deleteUser);
+router.post('/deleteUser', requireAdmin,userController.deleteUser);
 router.post('/createUser',[adminAuthMiddleware.validateJWTtoken],userController.adminAddUser);
-router.post('/change-employee-role/:id',userController.changeEmployeeRole);
-router.post('/update-employee-type',userController.updateEmployeeType);
-router.post("/change-assigned-admin", userController.changeAssignedAdmin);
+router.post('/change-employee-role/:id', requireAdmin,userController.changeEmployeeRole);
+router.post('/update-employee-type', requireAdmin,userController.updateEmployeeType);
+router.post("/change-assigned-admin", requireAdmin, userController.changeAssignedAdmin);
 router.post('/resetUserCredentials',[adminAuthMiddleware.validateJWTtoken],userController.resetUserCredentials);
-router.post('/adminEditUser/:id',userController.adminEditUser);
-router.get('/getClientChecklistByUserId/:id',userController.getClientChecklistByUserId);
-router.post('/addNewUserAddress',userController.addNewUserAddress);
-router.delete("/delete-user-address/:address_id",userController.deleteUserAddress);
-router.get('/get-closest-employees/:client_id',userController.getClosestEmployees);
-router.get("/get-closest-employees-by-address/:address_id",userController.getClosestEmployeesByAddress);
+router.post('/adminEditUser/:id', requireAdmin,userController.adminEditUser);
+router.get('/getClientChecklistByUserId/:id', requireAdmin,userController.getClientChecklistByUserId);
+router.post('/addNewUserAddress', requireAdmin,userController.addNewUserAddress);
+router.delete("/delete-user-address/:address_id", requireAdmin,userController.deleteUserAddress);
+router.get('/get-closest-employees/:client_id', requireAdmin,userController.getClosestEmployees);
+router.get("/get-closest-employees-by-address/:address_id", requireAdmin,userController.getClosestEmployeesByAddress);
 
-router.get('/getUserCount',userController.getUserCount);
-router.get('/getDriverCount',userController.getDriverCount);
-router.get('/getAdminCount',userController.getAdminCount);
-router.get('/getServiceCount',userController.getServiceCount);
-router.get('/getBookingCount',userController.getBookingCount);
-router.get('/getPendingBookingCount',userController.getPendingBookingCount);
-router.get('/getCompletedBookingCount',userController.getCompletedBookingCount);
-router.get('/getDeletedBookingCount',userController.getDeletedBookingCount);
-router.get('/getMostBookedService',userController.getMostBookedService);
-router.get('/getAllUserNameByAdmin',userController.getAllUserNameByAdmin);
-router.get('/getAllSupervisorByAdmin/:id',userController.getAllSupervisorByAdmin);
-router.get('/getAllQualityInspectorByAdmin/:id',userController.getAllQualityInspectorByAdmin);
-router.get('/getAllCleanerByAdmin/:id',userController.getAllCleanerByAdmin);
-router.get('/getAllTransactions',userController.getAllTransactions);
+router.get('/getUserCount', requireAdmin,userController.getUserCount);
+router.get('/getDriverCount', requireAdmin,userController.getDriverCount);
+router.get('/getAdminCount', requireAdmin,userController.getAdminCount);
+router.get('/getServiceCount', requireAdmin,userController.getServiceCount);
+router.get('/getBookingCount', requireAdmin,userController.getBookingCount);
+router.get('/getPendingBookingCount', requireAdmin,userController.getPendingBookingCount);
+router.get('/getCompletedBookingCount', requireAdmin,userController.getCompletedBookingCount);
+router.get('/getDeletedBookingCount', requireAdmin,userController.getDeletedBookingCount);
+router.get('/getMostBookedService', requireAdmin,userController.getMostBookedService);
+router.get('/getAllUserNameByAdmin', requireAdmin,userController.getAllUserNameByAdmin);
+router.get('/getAllSupervisorByAdmin/:id', requireAdmin,userController.getAllSupervisorByAdmin);
+router.get('/getAllQualityInspectorByAdmin/:id', requireAdmin,userController.getAllQualityInspectorByAdmin);
+router.get('/getAllCleanerByAdmin/:id', requireAdmin,userController.getAllCleanerByAdmin);
+router.get('/getAllTransactions', requireAdmin,userController.getAllTransactions);
 
 
 
 router.get('/login/timings',  [ adminAuthMiddleware.validateJWTtoken], userController.getUserLoginTimings);
 router.delete('/login/timings/clear',  [ adminAuthMiddleware.validateJWTtoken], userController.clearLoginRecords);
 
-router.post('/submitServiceQuote',  userController.submitServiceQuote);
-router.get('/getAllServiceRequests',userController.getAllServiceRequests);
-router.get('/getServiceRequestsByUserId/:user_id', userController.getServiceRequestsByUserId);
-router.post('/submitServiceRequest',  userController.submitServiceRequest);
-router.get("/getServiceRequestById/:id",userController.getServiceRequestById),
-router.put("/editServiceRequest",userController.editServiceRequest),
-router.get('/getNextServiceRequestRef',userController.getNextServiceRequestRef);
-router.delete("/deleteServiceRequest/:id", userController.deleteServiceRequest);
+router.post('/submitServiceQuote', requireAdmin,  userController.submitServiceQuote);
+router.get('/getAllServiceRequests', requireAdmin,userController.getAllServiceRequests);
+router.get('/getServiceRequestsByUserId/:user_id', requireAdmin, userController.getServiceRequestsByUserId);
+router.post('/submitServiceRequest', requireAdmin,  userController.submitServiceRequest);
+router.get("/getServiceRequestById/:id", requireAdmin,userController.getServiceRequestById),
+router.put("/editServiceRequest", requireAdmin,userController.editServiceRequest),
+router.get('/getNextServiceRequestRef', requireAdmin,userController.getNextServiceRequestRef);
+router.delete("/deleteServiceRequest/:id", requireAdmin, userController.deleteServiceRequest);
 
-router.post('/sendReviewEmail',  userController.sendReviewEmail);
-router.get('/getServiceQuotesByUserId/:id',  userController.getServiceQuotesByUserId);
-router.get('/getServiceQuoteById/:id',  userController.getServiceQuoteById);
-router.put('/editServiceQuote',  userController.editServiceQuote);
+router.post('/sendReviewEmail', requireAdmin,  userController.sendReviewEmail);
+router.get('/getServiceQuotesByUserId/:id', requireAdmin,  userController.getServiceQuotesByUserId);
+router.get('/getServiceQuoteById/:id', requireAdmin,  userController.getServiceQuoteById);
+router.put('/editServiceQuote', requireAdmin,  userController.editServiceQuote);
 
 
 // draft quotes api
-router.get('/getLatestDraftQuote/:id',  userController.getLatestDraftQuote);
-router.get('/getAllDraftQuotesByUser/:id',  userController.getAllDraftQuotesByUser);
-router.delete('/deleteDraftQuote/:id',  userController.deleteDraftQuote);
-router.post('/saveDraftQuote',  userController.saveDraftQuote);
-router.get('/getNextQuoteRef',  userController.getNextQuoteRef);
-router.delete("/deleteQuote/:id", userController.deleteQuote);
+router.get('/getLatestDraftQuote/:id', requireAdmin,  userController.getLatestDraftQuote);
+router.get('/getAllDraftQuotesByUser/:id', requireAdmin,  userController.getAllDraftQuotesByUser);
+router.delete('/deleteDraftQuote/:id', requireAdmin,  userController.deleteDraftQuote);
+router.post('/saveDraftQuote', requireAdmin,  userController.saveDraftQuote);
+router.get('/getNextQuoteRef', requireAdmin,  userController.getNextQuoteRef);
+router.delete("/deleteQuote/:id", requireAdmin, userController.deleteQuote);
 
 
-router.put("/toggle-logout-image", userController.toggleLogoutImageRequired);
+router.put("/toggle-logout-image", requireAdmin, userController.toggleLogoutImageRequired);
 
-router.post('/createOrUpdateReviewLink',  userController.createOrUpdateReviewLink);
-router.get('/getReviewLink',  userController.getReviewLink);
+router.post('/createOrUpdateReviewLink', requireAdmin,  userController.createOrUpdateReviewLink);
+router.get('/getReviewLink', requireAdmin,  userController.getReviewLink);
 
-router.put('/quotes/mark-check-paid/:id',  userController.markQuoteAsCheckPaid);
-router.put('/quotes/mark-ach-paid/:id',  userController.markQuoteAsACHPaid);
-router.put('/quotes/mark-booked/:id',  userController.markQuoteAsBooked);
-router.get('/invoices',  userController.getAllInvoices);
+router.put('/quotes/mark-check-paid/:id', requireAdmin,  userController.markQuoteAsCheckPaid);
+router.put('/quotes/mark-ach-paid/:id', requireAdmin,  userController.markQuoteAsACHPaid);
+router.put('/quotes/mark-booked/:id', requireAdmin,  userController.markQuoteAsBooked);
+router.get('/invoices', requireAdmin,  userController.getAllInvoices);
 
-router.post('/twilio/sms-status',  userController.handleTwilioSmsStatus);
+router.post('/twilio/sms-status', publicRoute,  userController.handleTwilioSmsStatus);
 
-router.get('/getAllUserName',userController.getAllUserName);
-router.get('/getUserAddressesByUserId/:userId', userController.getUserAddressesByUserId);
-router.get('/employee-dropdown',userController.getEmployeeDropdown);
+router.get('/getAllUserName', requireAdmin,userController.getAllUserName);
+router.get('/getUserAddressesByUserId/:userId', requireAdmin, userController.getUserAddressesByUserId);
+router.get('/employee-dropdown', requireAdmin,userController.getEmployeeDropdown);
 
-router.post('/getMonthlyInvoicesSummary',  userController.getMonthlyInvoicesSummary);
+router.post('/getMonthlyInvoicesSummary', requireAdmin,  userController.getMonthlyInvoicesSummary);
 
-router.post("/live-working-employees", userController.getLiveWorkingEmployeesController);
-router.post("/late-absent-employees", userController.getLateAbsentEmployeesController);
-router.post("/upcoming-scheduled-bookings", userController.getUpcomingScheduledBookingsController);
+router.post("/live-working-employees", requireAdmin, userController.getLiveWorkingEmployeesController);
+router.post("/late-absent-employees", requireAdmin, userController.getLateAbsentEmployeesController);
+router.post("/upcoming-scheduled-bookings", requireAdmin, userController.getUpcomingScheduledBookingsController);
 
 
-router.get("/employee-hiring-forms", userController.getEmployeeHiringForms);
+router.get("/employee-hiring-forms", requireAdmin, userController.getEmployeeHiringForms);
 
 
 module.exports = router;

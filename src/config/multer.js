@@ -29,8 +29,6 @@ const storage = multer.diskStorage({
 
 // Check file type
 function checkFileType(file, cb) {
-  console.log("file11111", file);
-
   const allowedFiletypes = [
     "jpeg",
     "jpg",
@@ -74,8 +72,6 @@ function checkFileType(file, cb) {
 }
 
 function getFileExtension(file) {
-  console.log("file", file);
-
   const mimeToExtMap = {
     "image/jpeg": "jpg",
     "image/jpg": "jpg",

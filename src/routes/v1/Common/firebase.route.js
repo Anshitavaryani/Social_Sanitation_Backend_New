@@ -4,6 +4,7 @@ const router = express.Router();
 const { chatController } = require("../../../controllers");
 const { userAuthMiddleware } = require("../../../middlewares");
 const { adminAuthMiddleware } = require("../../../middlewares");
+const { requireAdmin, requireAuth } = require("../../../middlewares/access.middleware");
 const {
   notificationController,
   groupChatController,
@@ -68,7 +69,7 @@ router.post(
 
 //push notification apis
 router.post(
-  "/sendPushNotification",
+  "/sendPushNotification", requireAdmin,
   notificationController.sendPushNotification,
 );
 router.get(
@@ -104,12 +105,12 @@ router.get(
   [verifyAnyAuthJWTToken],
   groupChatController.getGroupMessages,
 );
-router.put("/updateGroupName", groupChatController.updateGroupName);
+router.put("/updateGroupName", requireAuth, groupChatController.updateGroupName);
 router.get(
-  "/getGroupParticipants/:id",
+  "/getGroupParticipants/:id", requireAuth,
   groupChatController.getGroupParticipants,
 );
-router.delete("/deleteGroup/:id", groupChatController.deleteGroup);
+router.delete("/deleteGroup/:id", requireAuth, groupChatController.deleteGroup);
 
 // Team APIs
 router.post(

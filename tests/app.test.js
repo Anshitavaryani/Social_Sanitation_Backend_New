@@ -70,12 +70,14 @@ test("removed Google Calendar and Stripe routes are gone", async () => {
 test("log routes require an admin token", async () => {
   for (const method of ["GET", "DELETE"]) {
     const { status, json } = await request(method, "/api/v1/logs");
-    assert.equal(status, 400, method);
-    assert.equal(json.message, "Access denied: No token provided");
+    assert.equal(status, 401, method);
+    assert.equal(json.success, false);
+    assert.equal(json.message, "Authentication required. Send the access token in the x-access-token header.");
   }
 });
 
 test("GET /api/v1/logs works for an admin (req.body is writable on GET under Express 5)", async () => {
+  models.Admin.findOne = async () => ({ id: 1, role_id: 1, is_active: true });
   const { status, json } = await request("GET", "/api/v1/logs", { headers: { "x-access-token": adminToken() } });
   assert.equal(status, 200);
   assert.equal(json.success, true);

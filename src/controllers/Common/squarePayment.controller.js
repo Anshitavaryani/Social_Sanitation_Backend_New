@@ -1,7 +1,7 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
-const { SquareClient, SquareEnvironment } = require("square");
+const { SquareClient, SquareEnvironment, WebhooksHelper } = require("square");
 const { Payment, Booking, ServiceQuote, Invoice } = require("../../models");
 const catchAsync = require("../../utils/catchAsync");
 const ApiError = require("../../utils/ApiError");
@@ -149,14 +149,36 @@ const createPayment = catchAsync(async (req, res) => {
 });
 
 
+// Square signs each webhook with the subscription's signature key. Without the key configured the
+// event is processed unverified (previous behaviour) and a warning is logged.
+const isAuthenticSquareWebhook = async (req) => {
+  const signatureKey = process.env.SQUARE_WEBHOOK_SIGNATURE_KEY;
+  if (!signatureKey) {
+    console.warn("SQUARE_WEBHOOK_SIGNATURE_KEY is not set: Square webhook signature not verified");
+    return true;
+  }
+  const notificationUrl =
+    process.env.SQUARE_WEBHOOK_URL || `${req.protocol}://${req.get("host")}${req.originalUrl}`;
+  return WebhooksHelper.verifySignature({
+    requestBody: req.rawBody || "",
+    signatureHeader: req.get("x-square-hmacsha256-signature") || "",
+    signatureKey,
+    notificationUrl,
+  });
+};
+
 const handlePaymentWebhook = catchAsync(async (req, res) => {
   try {
     console.log("🔥 Webhook HIT");
 
+    if (!(await isAuthenticSquareWebhook(req))) {
+      return res.status(httpStatus.UNAUTHORIZED).json({ message: "Invalid webhook signature" });
+    }
+
     const event = req.body;
     const eventType = event.type;
 
-    console.log("Received event:", JSON.stringify(event, null, 2));
+    console.log("Received Square event:", event?.type, event?.event_id);
 
     if (
       eventType !== "payment.created" &&

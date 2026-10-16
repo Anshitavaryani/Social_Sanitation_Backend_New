@@ -1,5 +1,5 @@
 const { status: httpStatus } = require('http-status');
-const jwt = require('jsonwebtoken');
+const { requireAdmin } = require('./access.middleware');
 
 
 const validateEmail = require('../helpers/validateEmail');
@@ -32,24 +32,17 @@ const validateLoginAdminBody = catchAsync(async (req, res, next) => {
 });
 
 
-const validateJWTtoken = catchAsync(async (req, res, next) => {
-    try {
-        const token = req.header('x-access-token');
-        if (!token) {
-            return responseWrapper(res, '', 'Access denied: No token provided', httpStatus.BAD_REQUEST);
-        };
-        req.user = jwt.verify(token, Buffer.from(config?.jwt?.secret, 'hex'), {
-            algorithm: 'HS256',
-        });
-        if (req?.user?.is_backlisted) return responseWrapper(res, '', 'Invalid Token', httpStatus.UNAUTHORIZED);
-        req.body['user'] = req.user;
-        req.body.user_type = "ADMIN";
-        next();
+// Admin-token check used by the routes that already had one; same as access.middleware requireAdmin
+const validateJWTtoken = requireAdmin;
 
-    } catch (error) {
-        throw new ApiError(error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR, error.message);
+// Only a super admin may create another super admin (POST /admin/auth/register)
+const restrictSuperAdminCreation = (req, res, next) => {
+    const superAdminRole = Number(config.SUP_ADM_ROLE_ID);
+    if (Number(req.body.role_id) === superAdminRole && Number(req.user.role_id) !== superAdminRole) {
+        return next(new ApiError(httpStatus.FORBIDDEN, 'Only a super admin can create another super admin.'));
     }
-});
+    next();
+};
 
 const validateResetPassordBody = catchAsync(async (req, res, next) => {
     try {
@@ -74,4 +67,5 @@ module.exports = {
   validateLoginAdminBody,
   validateJWTtoken,
   validateResetPassordBody,
+  restrictSuperAdminCreation,
 };
