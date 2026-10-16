@@ -3,6 +3,7 @@
 const { status: httpStatus } = require("http-status");
 const Attendance = require("../../models/attendance.model");
 const ApiError = require("../../utils/ApiError");
+const { attendanceStatus } = require("../../utils/attendanceStatus");
 const { EMPLOYEE_ROLE_IDS } = require("../../config/roles");
 const { leaveStatusTypes, attendanceStatusTypes, breakStatusTypes } = require("../../config/types");
 const { Op, Sequelize } = require("sequelize");
@@ -1088,24 +1089,11 @@ const getAttendanceStatusWithBooking = async ({
 		DATETIME_FORMAT,
 	);
 
-	const lateThreshold = bookingStart.add(1, "hours");
-	const absentThreshold = bookingStart.add(2, "hours");
-
-	const now = dayjs.utc(nowWallClock());
-
-	// ✅ If clock-in exists
-	if (attendanceRecord?.clock_in_est) {
-		const clockIn = dayjs.utc(attendanceRecord.clock_in_est);
-
-		if (clockIn.isAfter(lateThreshold)) return attendanceStatusTypes.LATE;
-		return attendanceStatusTypes.PRESENT;
-	}
-
-	// ❌ No clock-in
-	if (now.isAfter(absentThreshold)) return attendanceStatusTypes.ABSENT;
-	if (now.isAfter(lateThreshold)) return attendanceStatusTypes.LATE;
-
-	return attendanceStatusTypes.PENDING;
+	return attendanceStatus({
+		bookingStart: bookingStart.toDate(),
+		clockIn: attendanceRecord?.clock_in_est ? dayjs.utc(attendanceRecord.clock_in_est).toDate() : null,
+		now: nowWallClock(),
+	});
 };
 
 // 	try {

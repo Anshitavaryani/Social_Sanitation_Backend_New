@@ -49,7 +49,7 @@ test("the rules keep the values the app used before they were gathered", () => {
     MAX_ATTEMPTS: 5,
     APP_ATTEMPT_WINDOW_MINUTES: 10,
   });
-  assert.equal(rules.ATTENDANCE.CLOCK_OUT_MAX_DISTANCE_KM, 0.5);
+  assert.deepEqual({ ...rules.ATTENDANCE }, { LATE_AFTER_MINUTES: 60, ABSENT_AFTER_MINUTES: 120, CLOCK_OUT_MAX_DISTANCE_KM: 0.5 });
   assert.equal(rules.BOOKING.DEFAULT_DURATION_HOURS, 2);
   assert.equal(rules.SQUARE_CHECKOUT.SALES_TAX_PERCENT, "7.5");
   assert.deepEqual([...rules.SQUARE_CHECKOUT.TIP_PERCENTAGES], [10, 15, 20]);

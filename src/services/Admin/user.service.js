@@ -10,6 +10,7 @@ const { Admin, User, Profile, UserAttachment, userLoginTiming, Service, Booking,
 const ApiError = require("../../utils/ApiError");
 const { hashPassword } = require("../../utils/password");
 const { distanceInMiles } = require("../../utils/geo");
+const { attendanceStatus } = require("../../utils/attendanceStatus");
 const { ROLE, EMPLOYEE_ROLE_IDS, BOOKING_ROLE_IDS } = require("../../config/roles");
 const { generateTemporaryPassword } = require("../../utils/temporaryPassword");
 const { sendUserCredentials, sendEmailWithPDF, sendReviewEmailWithPDF, sendServiceRequestEmailWithPDF, sendUpdatedUserCredentials } = require("../Common/email.service");
@@ -4911,14 +4912,6 @@ const getLateAbsentEmployees = async (reqBody) => {
     for (const booking of bookings) {
       const bookingStart = new Date(`${todayEST}T${booking.time}Z`);
 
-      const lateThreshold = new Date(
-        bookingStart.getTime() + 1 * 60 * 60 * 1000,
-      );
-
-      const absentThreshold = new Date(
-        bookingStart.getTime() + 2 * 60 * 60 * 1000,
-      );
-
       for (const assignment of booking.booking_employee_details || []) {
         const employeeId = assignment.employee_id;
 
@@ -4931,33 +4924,10 @@ const getLateAbsentEmployees = async (reqBody) => {
           },
         });
 
-        let status = null;
-        let clockIn = null;
-        let delayMinutes = null;
-
-        if (!attendance) {
-          // ❌ No clock-in
-          const diffMs = nowEST - bookingStart;
-          delayMinutes = Math.max(Math.floor(diffMs / 60000), 0);
-
-          if (nowEST >= absentThreshold) {
-            status = attendanceStatusTypes.ABSENT;
-          } else if (nowEST >= lateThreshold) {
-            status = attendanceStatusTypes.LATE;
-          }
-        } else {
-          // ✅ Has clock-in
-          clockIn = new Date(attendance.clock_in_est);
-
-          const diffMs = clockIn - bookingStart;
-          delayMinutes = Math.max(Math.floor(diffMs / 60000), 0);
-
-          if (clockIn >= absentThreshold) {
-            status = attendanceStatusTypes.ABSENT;
-          } else if (clockIn >= lateThreshold) {
-            status = attendanceStatusTypes.LATE;
-          }
-        }
+        const clockIn = attendance ? new Date(attendance.clock_in_est) : null;
+        // minutes after the booking start: to the clock-in, or to now when there is none
+        const delayMinutes = Math.max(Math.floor(((clockIn || nowEST) - bookingStart) / 60000), 0);
+        const status = attendanceStatus({ bookingStart, clockIn, now: nowEST });
 
         if (status === attendanceStatusTypes.LATE || status === attendanceStatusTypes.ABSENT) {
           const user = await User.findByPk(employeeId, {

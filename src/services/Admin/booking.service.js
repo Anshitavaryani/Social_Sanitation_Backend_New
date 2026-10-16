@@ -28,6 +28,7 @@ const { Booking, Service, Profile, User, UserAttachment, ServiceAttachment, User
 const ApiError = require("../../utils/ApiError");
 const { ATTENDANCE, BOOKING } = require("../../config/rules");
 const { distanceInKm } = require("../../utils/geo");
+const { attendanceStatus } = require("../../utils/attendanceStatus");
 const toBoolean = require("../../utils/toBoolean");
 const { ROLE, EMPLOYEE_ROLE_IDS } = require("../../config/roles");
 const { Sequelize, Op } = require("sequelize");
@@ -1999,20 +2000,6 @@ const sendAttendanceAlerts = async () => {
 
       const bookingStart = new Date(`${todayEST}T${booking.time}Z`);
 
-      const lateThreshold = new Date(
-        bookingStart.getTime() + 1 * 60 * 60 * 1000,
-      );
-
-      const absentThreshold = new Date(
-        bookingStart.getTime() + 2 * 60 * 60 * 1000,
-      );
-
-      console.log("⏱ Thresholds:", {
-        bookingStart,
-        lateThreshold,
-        absentThreshold,
-      });
-
       let employeesToNotify = [];
 
       for (const assignment of booking_employee_details) {
@@ -2031,31 +2018,14 @@ const sendAttendanceAlerts = async () => {
 
         console.log("📍 Attendance entry:", attendanceEntry);
 
-        let status = null;
+        const status = attendanceStatus({
+          bookingStart,
+          clockIn: attendanceEntry?.clock_in_est || null,
+          now: nowEST,
+        });
 
-        if (!attendanceEntry) {
-          console.log("⚠️ No attendance");
-
-          if (nowEST >= absentThreshold) {
-            status = attendanceStatusTypes.ABSENT;
-          } else if (nowEST >= lateThreshold) {
-            status = attendanceStatusTypes.LATE;
-          } else {
-            console.log("⏳ Too early, skipping");
-            continue;
-          }
-        } else {
-          const clockInTime = new Date(attendanceEntry.clock_in_est);
-
-          console.log("🕒 Clock-in time:", clockInTime);
-
-          if (clockInTime > lateThreshold) {
-            status = attendanceStatusTypes.LATE;
-          } else {
-            console.log("✅ On time, skipping");
-            continue;
-          }
-        }
+        // only late and absent employees are reported
+        if (status !== attendanceStatusTypes.LATE && status !== attendanceStatusTypes.ABSENT) continue;
 
         console.log("🚨 Final Status:", status);
 

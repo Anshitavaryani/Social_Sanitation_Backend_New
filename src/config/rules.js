@@ -25,7 +25,10 @@ const OTP_RULES = Object.freeze({
   APP_ATTEMPT_WINDOW_MINUTES: 10, // how long wrong app codes are counted
 });
 
+// Attendance, counted from the booking's start time
 const ATTENDANCE = Object.freeze({
+  LATE_AFTER_MINUTES: 60, // no clock-in by then, or a clock-in after it: LATE
+  ABSENT_AFTER_MINUTES: 120, // still no clock-in by then: ABSENT (a clock-in is never ABSENT)
   CLOCK_OUT_MAX_DISTANCE_KM: 0.5, // farther from the service address alerts the admin
 });
 
