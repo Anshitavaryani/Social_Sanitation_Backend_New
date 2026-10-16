@@ -1,6 +1,7 @@
 const { status: httpStatus } = require("http-status");
 const { Op } = require("sequelize");
 const ApiError = require("../../utils/ApiError");
+const { parsePagination } = require("../../utils/pagination");
 const {
   CostCalculation,
   CostCalculationTask,
@@ -246,9 +247,8 @@ const getCostCalculationById = async (id) => {
 
 const getAllCostCalculations = async (query) => {
   try {
-    const { page = 1, limit = 10, search = "" } = query;
-
-    const offset = (page - 1) * limit;
+    const { search = "" } = query;
+    const { page, limit, offset } = parsePagination(query);
 
     const whereCondition = {
       is_active: true,

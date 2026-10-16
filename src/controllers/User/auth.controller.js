@@ -1,6 +1,7 @@
 const { status: httpStatus } = require('http-status');
 
 const validatePassword = require('../../helpers/validatePassword');
+const { PASSWORD_POLICY_MESSAGE } = require('../../config/rules');
 const catchAsync = require('../../utils/catchAsync');
 const ApiError = require('../../utils/ApiError');
 const { userAuthService } = require('../../services');
@@ -44,7 +45,7 @@ const resetPassword = catchAsync(async (req, res) => {
 
     if (!validatePassword(new_password)) {
 
-        return responseWrapper(res, '', 'Password should have a minimum length of 8 characters and must have at least 2 digits and No Blank Space', httpStatus.BAD_REQUEST);
+        return responseWrapper(res, '', PASSWORD_POLICY_MESSAGE, httpStatus.BAD_REQUEST);
     };
 
     if (new_password !== confirm_password) {

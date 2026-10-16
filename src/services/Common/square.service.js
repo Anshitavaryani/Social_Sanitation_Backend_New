@@ -1,9 +1,10 @@
 /** @format */
 const axios = require("axios");
-const { paymentPurposeTypes, paymentStatusTypes } = require("../../config/types");
+const { currancyTypes, paymentPurposeTypes, paymentStatusTypes } = require("../../config/types");
 const { randomUUID: uuidv4 } = require("crypto");
 const { Payment } = require("../../models");
 const config = require("../../config/config");
+const { SQUARE_CHECKOUT } = require("../../config/rules");
 
 // Square REST API for payment links (squarePayment.controller.js uses the SDK with the same settings)
 const SQUARE_API_VERSION = "2024-10-17";
@@ -20,6 +21,49 @@ const squareHeaders = () => ({
 
 const squareJsonHeaders = () => ({ "Content-Type": "application/json", ...squareHeaders() });
 
+// The body every payment link sends: one line item, the sales tax and tip options from
+// src/config/rules.js. extraTipSettings adds to the tip settings of one kind of link.
+const checkoutBody = ({ itemName, amountCents, customerEmail, extraTipSettings = {} }) => ({
+  idempotency_key: uuidv4(),
+
+  order: {
+    location_id: config.square.locationId,
+
+    line_items: [
+      {
+        name: itemName,
+        quantity: "1",
+        base_price_money: {
+          amount: amountCents,
+          currency: currancyTypes.USD,
+        },
+      },
+    ],
+
+    taxes: [
+      {
+        name: `Sales Tax (${SQUARE_CHECKOUT.SALES_TAX_PERCENT}%)`,
+        percentage: SQUARE_CHECKOUT.SALES_TAX_PERCENT,
+        scope: "ORDER",
+      },
+    ],
+  },
+
+  checkout_options: {
+    allow_tipping: true,
+    redirect_url: "https://admin.socialsanitation.com/checkout",
+    tip_settings: {
+      separate_tip_screen: false,
+      enable_custom_tip_amount: true,
+      ...extraTipSettings,
+      show_tip_buttons: true,
+      tip_percentages: [...SQUARE_CHECKOUT.TIP_PERCENTAGES],
+    },
+  },
+
+  pre_populate_buyer_email: customerEmail,
+});
+
 async function generateSquarePaymentLink({
   amount,
   refNo,
@@ -29,45 +73,11 @@ async function generateSquarePaymentLink({
   try {
     const squareAmount = Math.max(0.01, Number(amount));
     const squareAmountCents = Math.round(squareAmount * 100);
-    const body = {
-      idempotency_key: uuidv4(),
-
-      order: {
-        location_id: config.square.locationId,
-        line_items: [
-          {
-            name: `Service Quote #${refNo}`,
-            quantity: "1",
-            base_price_money: {
-              amount: squareAmountCents,
-              currency: "USD",
-            },
-          },
-        ],
-
-        // ✅ ADD TAX (7.5%)
-        taxes: [
-          {
-            name: "Sales Tax (7.5%)",
-            percentage: "7.5",
-            scope: "ORDER",
-          },
-        ],
-      },
-
-      checkout_options: {
-        allow_tipping: true,
-        redirect_url: "https://admin.socialsanitation.com/checkout",
-        tip_settings: {
-          separate_tip_screen: false,
-          enable_custom_tip_amount: true,
-          show_tip_buttons: true,
-          tip_percentages: [10, 15, 20],
-        },
-      },
-
-      pre_populate_buyer_email: customerEmail,
-    };
+    const body = checkoutBody({
+      itemName: `Service Quote #${refNo}`,
+      amountCents: squareAmountCents,
+      customerEmail,
+    });
 
     const response = await axios.post(paymentLinksUrl(), body, { headers: squareJsonHeaders() });
 
@@ -79,7 +89,7 @@ async function generateSquarePaymentLink({
     await Payment.create({
       transaction_id: null, // will store payment.id later
       square_order_id: orderId, // ✅ store this separately
-      currency: "USD",
+      currency: currancyTypes.USD,
       user_id,
       booking_id: null,
       square_payment_link_id: paymentLinkId,
@@ -115,45 +125,11 @@ async function generateContractPaymentLink({
   user_id,
 }) {
   try {
-    const body = {
-      idempotency_key: uuidv4(),
-
-      order: {
-        location_id: config.square.locationId,
-
-        line_items: [
-          {
-            name: `Contract Payment - ${clientName}`,
-            quantity: "1",
-            base_price_money: {
-              amount: Math.round(amount * 100),
-              currency: "USD",
-            },
-          },
-        ],
-
-        taxes: [
-          {
-            name: "Sales Tax (7.5%)",
-            percentage: "7.5",
-            scope: "ORDER",
-          },
-        ],
-      },
-
-      checkout_options: {
-        allow_tipping: true,
-        redirect_url: "https://admin.socialsanitation.com/checkout",
-        tip_settings: {
-          separate_tip_screen: false,
-          enable_custom_tip_amount: true,
-          show_tip_buttons: true,
-          tip_percentages: [10, 15, 20],
-        },
-      },
-
-      pre_populate_buyer_email: customerEmail,
-    };
+    const body = checkoutBody({
+      itemName: `Contract Payment - ${clientName}`,
+      amountCents: Math.round(amount * 100),
+      customerEmail,
+    });
 
     const response = await axios.post(paymentLinksUrl(), body, { headers: squareJsonHeaders() });
 
@@ -165,7 +141,7 @@ async function generateContractPaymentLink({
     await Payment.create({
       transaction_id: null, // will store payment.id later
       square_order_id: orderId, // ✅ store this separately
-      currency: "USD",
+      currency: currancyTypes.USD,
       user_id,
       booking_id: null,
       square_payment_link_id: paymentLink.id,
@@ -237,46 +213,12 @@ async function generateInvoicePaymentLink({
       };
     }
 
-    const body = {
-      idempotency_key: uuidv4(),
-
-      order: {
-        location_id: config.square.locationId,
-
-        line_items: [
-          {
-            name: `Invoice #${invoiceRefNo} - ${clientName} (${paymentPurpose})`,
-            quantity: "1",
-            base_price_money: {
-              amount: squareAmount,
-              currency: "USD",
-            },
-          },
-        ],
-
-        taxes: [
-          {
-            name: "Sales Tax (7.5%)",
-            percentage: "7.5",
-            scope: "ORDER",
-          },
-        ],
-      },
-
-      checkout_options: {
-        allow_tipping: true,
-        redirect_url: "https://admin.socialsanitation.com/checkout",
-        tip_settings: {
-          separate_tip_screen: false,
-          enable_custom_tip_amount: true,
-          show_custom_tip_amount: true,
-          show_tip_buttons: true,
-          tip_percentages: [10, 15, 20],
-        },
-      },
-
-      pre_populate_buyer_email: customerEmail,
-    };
+    const body = checkoutBody({
+      itemName: `Invoice #${invoiceRefNo} - ${clientName} (${paymentPurpose})`,
+      amountCents: squareAmount,
+      customerEmail,
+      extraTipSettings: { show_custom_tip_amount: true },
+    });
 
     const response = await axios.post(paymentLinksUrl(), body, { headers: squareJsonHeaders() });
 
@@ -285,7 +227,7 @@ async function generateInvoicePaymentLink({
     await Payment.create({
       transaction_id: null,
       square_order_id: paymentLink.order_id,
-      currency: "USD",
+      currency: currancyTypes.USD,
       user_id,
       invoice_id,
       booking_id: null,

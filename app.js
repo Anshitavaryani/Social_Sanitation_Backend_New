@@ -20,6 +20,7 @@ app.set("json replacer", (key, value) => (HIDDEN_RESPONSE_KEYS.has(key) ? undefi
 app.set("query parser", "extended");
 
 const config = require("./src/config/config.js");
+const { LIMITS } = require("./src/config/rules.js");
 const routes = require("./src/routes/v1");
 const morgan = require("./src/config/morgan.js");
 const { authLimiter } = require("./src/middlewares/rateLimiter.js");
@@ -186,7 +187,7 @@ app.use(helmet());
 // parse json request body; keep the raw bytes for the Square webhook signature check
 app.use(
   express.json({
-    limit: "25mb",
+    limit: `${LIMITS.MAX_REQUEST_BODY_MB}mb`,
     verify: (req, res, buffer) => {
       if (req.originalUrl.startsWith("/api/v1/payment/square/webhooks")) {
         req.rawBody = buffer.toString("utf8");
@@ -196,7 +197,7 @@ app.use(
 );
 
 // parse urlencoded request body
-app.use(express.urlencoded({ extended: true, limit: "25mb" }));
+app.use(express.urlencoded({ extended: true, limit: `${LIMITS.MAX_REQUEST_BODY_MB}mb` }));
 
 // Express 5 leaves req.body undefined when there is no body; the auth
 // middlewares attach req.body.user on GET requests, so default it to {}

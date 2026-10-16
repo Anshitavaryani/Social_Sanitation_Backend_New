@@ -4,8 +4,15 @@
 // so every request sees the same counters. A restart forgets them, which only means a
 // pending code has to be requested again. Running several instances would need a shared
 // store (database or Redis) instead.
-const MAX_ATTEMPTS = 5;
-const ADMIN_OTP_TTL_MS = 10 * 60 * 1000;
+const { randomInt } = require("crypto");
+const { OTP_RULES } = require("../config/rules");
+
+const MAX_ATTEMPTS = OTP_RULES.MAX_ATTEMPTS;
+const ADMIN_OTP_TTL_MS = OTP_RULES.ADMIN_CODE_MINUTES * 60 * 1000;
+const APP_ATTEMPT_WINDOW_MS = OTP_RULES.APP_ATTEMPT_WINDOW_MINUTES * 60 * 1000;
+
+// A random numeric code of the given length, leading zeros kept ("0042")
+const generateOtpCode = (digits) => String(randomInt(0, 10 ** digits)).padStart(digits, "0");
 
 const entries = new Map(); // key -> { expiresAt, attempts }
 
@@ -57,6 +64,8 @@ const sameCode = (submitted, expected) =>
 module.exports = {
   MAX_ATTEMPTS,
   ADMIN_OTP_TTL_MS,
+  APP_ATTEMPT_WINDOW_MS,
+  generateOtpCode,
   issue,
   isActive,
   recordFailure,

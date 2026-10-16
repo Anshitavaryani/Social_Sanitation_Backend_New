@@ -27,7 +27,6 @@ const envSchema = Joi.object({
   ACCESSDOMAINS: Joi.string().required().description("Origins allowed to call the API (CORS), comma separated"),
   API_BASE_URL: optional(Joi.string()).description("Public base URL of this API"),
   ADMIN_BASE_URL: optional(Joi.string()).description("Public base URL of the admin panel"),
-  DEFAULT_API_DATA_LIMIT: optional(Joi.number()).default(15).description("Default page size of list endpoints"),
   DEFAULT_AMOUNT: optional(Joi.number()).default(5).description("Default amount of a new payment row"),
   PUPPETEER_EXECUTABLE_PATH: optional(Joi.string())
     .default("/root/.cache/puppeteer/chrome/linux-136.0.7103.92/chrome-linux64/chrome")

@@ -27,7 +27,6 @@ module.exports = {
     accessDomains: envVars.ACCESSDOMAINS,
     API_BASE_URL: envVars.API_BASE_URL,
     ADMIN_BASE_URL: envVars.ADMIN_BASE_URL,
-    defaultLimit: envVars.DEFAULT_API_DATA_LIMIT,
     DEFAULT_AMOUNT: envVars.DEFAULT_AMOUNT,
     PUPPETEER_EXECUTABLE_PATH: envVars.PUPPETEER_EXECUTABLE_PATH,
     GOOGLE_API_KEY: envVars.GOOGLE_API_KEY,

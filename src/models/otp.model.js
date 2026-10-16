@@ -1,6 +1,7 @@
 const { Sequelize, DataTypes, Model, ENUM } = require('sequelize');
 const sequelize = require('../config/central.db');
 const { otpTypes } = require('../config/types');
+const { OTP_RULES } = require('../config/rules');
 
 class OTP extends Model { }
 OTP.init({
@@ -97,7 +98,7 @@ OTP.init({
 OTP.beforeValidate(async (OTP) => {
     if (!OTP.isNewRecord || OTP.otp_expiration_time) return;
     const expirationTime = new Date();
-    expirationTime.setMinutes(expirationTime.getMinutes() + 5);
+    expirationTime.setMinutes(expirationTime.getMinutes() + OTP_RULES.APP_CODE_MINUTES);
     OTP.otp_expiration_time = expirationTime;
 });
 

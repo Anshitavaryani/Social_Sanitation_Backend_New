@@ -2,13 +2,14 @@
 
 const { status: httpStatus } = require("http-status");
 const { attendanceStatusTypes, bookingListFilterTypes, bookingTypes, invoicePaymentStatusTypes, jobStatusTypes, paymentStatusTypes, quoteStatusTypes, userStatusTypes } = require("../../config/types");
-const bcrypt = require("bcryptjs");
 const { Sequelize, Op } = require("sequelize");
 const path = require("path");
 const { dayjs, dateInTz, addDays, nowWallClock, DATETIME_FORMAT, formatDisplayDate } = require("../../utils/time");
 const fs = require("fs");
 const { Admin, User, Profile, UserAttachment, userLoginTiming, Service, Booking, ServiceAttachment, BookingAssignment, UserAddress, Payment, ClientChecklistDetail, ClientChecklist, QuoteItem, ServiceQuote, Country, State, City, ReviewLink, Attendance, Break, UserToken, UserOAuth, Invoice, FormSubmission, FormSection } = require("../../models");
 const ApiError = require("../../utils/ApiError");
+const { hashPassword } = require("../../utils/password");
+const { distanceInMiles } = require("../../utils/geo");
 const { ROLE, EMPLOYEE_ROLE_IDS, BOOKING_ROLE_IDS } = require("../../config/roles");
 const { generateTemporaryPassword } = require("../../utils/temporaryPassword");
 const { sendUserCredentials, sendEmailWithPDF, sendReviewEmailWithPDF, sendServiceRequestEmailWithPDF, sendUpdatedUserCredentials } = require("../Common/email.service");
@@ -598,25 +599,6 @@ const deleteUser = async (body) => {
 // 		);
 // 	} catch (error) {
 
-const calculateDistanceInMiles = (lat1, lon1, lat2, lon2) => {
-  const toRad = (value) => (value * Math.PI) / 180;
-
-  const R = 3958.8; // Earth radius in miles
-
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return Number((R * c).toFixed(2));
-};
 
 const getClosestEmployees = async (clientId) => {
   try {
@@ -687,7 +669,7 @@ const getClosestEmployees = async (clientId) => {
         continue;
       }
 
-      const distance = calculateDistanceInMiles(
+      const distance = distanceInMiles(
         Number(clientAddress.address_lat),
         Number(clientAddress.address_long),
         Number(employeeAddress.address_lat),
@@ -794,7 +776,7 @@ const getClosestEmployeesByAddress = async (addressId) => {
         continue;
       }
 
-      const distance = calculateDistanceInMiles(
+      const distance = distanceInMiles(
         Number(clientAddress.address_lat),
         Number(clientAddress.address_long),
         Number(employeeAddress.address_lat),
@@ -1068,9 +1050,8 @@ const resetUserCredentials = async (reqBody) => {
     }
 
     // 🔑 Generate new password
-    const salt = bcrypt.genSaltSync(10);
     const newPassword = generateTemporaryPassword();
-    const hashedPassword = bcrypt.hashSync(newPassword, salt);
+    const hashedPassword = hashPassword(newPassword);
 
     // ✅ Save new password
     await user.update({ password: hashedPassword });
@@ -1417,13 +1398,12 @@ const adminAddUser = async (reqBody) => {
     // Create user
     // ============================
 
-    const salt = bcrypt.genSaltSync(10);
     const password = generateTemporaryPassword();
     const finalClientType = client_type || "commercial";
 
     const user = await User.create({
       email: email.trim().toLowerCase(),
-      password: bcrypt.hashSync(password, salt),
+      password: hashPassword(password),
       role_id,
       sub_role_id,
       status: userStatusTypes.ACCEPTED,

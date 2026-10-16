@@ -1,6 +1,7 @@
 const { status: httpStatus } = require("http-status");
 const { equipmentAssignmentStatusTypes, equipmentSignatureActionTypes, equipmentSignatureStatusTypes } = require("../../config/types");
 const ApiError = require("../../utils/ApiError");
+const { parsePagination } = require("../../utils/pagination");
 const { EMPLOYEE_ROLE_IDS } = require("../../config/roles");
 const { Op } = require("sequelize");
 const { dayjs, monthBoundsUtc, DATE_FORMAT, MONTH_FORMAT, formatDisplayMonth, isValidMonth } = require("../../utils/time");
@@ -76,9 +77,8 @@ const deleteEquipment = async (equipmentId) => {
 
 const getAllEquipments = async (query) => {
   try {
-    const { page = 1, limit = 10, search = "" } = query;
-
-    const offset = (page - 1) * limit;
+    const { search = "" } = query;
+    const { page, limit, offset } = parsePagination(query);
 
     const where = {};
 
@@ -326,9 +326,8 @@ const updateAssignment = async (assignmentId, body) => {
 
 const getAllAssignments = async (query) => {
   try {
-    const { page = 1, limit = 10, search = "" } = query;
-
-    const offset = (Number(page) - 1) * Number(limit);
+    const { search = "" } = query;
+    const { page, limit, offset } = parsePagination(query);
 
     const profileWhere = {};
 
@@ -731,9 +730,8 @@ const getMonthlyEmployeeEquipmentRecords = async (query) => {
     const {
       month,
       search = "",
-      page = 1,
-      limit = 10,
     } = query;
+    const { page, limit, offset } = parsePagination(query);
 
     if (!month) {
       throw new ApiError(
@@ -750,9 +748,6 @@ const getMonthlyEmployeeEquipmentRecords = async (query) => {
     }
 
     const { start: startDate, end: endDate } = monthBoundsUtc(month);
-
-    const offset =
-      (Number(page) - 1) * Number(limit);
 
     // ==========================================
     // EMPLOYEE SEARCH
@@ -1290,9 +1285,8 @@ const sendEmployeeEquipmentForm = async (
 const getMyEquipment = async (body, query) => {
   try {
     const { user } = body;
-    const { page = 1, limit = 10, status } = query;
-
-    const offset = (Number(page) - 1) * Number(limit);
+    const { status } = query;
+    const { page, limit, offset } = parsePagination(query);
 
     const where = {
       employee_id: user.id,
@@ -1591,10 +1585,8 @@ const getEquipmentSignatureHistory = async (body, assignmentId) => {
 
 const getEquipmentByEmployeeId = async (employeeId, query) => {
   try {
-    const { page = 1, limit = 10, status } = query;
-
-    const offset =
-      (Number(page) - 1) * Number(limit);
+    const { status } = query;
+    const { page, limit, offset } = parsePagination(query);
 
     const where = {
       employee_id: employeeId,

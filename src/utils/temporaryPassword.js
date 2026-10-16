@@ -4,6 +4,7 @@
 // digits only: the password is inserted into HTML emails as is, and people type it on phones.
 // Characters that are easy to misread (0 O o 1 I l) are left out.
 const { randomInt } = require("crypto");
+const { PASSWORD } = require("../config/rules");
 
 const UPPER = "ABCDEFGHJKLMNPQRSTUVWXYZ";
 const LOWER = "abcdefghijkmnpqrstuvwxyz";
@@ -15,11 +16,11 @@ const DEFAULT_LENGTH = 12; // about 69 bits of randomness
 const pick = (chars) => chars[randomInt(chars.length)];
 
 const generateTemporaryPassword = (length = DEFAULT_LENGTH) => {
-  if (!Number.isInteger(length) || length < 8) {
-    throw new RangeError("A temporary password needs at least 8 characters");
+  if (!Number.isInteger(length) || length < PASSWORD.MIN_LENGTH) {
+    throw new RangeError(`A temporary password needs at least ${PASSWORD.MIN_LENGTH} characters`);
   }
-  // one of each kind, so the password passes the usual "upper, lower and digit" rules
-  const chars = [pick(UPPER), pick(LOWER), pick(DIGITS)];
+  // an upper case and a lower case letter, and as many digits as the password policy asks for
+  const chars = [pick(UPPER), pick(LOWER), ...Array.from({ length: PASSWORD.MIN_DIGITS }, () => pick(DIGITS))];
   while (chars.length < length) chars.push(pick(ALPHABET));
 
   // Fisher-Yates shuffle, so the guaranteed characters are not always first

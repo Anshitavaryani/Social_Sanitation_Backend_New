@@ -31,6 +31,7 @@ const { generateInvoicePDF } = require("../../config/puppeteer");
 const { sendInvoiceEmailWithPDF } = require("./email.service");
 const ApiError = require("../../utils/ApiError");
 const config = require("../../config/config");
+const toBoolean = require("../../utils/toBoolean");
 const { ROLE } = require("../../config/roles");
 const { generateInvoicePaymentLink, deleteSquarePaymentLink } = require("./square.service");
 const sequelize = require("../../config/central.db");
@@ -198,10 +199,7 @@ const createInvoice = async (reqBody) => {
 
     // The UI should send a real boolean. This also handles string values safely.
     const finalDepositRequired =
-      deposit_required === true ||
-      deposit_required === 1 ||
-      deposit_required === "1" ||
-      deposit_required === "true";
+      toBoolean(deposit_required);
 
     const finalDepositPercentage = finalDepositRequired
       ? Number(deposit_percentage ?? 25)
@@ -765,10 +763,7 @@ const updateInvoice = async (invoice_id, body) => {
 
     const shouldUseDeposit =
       deposit_required !== undefined
-        ? deposit_required === true ||
-          deposit_required === 1 ||
-          deposit_required === "1" ||
-          deposit_required === "true"
+        ? toBoolean(deposit_required)
         : Boolean(invoice.deposit_required);
 
     const percentage = shouldUseDeposit
@@ -925,10 +920,7 @@ const updateInvoice = async (invoice_id, body) => {
     // include is_recurring.
     const effectiveIsRecurring =
       is_recurring !== undefined
-        ? is_recurring === true ||
-          is_recurring === 1 ||
-          is_recurring === "1" ||
-          is_recurring === "true"
+        ? toBoolean(is_recurring)
         : Boolean(recurring && recurring.status === recurringInvoiceStatusTypes.ACTIVE);
 
     if (effectiveIsRecurring) {
@@ -1891,10 +1883,7 @@ const generateRecurringInvoicesCron = async () => {
 
         // Handles Sequelize booleans and common DB representations.
         const recurringDepositRequired =
-          invoice.deposit_required === true ||
-          invoice.deposit_required === 1 ||
-          invoice.deposit_required === "1" ||
-          String(invoice.deposit_required).toLowerCase() === "true";
+          toBoolean(invoice.deposit_required);
 
         const rawDepositPercentage = Number(
           invoice.deposit_percentage,

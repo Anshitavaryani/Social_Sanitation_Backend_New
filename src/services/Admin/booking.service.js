@@ -26,6 +26,9 @@ const { randomUUID: uuidv4 } = require("crypto");
 
 const { Booking, Service, Profile, User, UserAttachment, ServiceAttachment, UserAddress, BookingAssignment, Country, State, City, BookingAttachment, BDMUser, Admin, Attendance, GuestBookingAddress, Break, AttendancePayroll } = require("../../models");
 const ApiError = require("../../utils/ApiError");
+const { ATTENDANCE, BOOKING } = require("../../config/rules");
+const { distanceInKm } = require("../../utils/geo");
+const toBoolean = require("../../utils/toBoolean");
 const { ROLE, EMPLOYEE_ROLE_IDS } = require("../../config/roles");
 const { Sequelize, Op } = require("sequelize");
 const config = require("../../config/config");
@@ -576,7 +579,7 @@ const updateBookingStatus = async (reqBody) => {
   let is_recurring = reqBody.is_recurring;
 
   if (typeof is_recurring === "string") {
-    is_recurring = is_recurring === "true";
+    is_recurring = toBoolean(is_recurring);
   }
 
 
@@ -877,7 +880,7 @@ const updateBookingStatus = async (reqBody) => {
       console.log("🔁 Is Recurring Booking:", isRecurringBooking);
 
       if (typeof is_recurring === "string") {
-        is_recurring = is_recurring === "true";
+        is_recurring = toBoolean(is_recurring);
       }
 
       if (typeof is_recurring !== "boolean") {
@@ -2100,27 +2103,9 @@ const sendAttendanceAlerts = async () => {
   }
 };
 
-function haversineDistanceInKm(lat1, lon1, lat2, lon2) {
-  const R = 6371; // Radius of Earth in kilometers
-  const toRad = (x) => (x * Math.PI) / 180;
-
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
 
 const notifyAdminIfClockoutFar = async () => {
   try {
-    const THRESHOLD_KM = 0.5;
     const todayUTC = utcDate();
 
     const bookings = await Booking.findAll({
@@ -2187,14 +2172,14 @@ const notifyAdminIfClockoutFar = async () => {
         const clockOutLat = parseFloat(attendance.clock_out_lat);
         const clockOutLng = parseFloat(attendance.clock_out_lng);
 
-        const distance = haversineDistanceInKm(
+        const distance = distanceInKm(
           clockOutLat,
           clockOutLng,
           userLat,
           userLng,
         );
 
-        if (distance > THRESHOLD_KM) {
+        if (distance > ATTENDANCE.CLOCK_OUT_MAX_DISTANCE_KM) {
           const employeeDetails = {
             name: employee.user_profile?.name || "N/A",
             email: employee.email,
@@ -2815,7 +2800,7 @@ const getDayOverviewForGantt = async (reqBody) => {
       const start = dayjs.utc(booking.time, TIME_FORMAT);
       const end = booking.end_time_by_admin
         ? dayjs.utc(booking.end_time_by_admin, TIME_FORMAT)
-        : dayjs.utc(booking.time, TIME_FORMAT).add(2, "hours");
+        : dayjs.utc(booking.time, TIME_FORMAT).add(BOOKING.DEFAULT_DURATION_HOURS, "hours");
 
       for (const emp of booking.booking_employee_details) {
         const empId = emp.employee_profile?.id;

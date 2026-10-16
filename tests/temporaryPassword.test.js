@@ -44,14 +44,14 @@ beforeEach(() => {
   sentEmails.length = 0;
 });
 
-test("a temporary password is 12 letters and digits with an upper case letter, a lower case letter and a digit", async () => {
+test("a temporary password is 12 letters and digits with an upper case letter, a lower case letter and 2 digits", async () => {
   await withoutMathRandom(() => {
     for (let i = 0; i < 2000; i++) {
       const password = generateTemporaryPassword();
       assert.match(password, VALID);
       assert.match(password, /[A-Z]/);
       assert.match(password, /[a-z]/);
-      assert.match(password, /[0-9]/);
+      assert.match(password, /[0-9].*[0-9]/, "at least 2 digits, as the password policy asks");
       assert.doesNotMatch(password, /[0O1Ilo]/, "no easily misread characters");
     }
   });
@@ -68,12 +68,16 @@ test("temporary passwords do not repeat and use the whole alphabet evenly", () =
     for (const c of password) counts[c]++;
   }
   assert.equal(seen.size, 20000);
-  // Each password has one guaranteed character of each kind plus 9 drawn from the whole alphabet,
-  // so a digit (8 of them) is expected 20000 * (1/8 + 9/56) times and a letter (24 per case)
-  // 20000 * (1/24 + 9/56) times. A biased generator lands far outside 10% of that.
+  // Each password has a guaranteed upper case letter, lower case letter and MIN_DIGITS digits, the
+  // rest drawn from the whole alphabet: a digit (8 of them) is expected 20000 * (MIN_DIGITS/8 +
+  // rest/56) times and a letter (24 per case) 20000 * (1/24 + rest/56) times. A biased generator
+  // lands far outside 10% of that.
+  const { MIN_DIGITS } = loadFromRoot("src/config/rules.js").PASSWORD;
+  const rest = 12 - 2 - MIN_DIGITS;
   for (const [c, n] of Object.entries(counts)) {
-    const kindSize = /[0-9]/.test(c) ? 8 : 24;
-    const expected = 20000 * (1 / kindSize + 9 / ALPHABET.length);
+    const expected = /[0-9]/.test(c)
+      ? 20000 * (MIN_DIGITS / 8 + rest / ALPHABET.length)
+      : 20000 * (1 / 24 + rest / ALPHABET.length);
     assert.ok(Math.abs(n - expected) < expected * 0.1, `${c} appeared ${n} times (expected about ${Math.round(expected)})`);
   }
   // the guaranteed upper/lower/digit characters are shuffled, not always at the front

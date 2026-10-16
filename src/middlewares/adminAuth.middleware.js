@@ -7,6 +7,8 @@ const catchAsync = require('../utils/catchAsync');
 const responseWrapper = require('../config/responseWrapper');
 
 const ApiError = require('../utils/ApiError');
+const validatePassword = require('../helpers/validatePassword');
+const { PASSWORD_POLICY_MESSAGE } = require('../config/rules');
 const { ROLE } = require("../config/roles");
 
 
@@ -53,6 +55,10 @@ const validateResetPassordBody = catchAsync(async (req, res, next) => {
 
         if (new_password !== confirm_password) {
             return responseWrapper(res, '', 'New Password and Confirm Password Must Be Equal', httpStatus.BAD_REQUEST);
+        };
+
+        if (!validatePassword(new_password)) {
+            return responseWrapper(res, '', PASSWORD_POLICY_MESSAGE, httpStatus.BAD_REQUEST);
         };
         next()
 

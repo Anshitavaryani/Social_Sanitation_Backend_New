@@ -2,7 +2,6 @@
 
 const { status: httpStatus } = require("http-status");
 const bcrypt = require("bcryptjs");
-const { randomInt } = require("crypto");
 const { dayjs, inZone, isValidTimeZone, DATETIME_FORMAT } = require("../../utils/time");
 
 const {
@@ -23,10 +22,10 @@ const {
 const { generateAuthTokens } = require("../Common/token.service");
 const { otpTypes, userStatusTypes } = require("../../config/types");
 const otpGuard = require("../../utils/otpGuard");
+const { hashPassword } = require("../../utils/password");
+const { OTP_RULES } = require("../../config/rules");
 const generateRandomString = require("../../utils/randomStringGenrate");
 
-// How long the forgot-password reset token from verifyOTP stays valid
-const RESET_TOKEN_TTL_MS = 30 * 60 * 1000;
 
 const sendOTP = async (body, headers) => {
 	try {
@@ -41,7 +40,7 @@ const sendOTP = async (body, headers) => {
 			where: { email: body?.email, type: body?.type, role_id: role_id },
 		});
 		if (existingOtp) await existingOtp.destroy({ force: true });
-		const generatedOTP = String(randomInt(0, 10 ** 4)).padStart(4, "0");
+		const generatedOTP = otpGuard.generateOtpCode(OTP_RULES.APP_CODE_DIGITS);
 		const otpObj = {
 			email: email,
 			code: generatedOTP,
@@ -93,7 +92,7 @@ const verifyOTP = async (email, otp, type, role_id) => {
 
 		if (!otpGuard.sameCode(otp, otpDoc.code)) {
 			// 4-digit codes: lock the code after 5 wrong attempts (each new code has a new id)
-			if (otpGuard.recordFailure(`user-otp:${otpDoc.id}`, 10 * 60 * 1000)) {
+			if (otpGuard.recordFailure(`user-otp:${otpDoc.id}`, otpGuard.APP_ATTEMPT_WINDOW_MS)) {
 				otpDoc.is_active = false;
 				await otpDoc.save();
 				throw new ApiError(
@@ -122,7 +121,7 @@ const verifyOTP = async (email, otp, type, role_id) => {
 			// the reset token replaces the code and is valid for 30 minutes
 			token = generateRandomString(50);
 			otpDoc.code = token;
-			otpDoc.otp_expiration_time = new Date(Date.now() + RESET_TOKEN_TTL_MS);
+			otpDoc.otp_expiration_time = new Date(Date.now() + OTP_RULES.APP_RESET_TOKEN_MINUTES * 60 * 1000);
 		}
 		await otpDoc.save();
 		return token ? { token } : isUpdate;
@@ -138,10 +137,9 @@ const register = async (body, files, headers) => {
 	try {
 		const { name, email, mobile, password } = body;
 		const { role_id } = headers;
-		let salt = bcrypt.genSaltSync(10);
 		const userObj = {
 			email: email,
-			password: bcrypt.hashSync(password, salt),
+			password: hashPassword(password),
 			role_id: role_id,
 		};
 		const user = await User.create(userObj);
@@ -173,7 +171,7 @@ const register = async (body, files, headers) => {
 			},
 		});
 		if (existingOtp) await existingOtp.destroy({ force: true });
-		const generatedOTP = String(randomInt(0, 10 ** 4)).padStart(4, "0");
+		const generatedOTP = otpGuard.generateOtpCode(OTP_RULES.APP_CODE_DIGITS);
 		const otpObj = {
 			user_id: user.id,
 			email: email,
@@ -299,9 +297,7 @@ const resetPassword = async (reqBody) => {
 			throw new ApiError(httpStatus.BAD_REQUEST, "Incorrect Old Password.");
 		}
 
-		let salt = bcrypt.genSaltSync(10);
-
-		user.password = bcrypt.hashSync(confirm_password, salt);
+		user.password = hashPassword(confirm_password);
 		let isUserPasswordUpdate = await user.save();
 
 		if (!isUserPasswordUpdate) {
@@ -335,8 +331,7 @@ const forgotPassword = async (reqBody) => {
 			);
 		}
 
-		let salt = bcrypt.genSaltSync(10);
-		user.password = bcrypt.hashSync(confirm_password, salt);
+		user.password = hashPassword(confirm_password);
 
 		const isUserPasswordUpdate = await user.save();
 

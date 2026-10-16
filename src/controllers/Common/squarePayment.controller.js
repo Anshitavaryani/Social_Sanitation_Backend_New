@@ -1,7 +1,7 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
-const { invoicePaymentStageTypes, invoicePaymentStatusTypes, jobStatusTypes, paymentPurposeTypes, paymentStatusTypes, squarePaymentStatusTypes } = require("../../config/types");
+const { currancyTypes, invoicePaymentStageTypes, invoicePaymentStatusTypes, jobStatusTypes, paymentPurposeTypes, paymentStatusTypes, squarePaymentStatusTypes } = require("../../config/types");
 const { createHash, randomUUID } = require("crypto");
 const { SquareClient, SquareEnvironment, WebhooksHelper } = require("square");
 const { Payment, Booking, ServiceQuote, Invoice } = require("../../models");
@@ -137,7 +137,7 @@ const createPayment = catchAsync(async (req, res) => {
       idempotencyKey: paymentIdempotencyKey(user.id, booking.id, idempotency_key),
       amountMoney: {
         amount: BigInt(cents),
-        currency: "USD",
+        currency: currancyTypes.USD,
       },
       sourceId,
       customerId: customer.id,

@@ -7,6 +7,7 @@ const { ROLE } = require("../config/roles");
 const { User, OTP, UserToken, Profile } = require('../models');
 const validateEmail = require('../helpers/validateEmail');
 const validatePassword = require('../helpers/validatePassword');
+const { PASSWORD_POLICY_MESSAGE } = require('../config/rules');
 const { tokenTypes, otpTypes } = require('../config/types');
 const catchAsync = require('../utils/catchAsync');
 const ApiError = require('../utils/ApiError');
@@ -33,7 +34,7 @@ const validateRegisterUserBody = catchAsync(async (req, res, next) => {
         };
 
         if (!validatePassword(password)) {
-            return responseWrapper(res, '', 'Password should have a minimum length of 8 characters and must have at least 2 digits and No Blank Space', httpStatus.BAD_REQUEST);
+            return responseWrapper(res, '', PASSWORD_POLICY_MESSAGE, httpStatus.BAD_REQUEST);
         };
 
         if (password !== confirm_password) {
@@ -136,6 +137,10 @@ const validateForgetPassordToken = catchAsync(async (req, res, next) => {
 
         if (!email || !password || !confirm_password || !token) {
             return responseWrapper(res, '', 'Please Enter Required Fields : [ email || new_password || confirm_password || token ]', httpStatus.BAD_REQUEST);
+        };
+
+        if (!validatePassword(password)) {
+            return responseWrapper(res, '', PASSWORD_POLICY_MESSAGE, httpStatus.BAD_REQUEST);
         };
 
         const userDoc = await User.findOne({ where: { email: email, is_active: true, role_id: req.headers.role_id } });

@@ -74,7 +74,7 @@ test("verifying an email-verification code does not extend it", async () => {
 
 const resetRequest = () => ({
   headers: { role_id: "6" },
-  body: { email: "u@example.com", password: "New#Pass1", confirm_password: "New#Pass1", token: "reset-token" },
+  body: { email: "u@example.com", password: "New#Pass12", confirm_password: "New#Pass12", token: "reset-token" },
 });
 
 test("the reset token is accepted within its 30 minutes", async () => {
@@ -90,6 +90,20 @@ test("the reset token is accepted within its 30 minutes", async () => {
   assert.equal(res.body, undefined, "the request goes on to the reset handler");
   assert.equal(req.body.user, user);
   assert.equal(req.body.otpDoc, row);
+});
+
+test("a new password that breaks the password policy is refused before the token is checked", async () => {
+  let looked = false;
+  models.User.findOne = async () => {
+    looked = true;
+    return { id: 9 };
+  };
+  const req = resetRequest();
+  Object.assign(req.body, { password: "weakpass1", confirm_password: "weakpass1" }); // one digit
+  const { res } = await runHandler(userAuthMiddleware.validateForgetPassordToken, req);
+  assert.equal(res.statusCode, 400);
+  assert.equal(res.body.message, "Password should have a minimum length of 8 characters and must have at least 2 digits and No Blank Space");
+  assert.equal(looked, false);
 });
 
 test("an expired reset token is refused with 400", async () => {

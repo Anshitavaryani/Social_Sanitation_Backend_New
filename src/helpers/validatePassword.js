@@ -1,20 +1,17 @@
 
 const passwordValidator = require('password-validator');
+const { PASSWORD } = require('../config/rules');
 
 
-// Create a schema
-var schema = new passwordValidator();
+// The password policy in src/config/rules.js: length, digits, no spaces, blocked values
+const schema = new passwordValidator();
 
-// .has().uppercase()                              // Must have uppercase letters
-// .has().lowercase()                              // Must have lowercase letters
-
-// Add properties to it
 schema
-    .is().min(8)                                    // Minimum length 8
-    .is().max(100)                                  // Maximum length 100
-    .has().digits(2)                                // Must have at least 2 digits
-    .has().not().spaces()                           // Should not have spaces
-    .is().not().oneOf(['Passw0rd', 'Password123']); // Blacklist these values
+    .is().min(PASSWORD.MIN_LENGTH)
+    .is().max(PASSWORD.MAX_LENGTH)
+    .has().digits(PASSWORD.MIN_DIGITS)
+    .has().not().spaces()
+    .is().not().oneOf([...PASSWORD.BLOCKED]);
 
 
 

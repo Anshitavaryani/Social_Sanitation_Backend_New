@@ -3,11 +3,12 @@ const path = require("path");
 const { randomBytes } = require("crypto");
 const { status: httpStatus } = require("http-status");
 const ApiError = require("../utils/ApiError");
+const { LIMITS } = require("./rules");
 
 const PUBLIC_DIR = path.resolve(__dirname, "../../public");
 
-// Largest file accepted in one upload field (images, PDFs, documents); same as the JSON body limit
-const MAX_FILE_MB = 25;
+// Largest file accepted in one upload field (images, PDFs, documents)
+const MAX_FILE_MB = LIMITS.MAX_UPLOAD_FILE_MB;
 
 // Set storage engine
 const storage = multer.diskStorage({

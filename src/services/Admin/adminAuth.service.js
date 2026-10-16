@@ -1,6 +1,5 @@
 const { status: httpStatus } = require("http-status");
 const bcrypt = require("bcryptjs");
-const { randomInt } = require("crypto");
 const jwt = require("jsonwebtoken");
 
 const { Admin, Role, UserOAuth } = require("../../models");
@@ -9,6 +8,9 @@ const config = require("../../config/config");
 const { emailService } = require("../Common");
 const { otpTypes } = require("../../config/types");
 const otpGuard = require("../../utils/otpGuard");
+const validatePassword = require("../../helpers/validatePassword");
+const { hashPassword } = require("../../utils/password");
+const { OTP_RULES, PASSWORD_POLICY_MESSAGE } = require("../../config/rules");
 const { generateTemporaryPassword } = require("../../utils/temporaryPassword");
 const { sendAdminCredentials } = require("../Common/email.service");
 
@@ -16,13 +18,12 @@ const { sendAdminCredentials } = require("../Common/email.service");
 const createAdminUser = async (userBody) => {
   try {
     const password = generateTemporaryPassword();
-    let salt = bcrypt.genSaltSync(10);
     const adminObj = {
       name: userBody.name,
       role_id: userBody.role_id,
       email: userBody.email,
       mobile:userBody.mobile,
-      password: bcrypt.hashSync(password, salt),
+      password: hashPassword(password),
     };
     const adminDoc = await Admin.create(adminObj);
     if (!adminDoc) {
@@ -110,9 +111,8 @@ const resetAdminPassword = async (reqBody) => {
       throw new ApiError(httpStatus.BAD_REQUEST, "Incorrect Old Password.");
     }
 
-    let salt = bcrypt.genSaltSync(10);
     const userObj = {
-      password: bcrypt.hashSync(confirm_password, salt),
+      password: hashPassword(confirm_password),
     };
 
     const isUserPasswordUpdate = await Admin.update(userObj, {
@@ -142,7 +142,7 @@ const sendOTP = async (email) => {
     if (!user) {
       throw new ApiError(httpStatus.NOT_FOUND, "Invalid Email");
     }
-    const generatedOTP = String(randomInt(0, 10 ** 6)).padStart(6, "0");
+    const generatedOTP = otpGuard.generateOtpCode(OTP_RULES.ADMIN_CODE_DIGITS);
     await emailService.sendForgotPasswordOTP(email, generatedOTP);
 
     await Admin.update(
@@ -251,9 +251,12 @@ const forgotAdminPassword = async (reqBody) => {
       );
     }
 
-    let salt = bcrypt.genSaltSync(10);
+    if (!validatePassword(password)) {
+      throw new ApiError(httpStatus.BAD_REQUEST, PASSWORD_POLICY_MESSAGE);
+    }
+
     const userObj = {
-      password: bcrypt.hashSync(confirm_password, salt),
+      password: hashPassword(confirm_password),
       remember_token: null,
     };
 
