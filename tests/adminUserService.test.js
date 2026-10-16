@@ -61,7 +61,7 @@ test("dashboard booking counts query the bookings table with their filters", asy
     { is_active: true },
     { is_active: true, booking_status: ["PENDING", "ACCEPTED", "ONGOING"] },
     { is_active: true, booking_status: ["SUCCESS"] },
-    { is_active: true, booking_status: ["DELETED", "REJECTED"] },
+    { is_active: true, booking_status: ["REJECTED"] },
   ]);
 });
 

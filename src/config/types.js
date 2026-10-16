@@ -32,8 +32,8 @@ const paymentStatusTypes = {
   REFUNDED: "REFUNDED",
 };
 
-// bookings.booking_status. DELETED and RESCHEDULED are not in the column's ENUM, so the list
-// filters that include them never match a row (audit doc).
+// bookings.booking_status (the column's ENUM, without DELETED). DELETED is a booking_details status; the
+// booking lists no longer filter on it or on RESCHEDULED, which no booking could hold.
 const bookingTypes = {
   PENDING: "PENDING",
   ACCEPTED: "ACCEPTED",
@@ -42,7 +42,6 @@ const bookingTypes = {
   REJECTED: "REJECTED",
   CANCELLED:"CANCELLED",
   DELETED:"DELETED",
-  RESCHEDULED: "RESCHEDULED",
 };
 
 // Booking list filters the apps and the panel ask for besides the stored statuses

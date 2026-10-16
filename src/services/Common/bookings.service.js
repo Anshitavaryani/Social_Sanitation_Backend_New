@@ -842,7 +842,7 @@ const getAllEmployeeBooking = async (body, booking_status) => {
       };
     } else if (booking_status === bookingListFilterTypes.COMPLETED) {
       whereCondition = {
-        booking_status: [bookingTypes.SUCCESS, bookingTypes.REJECTED, bookingTypes.DELETED],
+        booking_status: [bookingTypes.SUCCESS, bookingTypes.REJECTED],
         is_active: true,
       };
     } else if (booking_status) {

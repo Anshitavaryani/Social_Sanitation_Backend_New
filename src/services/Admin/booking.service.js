@@ -63,7 +63,7 @@ const getAllBookings = async (reqBody) => {
       const today = calendarDateUtc();
       if (period === "today") {
         whereCondition = {
-          booking_status: [bookingTypes.SUCCESS, bookingTypes.ACCEPTED, bookingTypes.PENDING, bookingTypes.RESCHEDULED],
+          booking_status: [bookingTypes.SUCCESS, bookingTypes.ACCEPTED, bookingTypes.PENDING],
           is_active: true,
           payment_status: paymentStatusTypes.SUCCESS,
           date: {
@@ -73,7 +73,7 @@ const getAllBookings = async (reqBody) => {
         };
       } else if (period === "past_30_days") {
         whereCondition = {
-          booking_status: [bookingTypes.SUCCESS, bookingTypes.ACCEPTED, bookingTypes.PENDING, bookingTypes.RESCHEDULED],
+          booking_status: [bookingTypes.SUCCESS, bookingTypes.ACCEPTED, bookingTypes.PENDING],
           is_active: true,
           payment_status: paymentStatusTypes.SUCCESS,
           date: {
@@ -83,7 +83,7 @@ const getAllBookings = async (reqBody) => {
         };
       } else if (period === "past_90_days") {
         whereCondition = {
-          booking_status: [bookingTypes.SUCCESS, bookingTypes.ACCEPTED, bookingTypes.PENDING, bookingTypes.RESCHEDULED],
+          booking_status: [bookingTypes.SUCCESS, bookingTypes.ACCEPTED, bookingTypes.PENDING],
           is_active: true,
           payment_status: paymentStatusTypes.SUCCESS,
           date: {
@@ -93,7 +93,7 @@ const getAllBookings = async (reqBody) => {
         };
       } else if (period === "all") {
         whereCondition = {
-          booking_status: [bookingTypes.SUCCESS, bookingTypes.ACCEPTED, bookingTypes.PENDING, bookingTypes.RESCHEDULED],
+          booking_status: [bookingTypes.SUCCESS, bookingTypes.ACCEPTED, bookingTypes.PENDING],
           is_active: true,
           payment_status: paymentStatusTypes.SUCCESS,
           date: {
@@ -108,7 +108,7 @@ const getAllBookings = async (reqBody) => {
       }
     } else if (booking_status === bookingTypes.CANCELLED) {
       whereCondition = {
-        booking_status: [bookingTypes.REJECTED, bookingTypes.DELETED, bookingTypes.CANCELLED],
+        booking_status: [bookingTypes.REJECTED, bookingTypes.CANCELLED],
         is_active: true,
         payment_status: paymentStatusTypes.SUCCESS,
       };
@@ -163,7 +163,7 @@ const getAllBookings = async (reqBody) => {
       }
     } else if (booking_status === bookingTypes.PENDING) {
       whereCondition = {
-        booking_status: [bookingTypes.PENDING, bookingTypes.RESCHEDULED],
+        booking_status: [bookingTypes.PENDING],
         is_active: true,
         payment_status: paymentStatusTypes.SUCCESS,
         date: {

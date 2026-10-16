@@ -95,3 +95,9 @@ test("only src/config/roles.js writes role ids as numbers", () => {
   }
   assert.deepEqual(offenders, [], "use ROLE / the role groups from src/config/roles.js");
 });
+
+test("the roles seed has every role id the code uses, with the same names", () => {
+  const sql = fs.readFileSync(path.join(ROOT, "src/seeders/dumps/roles.sql"), "utf8");
+  const seeded = Object.fromEntries([...sql.matchAll(/^\((\d+), '([^']+)'/gm)].map(([, id, name]) => [id, name]));
+  for (const [id, name] of Object.entries(roles.ROLE_NAMES)) assert.equal(seeded[id], name, `role ${id}`);
+});

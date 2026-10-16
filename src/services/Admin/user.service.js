@@ -289,7 +289,7 @@ const getBookinsByUserId = async (reqBody) => {
       };
     } else if (booking_status === bookingListFilterTypes.COMPLETED) {
       whereCondition = {
-        booking_status: [bookingTypes.SUCCESS, bookingTypes.REJECTED, bookingTypes.DELETED],
+        booking_status: [bookingTypes.SUCCESS, bookingTypes.REJECTED],
         is_active: 1,
         user_id: id,
       };
@@ -427,7 +427,6 @@ const getBookingByEmployeeId = async (reqBody) => {
       whereCondition["$employee_details_booking.booking_status$"] = [
         bookingTypes.SUCCESS,
         bookingTypes.REJECTED,
-        bookingTypes.DELETED,
       ];
     } else if (booking_status !== "all" && booking_status) {
       throw new ApiError(
@@ -2571,7 +2570,7 @@ const getDeletedBookingCount = async () => {
   const bookingCount = await Booking.count({
     where: {
       is_active: true,
-      booking_status: [bookingTypes.DELETED, bookingTypes.REJECTED],
+      booking_status: [bookingTypes.REJECTED],
     },
   });
   return bookingCount;
