@@ -15,7 +15,7 @@ const createDepartment = async (reqBody) => {
         return departmentDoc;
 
     } catch (error) {
-        throw new ApiError(error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR, error.message);
+        throw ApiError.from(error);
     }
 };
 
@@ -34,7 +34,7 @@ const updateDepartment = async (reqBody, id) => {
         return departmentDoc;
 
     } catch (error) {
-        throw new ApiError(error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR, error.message);
+        throw ApiError.from(error);
     }
 };
 
@@ -47,7 +47,7 @@ const getAllDeparments = async () => {
         return departmentDoc;
 
     } catch (error) {
-        throw new ApiError(error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR, error.message);
+        throw ApiError.from(error);
     }
 };
 
@@ -57,7 +57,7 @@ const findDepartmentById = async (id) => {
         return departmentDoc ? departmentDoc : [];
 
     } catch (error) {
-        throw new ApiError(error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR, error.message);
+        throw ApiError.from(error);
     }
 };
 
@@ -70,7 +70,7 @@ const deleteDepartment = async (id) => {
         return await departmentDoc.destroy();
 
     } catch (error) {
-        throw new ApiError(error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR, error.message);
+        throw ApiError.from(error);
     }
 };
 

@@ -30,10 +30,7 @@ const createServiceChecklist = async (reqBody) => {
 
 		return { heading, tasks };
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -59,10 +56,7 @@ const getAllServiceChecklist = async () => {
 		}
 		return serviceDoc;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -79,10 +73,7 @@ const findServiceChecklistById = async (id) => {
 		});
 		return serviceDoc ? serviceDoc : [];
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -187,10 +178,7 @@ const deleteServiceChecklist = async (body) => {
 			})
 		);
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 

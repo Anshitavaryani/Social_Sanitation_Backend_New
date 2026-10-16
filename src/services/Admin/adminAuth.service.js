@@ -39,10 +39,7 @@ const createAdminUser = async (userBody) => {
     }
     return adminDoc;
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -89,10 +86,7 @@ const loginAdminUser = async (reqBody) => {
 
     return response;
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -127,10 +121,7 @@ const resetAdminPassword = async (reqBody) => {
     }
     return "Password Changed Successfully.";
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -153,10 +144,7 @@ const sendOTP = async (email) => {
     otpGuard.issue(`admin-otp:${user.id}`, otpGuard.ADMIN_OTP_TTL_MS);
     return true;
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -220,10 +208,7 @@ const verifyOTP = async (email, otp, otp_type) => {
     await user.save();
     return token ? { token } : "";
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -272,10 +257,7 @@ const forgotAdminPassword = async (reqBody) => {
     }
     return "Password Changed Successfully.";
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message
-    );
+    throw ApiError.from(error);
   }
 };
 

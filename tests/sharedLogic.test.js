@@ -145,3 +145,49 @@ test("an app-user route refuses a missing role_id header (500 before), admin and
   const otherRole = await errorOf({ "x-access-token": appToken(), role_id: "6" });
   assert.deepEqual([otherRole.statusCode, otherRole.message], [401, "Your session has ended. Please log in again."]);
 });
+
+test("catch blocks rethrow with ApiError.from: the caught error's status, else 500, and its message", () => {
+  const ApiError = loadFromRoot("src/utils/ApiError.js");
+  for (const [caught, status] of [
+    [new ApiError(404, "Estimate not found"), 404],
+    [Object.assign(new Error("Card declined"), { statusCode: 402 }), 402],
+    [new Error("connect ECONNREFUSED"), 500],
+    [{ statusCode: 0, message: "zero" }, 500],
+  ]) {
+    const rethrown = ApiError.from(caught);
+    assert.ok(rethrown instanceof ApiError);
+    assert.deepEqual([rethrown.statusCode, rethrown.message], [status, caught.message]);
+  }
+
+  // no hand-written copy of it is left: new ApiError(e.statusCode ? e.statusCode : 500, e.message) or
+  // the || form (rethrows with another fallback status or message are different and stay)
+  const is500 = (n) => (n.type === "MemberExpression" && n.property.name === "INTERNAL_SERVER_ERROR") || (n.type === "Literal" && n.value === 500);
+  const isProp = (n, id, prop) => n?.type === "MemberExpression" && !n.computed && n.object.name === id && n.property.name === prop;
+  const isCopy = (node) => {
+    if (node.type !== "NewExpression" || node.callee.name !== "ApiError" || node.arguments.length !== 2) return false;
+    const [status, message] = node.arguments;
+    const id = message.type === "MemberExpression" && message.property.name === "message" ? message.object.name : null;
+    if (!id) return false;
+    if (status.type === "ConditionalExpression") return isProp(status.test, id, "statusCode") && isProp(status.consequent, id, "statusCode") && is500(status.alternate);
+    return status.type === "LogicalExpression" && status.operator === "||" && isProp(status.left, id, "statusCode") && is500(status.right);
+  };
+  const handWritten = [];
+  const visit = (node, file) => {
+    if (!node || typeof node.type !== "string") return;
+    if (isCopy(node)) handWritten.push(`${path.relative(ROOT, file)}:${node.loc.start.line}`);
+    for (const [key, child] of Object.entries(node)) {
+      if (key === "loc") continue;
+      if (Array.isArray(child)) child.forEach((item) => visit(item, file));
+      else if (child && typeof child.type === "string") visit(child, file);
+    }
+  };
+  const walk = (dir) =>
+    fs.readdirSync(dir, { withFileTypes: true }).forEach((entry) => {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) return walk(full);
+      if (!entry.name.endsWith(".js") || full === path.join(ROOT, "src/utils/ApiError.js")) return;
+      visit(espree.parse(fs.readFileSync(full, "utf8"), { ecmaVersion: "latest", loc: true }), full);
+    });
+  walk(path.join(ROOT, "src"));
+  assert.deepEqual(handWritten, [], "use ApiError.from(error)");
+});

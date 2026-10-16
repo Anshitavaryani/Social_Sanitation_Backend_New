@@ -78,10 +78,7 @@ const createService = async (reqBody, files) => {
 
 		return serviceDoc;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -131,10 +128,7 @@ const getAllServices = async () => {
 		}
 		return serviceDoc;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -166,10 +160,7 @@ const getAllServicesByAdmin = async () => {
 		}
 		return serviceDoc;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -258,10 +249,7 @@ const findServiceById = async (id) => {
 
 		return formattedResponse;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -381,10 +369,7 @@ const updateService = async (reqBody, files, id) => {
 
 		return serviceDoc;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -406,10 +391,7 @@ const updateServicePrices = async (reqBody) => {
 
 		return updatedCount
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -423,10 +405,7 @@ const getServicePrices = async () => {
 
     return service ? service.price : null;
   } catch (error) {
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -451,10 +430,7 @@ const deleteService = async (id) => {
 
 		return { success: true, message: "Service deleted successfully" };
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -473,10 +449,7 @@ const getAllServiceNameByAdmin = async () => {
 		}
 		return serviceDoc;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 

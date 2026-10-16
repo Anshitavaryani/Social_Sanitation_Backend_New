@@ -127,10 +127,7 @@ const createBooking = async (reqBody, files, headers) => {
       // booking: bookingDoc,
     };
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -329,10 +326,7 @@ const getAllUserBooking = async (body, booking_status) => {
 
     return bookingDoc;
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -436,10 +430,7 @@ const getBookingById = async (id) => {
 
     return bookingDoc;
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -473,10 +464,7 @@ const cancelBookingbyUser = async (reqBody) => {
 
     await bookingDoc.save();
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -510,10 +498,7 @@ const updateBookingStatusByEmployee = async (reqBody) => {
     await bookingDoc.save();
     return "Booking status updated successfully";
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -548,10 +533,7 @@ const uploadImages = async (reqBody, files) => {
     }
     await bookingDoc.save();
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -980,10 +962,7 @@ const getAllEmployeeBooking = async (body, booking_status) => {
 
     return bookingDoc;
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -1032,10 +1011,7 @@ const getTodaysBooking = async (body) => {
 
     return bookingDoc;
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -1075,10 +1051,7 @@ const getCompletedBooking = async (body) => {
 
     return completedBookingDoc;
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 

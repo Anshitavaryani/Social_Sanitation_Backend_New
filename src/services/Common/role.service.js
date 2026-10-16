@@ -17,7 +17,7 @@ const createRole = async (reqBody) => {
         return roleDoc ? true : false;
 
     } catch (error) {
-        throw new ApiError(error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR, error.message);
+        throw ApiError.from(error);
     }
 };
 
@@ -41,7 +41,7 @@ const updateRole = async (reqBody, id) => {
         return roleDoc ? roleDoc : {};
 
     } catch (error) {
-        throw new ApiError(error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR, error.message);
+        throw ApiError.from(error);
     }
 };
 
@@ -50,7 +50,7 @@ const findRoleById = async (id) => {
         const isRoleIdValid = await Role.findByPk(id);
         return isRoleIdValid
     } catch (error) {
-        throw new ApiError(error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR, error.message);
+        throw ApiError.from(error);
     }
 };
 
@@ -63,7 +63,7 @@ const getAllRoles = async () => {
         };
         return roleDoc;
     } catch (error) {
-        throw new ApiError(error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR, error.message);
+        throw ApiError.from(error);
     }
 };
 
@@ -76,7 +76,7 @@ const deleteRole = async (id) => {
         await roleDoc.destroy();
 
     } catch (error) {
-        throw new ApiError(error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR, error.message);
+        throw ApiError.from(error);
     }
 };
 

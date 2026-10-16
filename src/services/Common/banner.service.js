@@ -79,10 +79,7 @@ const findBannerImgaeById = async (id) => {
 		const contentDoc = await BannerAttachment.findByPk(id);
 		return contentDoc ? contentDoc : [];
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -117,10 +114,7 @@ const updateBannerImgaeById = async (reqBody, files, id) => {
 		("");
 		return result;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -132,10 +126,7 @@ const deleteBannerImgaeById = async (id) => {
 		}
 		return await contentDoc.destroy();
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 

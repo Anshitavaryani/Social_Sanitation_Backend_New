@@ -251,10 +251,7 @@ const getAllBookings = async (reqBody) => {
 
     return { data: bookingDoc, total: count, page, limit };
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -404,10 +401,7 @@ const getBookingById = async (id) => {
 
     return bookingDoc;
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -435,10 +429,7 @@ const checkBookingRequest = async () => {
       count: bookingCount,
     };
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -1388,10 +1379,7 @@ const adminCreateBooking = async (reqBody, headers) => {
     };
   } catch (error) {
     console.error("Admin Booking Error:", error);
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -1542,10 +1530,7 @@ const adminCreateBookingForGuest = async (reqBody) => {
     };
   } catch (error) {
     console.error("Admin Booking Error:", error);
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -2362,10 +2347,7 @@ const getDayOverview = async (reqBody, res) => {
       bookings: formattedData,
     };
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -2580,10 +2562,7 @@ const getBookingOverviewById = async (id) => {
 
     return result;
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -2693,10 +2672,7 @@ const deleteBooking = async (reqBody) => {
       message: "Invalid delete_mode for recurring booking",
     };
   } catch (error) {
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -2796,10 +2772,7 @@ const getDayOverviewForGantt = async (reqBody) => {
       employees: finalEmployees,
     };
   } catch (error) {
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -3196,10 +3169,7 @@ const updateEmployeeTimesheet = async (reqBody) => {
       payroll,
     };
   } catch (error) {
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 

@@ -20,10 +20,7 @@ const createContactUs = async (reqBody) => {
     }
     return contactUsDoc ? true : false;
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -56,10 +53,7 @@ const updateContactUs = async (reqBody, id) => {
     await contactUsDoc.save();
     return contactUsDoc ? contactUsDoc : {};
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -74,10 +68,7 @@ const getAllContactUs = async () => {
     }
     return contactUsDoc;
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -92,10 +83,7 @@ const getContactUs = async () => {
     }
     return contactUsDoc;
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -104,10 +92,7 @@ const findContactUsById = async (id) => {
     const contactUsDoc = await ContactUs.findByPk(id, {});
     return contactUsDoc ? contactUsDoc : [];
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -119,10 +104,7 @@ const deleteContactUs = async (id) => {
     }
     await contactUsDoc.destroy();
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message
-    );
+    throw ApiError.from(error);
   }
 };
 

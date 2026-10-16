@@ -37,10 +37,7 @@ const createDailyChecklist = async (reqBody) => {
 
 		return { heading, tasks };
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -68,10 +65,7 @@ const createOrUpdateChecklistMainTitle = async (reqBody) => {
 			updated_count: updatedRows[0] || updatedRows,
 		};
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -85,10 +79,7 @@ const getChecklistMainTitle = async () => {
 
 		return service ? service.main_title : null;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -110,10 +101,7 @@ const getDailyChecklist = async () => {
 
 		return headings;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -130,10 +118,7 @@ const findDailyChecklistById = async (id) => {
 		});
 		return serviceDoc ? serviceDoc : [];
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -187,10 +172,7 @@ const updateDailyChecklist = async (reqBody, headingId) => {
 
 		return { message: "Checklist updated successfully" };
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -233,10 +215,7 @@ const deleteDailyChecklist = async (body) => {
 			})
 		);
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 

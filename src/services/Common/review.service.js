@@ -54,10 +54,7 @@ const postReviewAndRating = async (reqBody) => {
 
 		return newReviewObj;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -103,10 +100,7 @@ const updateReviewAndRating = async (reqBody) => {
 
 		return existingReviewDoc;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -145,10 +139,7 @@ const deleteReviewAndRating = async (id) => {
 			{ where: { id: serviceId } }
 		);
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -203,10 +194,7 @@ const getReviewsAndRatings = async (reqBody) => {
 			data: modifiedResult
 		};
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -236,10 +224,7 @@ const getAllReviewsAndRatings = async (reqBody) => {
 		}
 		return result;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 

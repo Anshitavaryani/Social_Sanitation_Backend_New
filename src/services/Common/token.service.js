@@ -25,10 +25,7 @@ const generateToken = (
     };
     return jwt.sign(payload, secret);
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -51,10 +48,7 @@ const saveToken = async (token, userId, expires, type, role_id, fcm_token) => {
     });
     return tokenDoc;
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -97,10 +91,7 @@ const generateAuthTokens = async (user, fcm_token) => {
       },
     };
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message
-    );
+    throw ApiError.from(error);
   }
 };
 

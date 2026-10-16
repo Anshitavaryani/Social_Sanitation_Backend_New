@@ -40,7 +40,7 @@ const validateRegisterUserBody = catchAsync(async (req, res, next) => {
         next()
 
     } catch (error) {
-        throw new ApiError(error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR, error.message);
+        throw ApiError.from(error);
     }
 });
 
@@ -74,7 +74,7 @@ const validateResetPassordBody = catchAsync(async (req, res, next) => {
         next()
 
     } catch (error) {
-        throw new ApiError(error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR, error.message);
+        throw ApiError.from(error);
     }
 });
 
@@ -107,7 +107,7 @@ const validateForgetPassordToken = catchAsync(async (req, res, next) => {
         next()
 
     } catch (error) {
-        throw new ApiError(error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR, error.message);
+        throw ApiError.from(error);
     }
 });
 
@@ -119,7 +119,7 @@ const setRoleIdIfNotPresent = (req, res, next) => {
         next();
 
     } catch (error) {
-        throw new ApiError(error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR, error.message);
+        throw ApiError.from(error);
     }
 };
 

@@ -60,10 +60,7 @@ const getProfile = async (body, headers) => {
 			throw new ApiError(httpStatus.BAD_REQUEST, "Failed to Get Profile.");
 		return result;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message,
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -139,10 +136,7 @@ const updateUserProfile = async (body, files) => {
 
 		return newUpdatedUserDoc;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message,
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -167,10 +161,7 @@ const deactivateAccount = async (reqBody, headers) => {
 		}
 		return "";
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message,
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -181,10 +172,7 @@ const notificationToogle = async (body) => {
 		await user.save();
 		return user;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message,
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -220,10 +208,7 @@ const addNewAddress = async (reqBody, headers) => {
 
 		return userAddressDoc;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message,
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -268,10 +253,7 @@ const editAddress = async (body) => {
 
 		return addressDoc;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-			error.message,
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -293,10 +275,7 @@ const deleteAddress = async (reqBody, id) => {
 		// Finally, delete the address itself
 		await addressDoc.destroy();
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-			error.message,
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -337,10 +316,7 @@ const getAllUserAddress = async (reqBody) => {
 
 		return addressDoc;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message,
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -376,10 +352,7 @@ const getUserAddressById = async (id) => {
 
 		return addressDoc;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message,
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -415,10 +388,7 @@ const getUserAddressByUserId = async (id) => {
 
 		return addressDoc;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message,
-		);
+		throw ApiError.from(error);
 	}
 };
 

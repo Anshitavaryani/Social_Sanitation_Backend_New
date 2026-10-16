@@ -30,10 +30,7 @@ const getSquareKeys = catchAsync(async (req, res) => {
 
     return responseWrapper(res, response, "Square keys fetched successfully.");
   } catch (error) {
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 });
 
@@ -78,10 +75,7 @@ const createCustomer = async (userDoc) => {
     return customer ? customer : false;
   } catch (error) {
     console.error("Square API Error:", error);
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -164,10 +158,7 @@ const createPayment = catchAsync(async (req, res) => {
     return responseWrapper(res, response, "");
   } catch (error) {
     console.error("Square API Error:", error);
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 });
 

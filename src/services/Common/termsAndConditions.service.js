@@ -19,10 +19,7 @@ const createTermsAndConditons = async (reqBody) => {
     }
     return contentDoc;
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -39,10 +36,7 @@ const getAllTermsAndConditons = async () => {
     }
     return contentDoc;
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -59,10 +53,7 @@ const getAllTermsAndConditonsByAdmin = async () => {
     }
     return contentDoc;
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -72,10 +63,7 @@ const findTermsAndConditonsById = async (id) => {
     const contentDoc = await TermsAndConditions.findByPk(id);
     return contentDoc ? contentDoc : [];
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -104,10 +92,7 @@ const updateTermsAndConditons = async (reqBody, id) => {
     await contentDoc.save();
     return contentDoc;
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -119,10 +104,7 @@ const deleteTermsAndConditons = async (id) => {
     }
     return await contentDoc.destroy();
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message
-    );
+    throw ApiError.from(error);
   }
 };
 

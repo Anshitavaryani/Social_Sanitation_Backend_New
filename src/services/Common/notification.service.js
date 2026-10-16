@@ -95,10 +95,7 @@ const getAllNotificationsOfUser = async (body) => {
       activeNotificationCount: activeNotificationCount,
     };
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -128,10 +125,7 @@ const markOneNotificationAsRead = async (body) => {
     // Optionally, you can return the updated notification
     return notificationDoc;
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -168,10 +162,7 @@ const markAllNotificationAsRead = async (body) => {
     // Optionally, you can return the updated notifications
     return "";
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message
-    );
+    throw ApiError.from(error);
   }
 };
 

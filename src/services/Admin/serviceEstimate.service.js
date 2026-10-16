@@ -760,10 +760,7 @@ const deleteServiceEstimate = async (id) => {
       message: "Service Estimate deleted successfully",
     };
   } catch (error) {
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -1129,10 +1126,7 @@ const deleteContractAgreement = async (id) => {
       message: "Contract Agreement deleted successfully",
     };
   } catch (error) {
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 

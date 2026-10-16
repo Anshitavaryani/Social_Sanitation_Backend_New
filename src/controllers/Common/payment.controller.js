@@ -19,7 +19,7 @@ const getNewPaymentCount = catchAsync(async (req, res) => {
         return responseWrapper(res, paymentDoc.length ? paymentDoc.length : 0, "");
 
     } catch (error) {
-        throw new ApiError(error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR, error.message);
+        throw ApiError.from(error);
     }
 });
 
@@ -35,7 +35,7 @@ const getNewPaymentTotal = catchAsync(async (req, res) => {
         return responseWrapper(res, totalPayment ? totalPayment : 0, "");
 
     } catch (error) {
-        throw new ApiError(error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR, error.message);
+        throw ApiError.from(error);
     }
 });
 

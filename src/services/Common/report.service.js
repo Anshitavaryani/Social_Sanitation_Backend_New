@@ -58,10 +58,7 @@ const reportBooking = async (body, files, id) => {
 
 		return { message: "Report created successfully", report_id: reportDoc.id };
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-			error.message,
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -121,10 +118,7 @@ const getAllReport = async () => {
 			);
 		return result;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message,
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -182,10 +176,7 @@ const getAllUserReport = async (reqBody, headers) => {
 
 		return result;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message,
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -222,10 +213,7 @@ const updateReportStatus = async (reqBody) => {
 			report: reportDoc,
 		};
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-			error.message,
-		);
+		throw ApiError.from(error);
 	}
 };
 

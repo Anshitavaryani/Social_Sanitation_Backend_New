@@ -590,10 +590,7 @@ const getAllUserLeaves = async (reqBody, headers) => {
 
 		return attendanceDocs;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message,
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -644,10 +641,7 @@ const updateLeaveStatus = async (reqBody, id) => {
 			leaveRequest,
 		};
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-			error.message,
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -685,10 +679,7 @@ const getAllLeaveRequest = async () => {
 
 		return attendanceDocs;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message,
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -818,10 +809,7 @@ const getAttendanceByUserId = async (reqBody, id) => {
 
 		return Object.values(attendanceMap);
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-			error.message,
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -1040,10 +1028,7 @@ const getAllAttendance = async (reqBody) => {
 		);
 	} catch (error) {
 		console.error("Attendance Fetch Error:", error);
-		throw new ApiError(
-			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-			error.message,
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -1191,10 +1176,7 @@ const getTodayAttendanceStats = async (reqBody) => {
 			},
 		};
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-			error.message,
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -1305,10 +1287,7 @@ const getDailyPresenceForMonth = async (reqBody) => {
 		return result;
 	} catch (error) {
 		console.error("Fetch Monthly Presence Error:", error);
-		throw new ApiError(
-			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-			error.message,
-		);
+		throw ApiError.from(error);
 	}
 };
 

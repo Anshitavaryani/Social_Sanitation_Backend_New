@@ -25,10 +25,7 @@ const createEquipment = async (body) => {
 
     return equipment;
   } catch (error) {
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -44,10 +41,7 @@ const updateEquipment = async (equipmentId, body) => {
 
     return equipment;
   } catch (error) {
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -68,10 +62,7 @@ const deleteEquipment = async (equipmentId) => {
 
     return true;
   } catch (error) {
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -105,10 +96,7 @@ const getAllEquipments = async (query) => {
       },
     };
   } catch (error) {
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -153,10 +141,7 @@ const assignEquipment = async (body) => {
 
     return assignment;
   } catch (error) {
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -317,10 +302,7 @@ const updateAssignment = async (assignmentId, body) => {
 
     return assignment;
   } catch (error) {
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -465,10 +447,7 @@ const getAllAssignments = async (query) => {
       },
     };
   } catch (error) {
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -516,10 +495,7 @@ const assignmentOverview = async () => {
       overdue_assignments: overdueAssignments,
     };
   } catch (error) {
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -717,11 +693,7 @@ const getAssignmentEquipmentHistory = async (assignmentId) => {
       })),
     };
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ||
-        httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -988,11 +960,7 @@ const getMonthlyEmployeeEquipmentRecords = async (query) => {
       },
     };
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ||
-        httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -1272,11 +1240,7 @@ const sendEmployeeEquipmentForm = async (
         "Equipment form sent successfully.",
     };
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ||
-        httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -1363,10 +1327,7 @@ const getMyEquipment = async (body, query) => {
       },
     };
   } catch (error) {
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -1485,10 +1446,7 @@ const signEquipment = async (body, assignmentId) => {
 
     return signatureDoc;
   } catch (error) {
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -1576,10 +1534,7 @@ const getEquipmentSignatureHistory = async (body, assignmentId) => {
       })),
     };
   } catch (error) {
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -1680,11 +1635,7 @@ const getEquipmentByEmployeeId = async (employeeId, query) => {
       },
     };
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ||
-        httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 

@@ -435,10 +435,7 @@ const createInvoice = async (reqBody) => {
       data: invoice,
     };
   } catch (error) {
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -469,10 +466,7 @@ const getInvoiceById = async (invoice_id) => {
       data: invoice,
     };
   } catch (error) {
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -1244,10 +1238,7 @@ const updateInvoice = async (invoice_id, body) => {
       await t.rollback();
     }
 
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -1459,11 +1450,7 @@ const deleteInvoice = async (invoiceId) => {
       message: "Invoice deleted successfully",
     };
   } catch (error) {
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -2224,10 +2211,7 @@ const sendInvoiceBalance = async (invoice_id) => {
       },
     };
   } catch (error) {
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -2349,10 +2333,7 @@ const markInvoicePaidByCheck = async (invoice_id) => {
       data: invoice,
     };
   } catch (error) {
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -2405,10 +2386,7 @@ const markInvoicePaidByACH = async (invoice_id) => {
       data: invoice,
     };
   } catch (error) {
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -3031,10 +3009,7 @@ const reorderInvoiceItems = async (invoice_id, items) => {
   } catch (error) {
     await t.rollback();
 
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -3348,10 +3323,7 @@ const uploadHistoricalInvoicePDF = async (invoice_id, file) => {
       },
     };
   } catch (error) {
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 

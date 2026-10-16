@@ -21,10 +21,7 @@ const createTrendingVideo = async (reqBody) => {
 
 		return videoDoc;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -41,10 +38,7 @@ const getAllTrendingVideos = async (reqBody) => {
 		}
 		return contentDoc;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -53,10 +47,7 @@ const findTrendingVideoById = async (id) => {
 		const contentDoc = await TrendingVideoAttachment.findByPk(id, {});
 		return contentDoc ? contentDoc : [];
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -91,10 +82,7 @@ const updateTrendingVideo = async (reqBody, id) => {
 
 		return contentDoc; // return updated record
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -133,10 +121,7 @@ const deleteTrendingVideo = async (body) => {
 			})
 		);
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 

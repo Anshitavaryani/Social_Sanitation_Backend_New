@@ -126,10 +126,7 @@ const submitForm = async (reqBody, files) => {
     };
   } catch (error) {
     console.error("Error in submitForm:", error);
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -150,10 +147,7 @@ const getAllForm = async () => {
     }
     return formDoc;
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -173,10 +167,7 @@ const getFormById = async (id) => {
     }
     return formDoc;
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -217,10 +208,7 @@ const deleteForm = async (ids) => {
       deleted_count: forms.length,
     };
   } catch (error) {
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 

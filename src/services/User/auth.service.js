@@ -62,10 +62,7 @@ const sendOTP = async (body, headers) => {
 		}
 		return true;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -127,10 +124,7 @@ const verifyOTP = async (email, otp, type, role_id) => {
 		await otpDoc.save();
 		return token ? { token } : isUpdate;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -211,10 +205,7 @@ const register = async (body, files, headers) => {
 		}
 		return {};
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -281,10 +272,7 @@ const login = async (reqBody, headers) => {
 
 		return userObj;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -314,10 +302,7 @@ const resetPassword = async (reqBody) => {
 		};
 		return response;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -345,10 +330,7 @@ const forgotPassword = async (reqBody) => {
 		await otpDoc.destroy({ force: true });
 		return "";
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -367,10 +349,7 @@ const logout = async (reqBody, headers) => {
 
 		return "";
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -404,10 +383,7 @@ const saveLoginTiming = async (user, token, reqBody, timezone) => {
 		const timingDetails = await userLoginTiming.create(obj);
 		return timingDetails;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -429,10 +405,7 @@ const saveLogoutTiming = async (tokenDoc, timezone) => {
 		}
 		return "";
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 

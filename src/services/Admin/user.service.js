@@ -403,10 +403,7 @@ const getBookinsByUserId = async (reqBody) => {
 
     return bookingDoc;
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -511,10 +508,7 @@ const getBookingByEmployeeId = async (reqBody) => {
     return bookingDetailsWithoutTeamLeader;
   } catch (error) {
     console.error("Error:", error);
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -585,10 +579,7 @@ const deleteUser = async (body) => {
     };
   } catch (error) {
     await t.rollback();
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -706,10 +697,7 @@ const getClosestEmployees = async (clientId) => {
       employees: result.slice(0, 7),
     };
   } catch (error) {
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -816,10 +804,7 @@ const getClosestEmployeesByAddress = async (addressId) => {
       employees: result.slice(0, 7),
     };
   } catch (error) {
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -852,10 +837,7 @@ const addNewUserAddress = async (reqBody) => {
 
     return userAddressDoc;
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -930,10 +912,7 @@ const deleteUserAddress = async (addressId) => {
       console.error("Transaction rollback error:", rollbackError);
     }
 
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -2688,10 +2667,7 @@ const getUserLoginTimings = async () => {
     const groupedByUserId = loginTimingsByUserId(result);
     return groupedByUserId;
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -2711,10 +2687,7 @@ const clearLoginRecords = async () => {
     await userLoginTiming.destroy({ force: true, where: { is_active: true } });
     return "ok";
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -3514,11 +3487,7 @@ const deleteQuote = async (quoteId) => {
       message: "Quote deleted successfully",
     };
   } catch (error) {
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -4253,10 +4222,7 @@ const deleteServiceRequest = async (serviceRequestId) => {
   } catch (error) {
     await transaction.rollback();
 
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -4365,10 +4331,7 @@ const createOrUpdateReviewLink = async (reqBody) => {
 
     return result;
   } catch (error) {
-    throw new ApiError(
-      error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -5168,10 +5131,7 @@ const getEmployeeDropdown = async () => {
       name: employee.user_profile?.name || "",
     }));
   } catch (error) {
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 
@@ -5213,10 +5173,7 @@ const getEmployeeHiringForms = async (reqQuery) => {
 
     return forms;
   } catch (error) {
-    throw new ApiError(
-      error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-      error.message,
-    );
+    throw ApiError.from(error);
   }
 };
 

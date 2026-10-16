@@ -18,7 +18,7 @@ const createFaq = async (reqBody) => {
         return faqDoc;
 
     } catch (error) {
-        throw new ApiError(error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR, error.message);
+        throw ApiError.from(error);
     }
 };
 
@@ -36,7 +36,7 @@ const getAllFaq = async () => {
         return faqDoc;
 
     } catch (error) {
-        throw new ApiError(error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR, error.message);
+        throw ApiError.from(error);
     }
 };
 
@@ -55,7 +55,7 @@ const updateFaq = async (reqBody, id) => {
         return faqDoc;
 
     } catch (error) {
-        throw new ApiError(error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR, error.message);
+        throw ApiError.from(error);
     }
 };
 
@@ -67,7 +67,7 @@ const deleteFaq = async (id) => {
         return '';
 
     } catch (error) {
-        throw new ApiError(error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR, error.message);
+        throw ApiError.from(error);
     }
 };
 

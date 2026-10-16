@@ -47,10 +47,7 @@ const createQuestions = async (reqBody) => {
 			questions: questionDocs,
 		};
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -67,10 +64,7 @@ const getAllQuestions = async () => {
 
 		return forms;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -94,10 +88,7 @@ const editQuestion = async (reqBody, id) => {
 		await questionDoc.save();
 		return questionDoc;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -109,10 +100,7 @@ const deleteQuestion = async (id) => {
 		}
 		await contactUsDoc.destroy();
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -151,10 +139,7 @@ const getQuoteRequests = async () => {
 
 		return quoteRequests;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -200,10 +185,7 @@ const updateStatus = async (reqBody, id) => {
 			},
 		};
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -276,10 +258,7 @@ const submitForm = async (reqBody) => {
 			quote_request_id: quoteRequest.id,
 		};
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
@@ -308,10 +287,7 @@ const getQuoteRequestsByUser = async (reqBody) => {
 
 		return quoteRequests;
 	} catch (error) {
-		throw new ApiError(
-			error.statusCode || httpStatus.INTERNAL_SERVER_ERROR,
-			error.message
-		);
+		throw ApiError.from(error);
 	}
 };
 
