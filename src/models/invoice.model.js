@@ -2,6 +2,7 @@
 
 const { Sequelize, DataTypes, Model } = require("sequelize");
 const { invoicePaymentStageTypes, invoicePaymentStatusTypes, invoiceStatusTypes } = require("../config/types");
+const { INVOICE } = require("../config/rules");
 const sequelize = require("../config/central.db");
 
 class Invoice extends Model {}
@@ -82,7 +83,7 @@ Invoice.init(
     deposit_percentage: {
       type: DataTypes.DECIMAL(5, 2),
       allowNull: false,
-      defaultValue: 25.0,
+      defaultValue: INVOICE.DEFAULT_DEPOSIT_PERCENT,
     },
 
     deposit_amount: {

@@ -51,6 +51,7 @@ test("the rules keep the values the app used before they were gathered", () => {
   });
   assert.deepEqual({ ...rules.ATTENDANCE }, { LATE_AFTER_MINUTES: 60, ABSENT_AFTER_MINUTES: 120, CLOCK_OUT_MAX_DISTANCE_KM: 0.5 });
   assert.equal(rules.BOOKING.DEFAULT_DURATION_HOURS, 2);
+  assert.equal(rules.INVOICE.DEFAULT_DEPOSIT_PERCENT, 25);
   assert.equal(rules.SQUARE_CHECKOUT.SALES_TAX_PERCENT, "7.5");
   assert.deepEqual([...rules.SQUARE_CHECKOUT.TIP_PERCENTAGES], [10, 15, 20]);
   assert.equal(rules.PAGINATION.DEFAULT_PAGE_SIZE, 10, "the page size most lists used");

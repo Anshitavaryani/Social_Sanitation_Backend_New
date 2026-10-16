@@ -2,6 +2,7 @@ const { status: httpStatus } = require("http-status");
 const { Op } = require("sequelize");
 const ApiError = require("../../utils/ApiError");
 const { parsePagination } = require("../../utils/pagination");
+const { roundMoney } = require("../../utils/money");
 const {
   CostCalculation,
   CostCalculationTask,
@@ -164,13 +165,13 @@ const createCostCalculator = async (reqBody) => {
 
       hours_per_employee: Number(hoursPerEmployee.toFixed(2)),
 
-      labor_cost: Number(laborCost.toFixed(2)),
+      labor_cost: roundMoney(laborCost),
 
-      equipment_cost: Number(equipmentCost.toFixed(2)),
+      equipment_cost: roundMoney(equipmentCost),
 
-      chemical_cost: Number(chemicalCost.toFixed(2)),
+      chemical_cost: roundMoney(chemicalCost),
 
-      total_operational_cost: Number(totalOperationalCost.toFixed(2)),
+      total_operational_cost: roundMoney(totalOperationalCost),
 
       created_by,
     });
@@ -379,7 +380,7 @@ const createBidMaximizer = async (reqBody) => {
     const bid = await BidMaximizer.create({
       cost_calculation_id,
 
-      operational_cost: Number(operationalCost.toFixed(2)),
+      operational_cost: roundMoney(operationalCost),
 
       profit_margin_percentage,
 
@@ -387,15 +388,15 @@ const createBidMaximizer = async (reqBody) => {
 
       risk_buffer_amount,
 
-      minimum_bid: Number(minimumBid.toFixed(2)),
+      minimum_bid: roundMoney(minimumBid),
 
-      recommended_bid: Number(recommendedBid.toFixed(2)),
+      recommended_bid: roundMoney(recommendedBid),
 
-      maximum_bid: Number(maximumBid.toFixed(2)),
+      maximum_bid: roundMoney(maximumBid),
 
       commission_percentage,
 
-      commission_amount: Number(commissionAmount.toFixed(2)),
+      commission_amount: roundMoney(commissionAmount),
 
       created_by,
     });

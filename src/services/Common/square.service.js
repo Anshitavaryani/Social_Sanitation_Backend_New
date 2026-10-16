@@ -5,6 +5,7 @@ const { randomUUID: uuidv4 } = require("crypto");
 const { Payment } = require("../../models");
 const config = require("../../config/config");
 const { SQUARE_CHECKOUT } = require("../../config/rules");
+const { roundMoney, toCents } = require("../../utils/money");
 
 // Square REST API for payment links (squarePayment.controller.js uses the SDK with the same settings)
 const SQUARE_API_VERSION = "2024-10-17";
@@ -72,7 +73,7 @@ async function generateSquarePaymentLink({
 }) {
   try {
     const squareAmount = Math.max(0.01, Number(amount));
-    const squareAmountCents = Math.round(squareAmount * 100);
+    const squareAmountCents = toCents(squareAmount);
     const body = checkoutBody({
       itemName: `Service Quote #${refNo}`,
       amountCents: squareAmountCents,
@@ -127,7 +128,7 @@ async function generateContractPaymentLink({
   try {
     const body = checkoutBody({
       itemName: `Contract Payment - ${clientName}`,
-      amountCents: Math.round(amount * 100),
+      amountCents: toCents(amount),
       customerEmail,
     });
 
@@ -145,7 +146,7 @@ async function generateContractPaymentLink({
       user_id,
       booking_id: null,
       square_payment_link_id: paymentLink.id,
-      amount: Number(amount.toFixed(2)),
+      amount: roundMoney(amount),
       square_customer_id: customerEmail,
       description: `Contract Payment - ${clientName}`,
       payment_status: paymentStatusTypes.PENDING,
@@ -193,7 +194,7 @@ async function generateInvoicePaymentLink({
       throw new Error("Invalid payment purpose");
     }
 
-    const squareAmount = Math.round(actualAmount * 100);
+    const squareAmount = toCents(actualAmount);
 
     // Reuse only a pending payment for the same invoice AND purpose.
     const existingPayment = await Payment.findOne({

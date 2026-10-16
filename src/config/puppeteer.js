@@ -5,6 +5,7 @@ const config = require("./config");
 const fs = require("fs");
 const path = require("path");
 const { formatDisplayDate, formatDisplayDateRange } = require("../utils/time");
+const { formatAmount } = require("../utils/money");
 
 const getLayoutConfig = (itemCount) => {
   if (itemCount <= 5) {
@@ -65,20 +66,6 @@ const generateQuotePDF = async (data) => {
     square_payment_url,
   } = data;
 
-
-  const formatAmount = (value) => {
-    if (value === null || value === undefined || value === "") {
-      return "0";
-    }
-
-    const number = Number(value);
-
-    if (!Number.isFinite(number)) {
-      return "0";
-    }
-
-    return number.toFixed(6).replace(/\.?0+$/, "");
-  };
 
   const formattedServiceDates = formatDisplayDateRange(service_dates);
   const formattedDueDate = formatDisplayDate(due_date);
@@ -3602,16 +3589,6 @@ const generateInvoicePDF = async (data) => {
 
   const formattedDueDate = formatDisplayDate(due_date);
 
-  const formatAmount = (value) => {
-    const num = Number(value || 0);
-
-    if (!Number.isFinite(num)) {
-      return "0";
-    }
-
-    return num.toFixed(6).replace(/\.?0+$/, "");
-  };
-
   const hasSqft = items.some((item) => item.calculation_type === "sqft");
   const hasHour = items.some((item) => item.calculation_type === "hour");
   const showMeasurementColumn = hasSqft || hasHour;
@@ -4147,16 +4124,6 @@ const generateServiceRequestPDF = async (data) => {
 
   const formattedSignedDate = formatDisplayDate(date);
   const formattedDueDate = formatDisplayDate(due_date);
-
-  const formatAmount = (value) => {
-    const num = Number(value || 0);
-
-    if (!Number.isFinite(num)) {
-      return "0";
-    }
-
-    return num.toFixed(6).replace(/\.?0+$/, "");
-  };
 
   const calculatedTotal = items.reduce((sum, item) => {
     const quantity = Number(item.quantity || 1);

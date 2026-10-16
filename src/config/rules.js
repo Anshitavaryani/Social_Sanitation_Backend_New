@@ -36,6 +36,10 @@ const BOOKING = Object.freeze({
   DEFAULT_DURATION_HOURS: 2, // when no end time was set
 });
 
+const INVOICE = Object.freeze({
+  DEFAULT_DEPOSIT_PERCENT: 25, // when a deposit is asked for without a percentage
+});
+
 // Square payment links
 const SQUARE_CHECKOUT = Object.freeze({
   SALES_TAX_PERCENT: "7.5",
@@ -57,6 +61,7 @@ module.exports = {
   OTP_RULES,
   ATTENDANCE,
   BOOKING,
+  INVOICE,
   SQUARE_CHECKOUT,
   PAGINATION,
   LIMITS,

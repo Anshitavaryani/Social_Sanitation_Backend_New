@@ -7,6 +7,7 @@ const { SquareClient, SquareEnvironment, WebhooksHelper } = require("square");
 const { Payment, Booking, ServiceQuote, Invoice } = require("../../models");
 const catchAsync = require("../../utils/catchAsync");
 const ApiError = require("../../utils/ApiError");
+const { parseAmountToCents } = require("../../utils/money");
 const responseWrapper = require("../../config/responseWrapper");
 const config = require("../../config/config");
 
@@ -84,16 +85,6 @@ const createCustomer = async (userDoc) => {
   }
 };
 
-// Amount in cents for a positive dollar amount with at most two decimals, otherwise null
-const toCents = (amount) => {
-  const value = typeof amount === "string" ? amount.trim() : amount;
-  if ((typeof value !== "number" && typeof value !== "string") || value === "") return null;
-  const dollars = Number(value);
-  if (!Number.isFinite(dollars) || dollars <= 0) return null;
-  const cents = Math.round(dollars * 100);
-  return Math.abs(dollars * 100 - cents) < 1e-6 ? cents : null;
-};
-
 // Square charges once per idempotency key. When the app sends the same idempotency_key for
 // every retry of one payment, a retry after a timeout returns the first charge instead of
 // charging again. Without one, every request is a new charge (the previous behaviour).
@@ -111,7 +102,7 @@ const createPayment = catchAsync(async (req, res) => {
     if (!sourceId || typeof sourceId !== "string") {
       throw new ApiError(httpStatus.BAD_REQUEST, "sourceId is required.");
     }
-    const cents = toCents(amount);
+    const cents = parseAmountToCents(amount);
     if (cents === null) {
       throw new ApiError(httpStatus.BAD_REQUEST, "amount must be a positive dollar amount with at most 2 decimal places.");
     }

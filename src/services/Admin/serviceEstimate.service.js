@@ -25,6 +25,7 @@ const {
   ClientChecklistDetail,
 } = require("../../models");
 const ApiError = require("../../utils/ApiError");
+const { formatUsd } = require("../../utils/money");
 const { getSigningUrl } = require("../Common/docusignSigning.service");
 const {
   createEnvelope,
@@ -191,7 +192,7 @@ const generateEstimatePDFService = async (reqBody) => {
           name: s.name,
           frequency: s.frequency,
           startingAt: `$${s.rate} per s/f`,
-          minimumCharge: `$${(s.rate * s.minSqft).toFixed(2)}`,
+          minimumCharge: formatUsd(s.rate * s.minSqft),
         };
       }
 
@@ -615,7 +616,7 @@ const updateServiceEstimate = async (reqBody) => {
           name: s.name,
           frequency: s.frequency,
           startingAt: `$${s.rate} per s/f`,
-          minimumCharge: `$${(s.rate * s.minSqft).toFixed(2)}`,
+          minimumCharge: formatUsd(s.rate * s.minSqft),
         };
       }
 

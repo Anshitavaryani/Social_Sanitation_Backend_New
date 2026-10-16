@@ -32,7 +32,9 @@ const { sendInvoiceEmailWithPDF } = require("./email.service");
 const ApiError = require("../../utils/ApiError");
 const config = require("../../config/config");
 const toBoolean = require("../../utils/toBoolean");
+const { assertDepositPercent, roundMoney, splitDeposit } = require("../../utils/money");
 const { ROLE } = require("../../config/roles");
+const { INVOICE } = require("../../config/rules");
 const { generateInvoicePaymentLink, deleteSquarePaymentLink } = require("./square.service");
 const sequelize = require("../../config/central.db");
 const { paymentStatusTypes, invoicePaymentStageTypes, invoicePaymentStatusTypes, invoiceStatusTypes, paymentPurposeTypes, recurringInvoiceStatusTypes } = require("../../config/types");
@@ -66,7 +68,7 @@ const createInvoice = async (reqBody) => {
 
       // Deposit is optional. Existing invoices remain full-payment by default.
       deposit_required = false,
-      deposit_percentage = 25,
+      deposit_percentage = INVOICE.DEFAULT_DEPOSIT_PERCENT,
       balance_date,
     } = reqBody;
 
@@ -202,28 +204,14 @@ const createInvoice = async (reqBody) => {
       toBoolean(deposit_required);
 
     const finalDepositPercentage = finalDepositRequired
-      ? Number(deposit_percentage ?? 25)
+      ? Number(deposit_percentage ?? INVOICE.DEFAULT_DEPOSIT_PERCENT)
       : 0;
 
-    if (
-      finalDepositRequired &&
-      (!Number.isFinite(finalDepositPercentage) ||
-        finalDepositPercentage <= 0 ||
-        finalDepositPercentage >= 100)
-    ) {
-      throw new ApiError(
-        httpStatus.BAD_REQUEST,
-        "Deposit percentage must be greater than 0 and less than 100.",
-      );
-    }
+    if (finalDepositRequired) assertDepositPercent(finalDepositPercentage);
 
-    const depositAmount = finalDepositRequired
-      ? Number(((Number(total_due) * finalDepositPercentage) / 100).toFixed(2))
-      : null;
-
-    const balanceAmount = finalDepositRequired
-      ? Number((Number(total_due) - depositAmount).toFixed(2))
-      : null;
+    const { deposit: depositAmount, balance: balanceAmount } = finalDepositRequired
+      ? splitDeposit(total_due, finalDepositPercentage)
+      : { deposit: null, balance: null };
 
     const initialPaymentStage = finalDepositRequired
       ? invoicePaymentStageTypes.DEPOSIT_PENDING
@@ -287,7 +275,7 @@ const createInvoice = async (reqBody) => {
 
       // Deposit configuration
       deposit_required: finalDepositRequired,
-      deposit_percentage: finalDepositRequired ? finalDepositPercentage : 25,
+      deposit_percentage: finalDepositRequired ? finalDepositPercentage : INVOICE.DEFAULT_DEPOSIT_PERCENT,
       deposit_amount: depositAmount,
       balance_amount: balanceAmount,
       payment_stage: initialPaymentStage,
@@ -759,7 +747,7 @@ const updateInvoice = async (invoice_id, body) => {
     /* ================= CALCULATE TOTAL + DEPOSIT ================= */
 
     // total_due always represents the complete invoice amount.
-    const finalTotalDue = Number(Number(total_due).toFixed(2));
+    const finalTotalDue = roundMoney(total_due);
 
     const shouldUseDeposit =
       deposit_required !== undefined
@@ -772,21 +760,11 @@ const updateInvoice = async (invoice_id, body) => {
             deposit_percentage !== null &&
             deposit_percentage !== ""
             ? deposit_percentage
-            : invoice.deposit_percentage || 25,
+            : invoice.deposit_percentage || INVOICE.DEFAULT_DEPOSIT_PERCENT,
         )
       : 0;
 
-    if (
-      shouldUseDeposit &&
-      (!Number.isFinite(percentage) ||
-        percentage <= 0 ||
-        percentage >= 100)
-    ) {
-      throw new ApiError(
-        httpStatus.BAD_REQUEST,
-        "Deposit percentage must be greater than 0 and less than 100.",
-      );
-    }
+    if (shouldUseDeposit) assertDepositPercent(percentage);
 
     /* ================= VALIDATE BALANCE DATE ================= */
 
@@ -868,7 +846,7 @@ const updateInvoice = async (invoice_id, body) => {
       finalTotalDue !== Number(invoice.total_due || 0) ||
       shouldUseDeposit !== Boolean(invoice.deposit_required) ||
       (shouldUseDeposit &&
-        percentage !== Number(invoice.deposit_percentage || 25));
+        percentage !== Number(invoice.deposit_percentage || INVOICE.DEFAULT_DEPOSIT_PERCENT));
 
     if (paymentAlreadyStarted && financialTermsChanged) {
       throw new ApiError(
@@ -877,20 +855,16 @@ const updateInvoice = async (invoice_id, body) => {
       );
     }
 
-    const calculatedDepositAmount = shouldUseDeposit
-      ? Number(((finalTotalDue * percentage) / 100).toFixed(2))
-      : null;
-
-    const calculatedBalanceAmount = shouldUseDeposit
-      ? Number((finalTotalDue - calculatedDepositAmount).toFixed(2))
-      : null;
+    const { deposit: calculatedDepositAmount, balance: calculatedBalanceAmount } = shouldUseDeposit
+      ? splitDeposit(finalTotalDue, percentage)
+      : { deposit: null, balance: null };
 
     const currentStage = invoice.payment_stage || invoicePaymentStageTypes.FULL;
 
     const depositUpdatePayload = {
       total_due: finalTotalDue,
       deposit_required: shouldUseDeposit,
-      deposit_percentage: shouldUseDeposit ? percentage : 25,
+      deposit_percentage: shouldUseDeposit ? percentage : INVOICE.DEFAULT_DEPOSIT_PERCENT,
       deposit_amount: calculatedDepositAmount,
       balance_amount: calculatedBalanceAmount,
       balance_due_date: finalBalanceDueDate,
@@ -1196,8 +1170,8 @@ const updateInvoice = async (invoice_id, body) => {
         Number(originalInvoice.total_due || 0) ||
       Boolean(updatedInvoice.deposit_required) !==
         Boolean(originalInvoice.deposit_required) ||
-      Number(updatedInvoice.deposit_percentage || 25) !==
-        Number(originalInvoice.deposit_percentage || 25);
+      Number(updatedInvoice.deposit_percentage || INVOICE.DEFAULT_DEPOSIT_PERCENT) !==
+        Number(originalInvoice.deposit_percentage || INVOICE.DEFAULT_DEPOSIT_PERCENT);
 
     const isInitialPaymentStage = [
       invoicePaymentStageTypes.FULL,
@@ -1894,7 +1868,7 @@ const generateRecurringInvoicesCron = async () => {
             rawDepositPercentage > 0 &&
             rawDepositPercentage <= 100
             ? rawDepositPercentage
-            : 25
+            : INVOICE.DEFAULT_DEPOSIT_PERCENT
           : 0;
 
         const totalDue = Number(invoice.total_due || 0);
@@ -1906,20 +1880,9 @@ const generateRecurringInvoicesCron = async () => {
           continue;
         }
 
-        const recurringDepositAmount = recurringDepositRequired
-          ? Number(
-              (
-                (totalDue * recurringDepositPercentage) /
-                100
-              ).toFixed(2),
-            )
-          : null;
-
-        const recurringBalanceAmount = recurringDepositRequired
-          ? Number(
-              (totalDue - recurringDepositAmount).toFixed(2),
-            )
-          : null;
+        const { deposit: recurringDepositAmount, balance: recurringBalanceAmount } = recurringDepositRequired
+          ? splitDeposit(totalDue, recurringDepositPercentage)
+          : { deposit: null, balance: null };
 
         // Shift the balance due date by the same number of days
         // as the gap between the template billing date and balance date.
@@ -2027,7 +1990,7 @@ const generateRecurringInvoicesCron = async () => {
           deposit_required: recurringDepositRequired,
           deposit_percentage: recurringDepositRequired
             ? recurringDepositPercentage
-            : invoice.deposit_percentage ?? 25,
+            : invoice.deposit_percentage ?? INVOICE.DEFAULT_DEPOSIT_PERCENT,
           deposit_amount: recurringDepositAmount,
           balance_amount: recurringBalanceAmount,
           balance_due_date: nextBalanceDueDate,
