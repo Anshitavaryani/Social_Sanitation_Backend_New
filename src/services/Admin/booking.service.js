@@ -26,7 +26,8 @@ const { randomUUID: uuidv4 } = require("crypto");
 
 const { Booking, Service, Profile, User, UserAttachment, ServiceAttachment, UserAddress, BookingAssignment, Country, State, City, BookingAttachment, BDMUser, Admin, Attendance, GuestBookingAddress, Break, AttendancePayroll } = require("../../models");
 const ApiError = require("../../utils/ApiError");
-const { ATTENDANCE, BOOKING } = require("../../config/rules");
+const { ATTENDANCE, BOOKING, PAGINATION } = require("../../config/rules");
+const { parsePagination } = require("../../utils/pagination");
 const { distanceInKm } = require("../../utils/geo");
 const { attendanceStatus } = require("../../utils/attendanceStatus");
 const toBoolean = require("../../utils/toBoolean");
@@ -46,9 +47,7 @@ const getAllBookings = async (reqBody) => {
 
     // ─── Pagination — defaults kept generous so existing frontend calls
     // that don't send these yet still work, but no longer unbounded. ───
-    const page = Number(reqBody.page) > 0 ? Number(reqBody.page) : 1;
-    const limit = Number(reqBody.limit) > 0 ? Number(reqBody.limit) : 50;
-    const offset = (page - 1) * limit;
+    const { page, limit, offset } = parsePagination(reqBody, PAGINATION.ADMIN_BOOKINGS_PAGE_SIZE);
 
     let whereCondition = {};
 

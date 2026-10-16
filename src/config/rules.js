@@ -48,6 +48,7 @@ const SQUARE_CHECKOUT = Object.freeze({
 
 const PAGINATION = Object.freeze({
   DEFAULT_PAGE_SIZE: 10, // when a list request sends no limit
+  ADMIN_BOOKINGS_PAGE_SIZE: 50, // admin booking list: the admin panel does not always send a limit yet
 });
 
 const LIMITS = Object.freeze({

@@ -4,9 +4,10 @@ require("./helpers/env");
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const bcrypt = require("bcryptjs");
-const { mockModule, mockPackage, mockDatabase, loadFromRoot, runHandler } = require("./helpers/mocks");
+const { mockModule, mockPackage, mockDatabase, mockFirebase, loadFromRoot, runHandler } = require("./helpers/mocks");
 
 const { models } = mockDatabase();
+mockFirebase();
 mockPackage("axios", {
   post: async (url, body) => {
     squareBodies.push(body);
@@ -54,7 +55,7 @@ test("the rules keep the values the app used before they were gathered", () => {
   assert.equal(rules.INVOICE.DEFAULT_DEPOSIT_PERCENT, 25);
   assert.equal(rules.SQUARE_CHECKOUT.SALES_TAX_PERCENT, "7.5");
   assert.deepEqual([...rules.SQUARE_CHECKOUT.TIP_PERCENTAGES], [10, 15, 20]);
-  assert.equal(rules.PAGINATION.DEFAULT_PAGE_SIZE, 10, "the page size most lists used");
+  assert.deepEqual({ ...rules.PAGINATION }, { DEFAULT_PAGE_SIZE: 10, ADMIN_BOOKINGS_PAGE_SIZE: 50 }, "10: the page size most lists used");
   assert.deepEqual({ ...rules.LIMITS }, { MAX_UPLOAD_FILE_MB: 25, MAX_REQUEST_BODY_MB: 25 });
 });
 
@@ -121,6 +122,18 @@ test("lists use one default page size; bad page values fall back instead of reac
   const countryController = loadFromRoot("src/controllers/Common/country.controller.js");
   await runHandler(countryController.getAllCountry, { body: {}, query: {}, params: {} });
   assert.deepEqual(lookups[0], { sortBy: "ASC", page: 1, limit: 10, offset: 0 });
+});
+
+test("the admin booking list keeps its larger default page size, and bad values fall back the same way", async () => {
+  assert.deepEqual(parsePagination({}, rules.PAGINATION.ADMIN_BOOKINGS_PAGE_SIZE), { page: 1, limit: 50, offset: 0 });
+  const adminBookingService = loadFromRoot("src/services/Admin/booking.service.js");
+  const queries = [];
+  models.Booking.findAndCountAll = async (query) => queries.push(query) && { count: 0, rows: [] };
+  for (const paging of [{}, { page: "2" }, { page: "2", limit: "2.5" }, { page: "3", limit: "20" }]) {
+    await adminBookingService.getAllBookings({ booking_status: "UPCOMING", period: "all", ...paging });
+  }
+  // a limit of 2.5 used to reach the database as LIMIT 2.5
+  assert.deepEqual(queries.map((q) => [q.limit, q.offset]), [[50, 0], [50, 50], [50, 50], [20, 40]]);
 });
 
 test("distances match the formulas they replaced", () => {
