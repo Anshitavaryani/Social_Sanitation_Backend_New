@@ -1,4 +1,5 @@
 const { status: httpStatus } = require("http-status");
+const { editableFields } = require("../../utils/editableFields");
 const { equipmentAssignmentStatusTypes, equipmentSignatureActionTypes, equipmentSignatureStatusTypes } = require("../../config/types");
 const ApiError = require("../../utils/ApiError");
 const { parsePagination } = require("../../utils/pagination");
@@ -37,7 +38,7 @@ const updateEquipment = async (equipmentId, body) => {
       throw new ApiError(httpStatus.NOT_FOUND, "Equipment not found.");
     }
 
-    await equipment.update(body);
+    await equipment.update(body, { fields: editableFields(Equipment) });
 
     return equipment;
   } catch (error) {

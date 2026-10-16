@@ -231,3 +231,27 @@ test("catch blocks that may see other services' errors keep their own 404s and 4
   walk(path.join(ROOT, "src"));
   assert.deepEqual(left, [], "use ApiError.orInternal(error)");
 });
+
+test("admin edits change only editable columns: not id, is_active, timestamps or ownership links", async () => {
+  const Product = loadFromRoot("src/models/product.model.js");
+  const UserScopeSection = loadFromRoot("src/models/userScopeSection.model.js");
+  const { editableFields } = loadFromRoot("src/utils/editableFields.js");
+  assert.deepEqual(editableFields(Product), ["name", "description", "quantity"]);
+  assert.deepEqual(editableFields(UserScopeSection, ["user_id", "master_section_id"]), ["title", "order", "is_red"]);
+
+  const productService = loadFromRoot("src/services/Common/product.service.js");
+  const product = Product.build({ id: 5, name: "Mop", description: "", quantity: 1, is_active: true }, { isNewRecord: false });
+  models.Product.findByPk = async () => product;
+  models.Product.rawAttributes = Product.rawAttributes; // the service sees the stand-in model
+  written = null;
+  await productService.updateProductById(5, {
+    name: "Mop XL",
+    quantity: 3,
+    id: 99,
+    is_active: false,
+    deleted_at: "2026-10-16 00:00:00",
+    user: { id: 1 },
+  });
+  assert.deepEqual(Object.keys(written).sort(), ["description", "name", "quantity", "updated_at"]);
+  assert.deepEqual([written.name, written.quantity, product.id, product.is_active], ["Mop XL", 3, 5, true]);
+});

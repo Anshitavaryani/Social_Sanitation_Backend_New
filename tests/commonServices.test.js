@@ -55,6 +55,7 @@ test("images added while editing a service are stored under /images like on crea
 test("images added while editing a product are stored under /images like on create", async () => {
   const created = [];
   models.Product.findByPk = async () => ({ async update() {} });
+  models.Product.rawAttributes = loadFromRoot("src/models/product.model.js").rawAttributes;
   models.ProductAttachment.bulkCreate = async (rows) => created.push(...rows);
 
   await productService.updateProductById(4, {}, { images: [{ filename: "images-2.png", size: 10 }] });

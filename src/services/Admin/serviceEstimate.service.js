@@ -1,6 +1,7 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
+const { editableFields } = require("../../utils/editableFields");
 const logger = require("../../config/logger");
 const { UPLOAD_DIRS, docUrl } = require("../../config/storage");
 const { COMPANY, STAFF } = require("../../config/company");
@@ -1200,7 +1201,7 @@ const updateScopeSection = async (id, reqBody) => {
       throw new ApiError(httpStatus.NOT_FOUND, "Section not found");
     }
 
-    await section.update(reqBody);
+    await section.update(reqBody, { fields: editableFields(ScopeSection) });
 
     return { success: true, data: section };
   } catch (error) {
@@ -1297,7 +1298,7 @@ const updateScopeItem = async (id, reqBody) => {
       throw new ApiError(httpStatus.NOT_FOUND, "Item not found");
     }
 
-    await item.update(reqBody);
+    await item.update(reqBody, { fields: editableFields(ScopeItem) });
 
     return { success: true, data: item };
   } catch (error) {
@@ -1952,7 +1953,7 @@ const updateUserScopeSection = async (id, reqBody) => {
       throw new ApiError(httpStatus.NOT_FOUND, "Section not found");
     }
 
-    await section.update(reqBody);
+    await section.update(reqBody, { fields: editableFields(UserScopeSection, ["user_id", "master_section_id"]) });
 
     return {
       success: true,
@@ -2008,7 +2009,7 @@ const updateUserScopeItem = async (id, reqBody) => {
       throw new ApiError(httpStatus.NOT_FOUND, "Item not found");
     }
 
-    await item.update(reqBody);
+    await item.update(reqBody, { fields: editableFields(UserScopeItem, ["master_item_id"]) });
 
     return {
       success: true,

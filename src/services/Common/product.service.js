@@ -1,6 +1,7 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
+const { editableFields } = require("../../utils/editableFields");
 const { IMAGE_FILE_URI } = require("../../config/storage");
 const {
 	Product,
@@ -116,7 +117,7 @@ const updateProductById = async (id, reqBody, files) => {
 			}));
 			await ProductAttachment.bulkCreate(imageAttachments);
 		}
-		await product.update(reqBody);
+		await product.update(reqBody, { fields: editableFields(Product) });
 		return product;
 	} catch (error) {
 		throw new ApiError(
