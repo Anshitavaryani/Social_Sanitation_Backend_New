@@ -8,7 +8,7 @@ const sendSMS = async ({ to, message }) => {
     body: message,
     from: config.twilio.from,
     to,
-    statusCallback: "https://node.socialsanitation.com:3000/api/v1/admin/user/twilio/sms-status",
+    statusCallback: `${config.apiBaseUrl}/admin/user/twilio/sms-status`,
   });
   
 };

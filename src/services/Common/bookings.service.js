@@ -1,6 +1,7 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
+const { IMAGE_FILE_URI } = require("../../config/storage");
 const { inZone, dateInTz, DATETIME_FORMAT, DATE_FORMAT, TIME_FORMAT, toBusinessDateTime, utcDate } = require("../../utils/time");
 const { Booking, Service, Profile, User, UserAttachment, ServiceAttachment, UserAddress, BookingAssignment, Country, State, City, BDMUser, Admin, BookingAttachment, ServiceChecklist, BookingServiceChecklist, ServiceChecklistMapping, Notification, ServiceChecklistHeading, GuestBookingAddress } = require("../../models");
 const ApiError = require("../../utils/ApiError");
@@ -108,7 +109,7 @@ const createBooking = async (reqBody, files, headers) => {
           title: "BEFORE SERVICE",
           file_type: "Image",
           file_name: currImage.filename,
-          file_uri: "/images",
+          file_uri: IMAGE_FILE_URI,
           file_size: currImage.size,
         };
         await BookingAttachment.create(bookingAttachmentObj);
@@ -539,7 +540,7 @@ const uploadImages = async (reqBody, files) => {
           title: "AFTER SERVICE",
           file_type: "Image",
           file_name: currImage.filename,
-          file_uri: "/images",
+          file_uri: IMAGE_FILE_URI,
           file_size: currImage.size,
         };
         await BookingAttachment.create(bookingAttachmentObj);

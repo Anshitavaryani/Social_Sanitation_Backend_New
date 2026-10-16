@@ -1,6 +1,7 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
+const { IMAGE_FILE_URI } = require("../../config/storage");
 
 const {
 	Service,
@@ -69,7 +70,7 @@ const createService = async (reqBody, files) => {
 					title: "Service Image",
 					file_type: "Image",
 					file_name: currImage.filename,
-					file_uri: "/images",
+					file_uri: IMAGE_FILE_URI,
 					file_size: currImage.size,
 				});
 			}
@@ -372,7 +373,7 @@ const updateService = async (reqBody, files, id) => {
 				title: "Service Image",
 				file_type: "Image",
 				file_name: image.filename,
-				file_uri: "/images",
+				file_uri: IMAGE_FILE_URI,
 				file_size: image.size,
 			}));
 			await ServiceAttachment.bulkCreate(imageAttachments);

@@ -1,6 +1,7 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
+const { IMAGE_FILE_URI, docUrl } = require("../../config/storage");
 const ApiError = require("../../utils/ApiError");
 const { FormSubmission, FormSection, FormAttachment } = require("../../models");
 const { generatePDF, generateSpanishPDF } = require("../../config/puppeteer");
@@ -76,7 +77,7 @@ const submitForm = async (reqBody, files) => {
           submission_id: submission.id,
           file_type: "Image",
           file_name: currImage.filename,
-          file_uri: "/uploads",
+          file_uri: IMAGE_FILE_URI,
           file_size: currImage.size,
         });
 
@@ -107,7 +108,7 @@ const submitForm = async (reqBody, files) => {
     // Save PDF URL in database
     const pdfFileName = path.basename(pdfPath);
 
-    const pdfUrl = `https://node.socialsanitation.com/api/v1/docs/${pdfFileName}`;
+    const pdfUrl = docUrl(pdfFileName);
 
     await submission.update({
       pdf_url: pdfUrl,

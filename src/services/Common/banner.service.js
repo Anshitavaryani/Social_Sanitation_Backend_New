@@ -1,6 +1,7 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
+const { IMAGE_FILE_URI } = require("../../config/storage");
 
 const { BannerAttachment } = require("../../models");
 const ApiError = require("../../utils/ApiError");
@@ -17,7 +18,7 @@ const createBanner = async (reqBody, files) => {
 			title: "Banner Image",
 			file_type: "Image",
 			file_name: currImage.filename,
-			file_uri: "/images",
+			file_uri: IMAGE_FILE_URI,
 			file_size: currImage.size,
 		};
 
@@ -107,7 +108,7 @@ const updateBannerImgaeById = async (reqBody, files, id) => {
 					about_us_id: contentDoc.id,
 					file_type: "Image",
 					file_name: currImage.filename,
-					file_uri: "/images",
+					file_uri: IMAGE_FILE_URI,
 					file_size: currImage.size,
 				};
 				await updateBannerImgaeById.create(bannerAttachmentObj);

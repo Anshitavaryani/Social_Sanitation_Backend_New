@@ -1,6 +1,8 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
+const { UPLOAD_DIRS, docUrl } = require("../../config/storage");
+const { invoiceSenderEmail } = require("../../config/company");
 const { Sequelize, Op } = require("sequelize");
 const {
   dayjs,
@@ -30,7 +32,6 @@ const {
 const { generateInvoicePDF } = require("../../config/puppeteer");
 const { sendInvoiceEmailWithPDF } = require("./email.service");
 const ApiError = require("../../utils/ApiError");
-const config = require("../../config/config");
 const toBoolean = require("../../utils/toBoolean");
 const { assertDepositPercent, roundMoney, splitDeposit } = require("../../utils/money");
 const { ROLE } = require("../../config/roles");
@@ -421,7 +422,7 @@ const createInvoice = async (reqBody) => {
     });
 
     const fileName = pdfPath.split("/").pop();
-    const publicUrl = `https://node.socialsanitation.com/api/v1/docs/${fileName}`;
+    const publicUrl = docUrl(fileName);
 
     await invoice.update({
       pdf_url: publicUrl,
@@ -1103,8 +1104,7 @@ const updateInvoice = async (invoice_id, body) => {
 
     const fileName = pdfPath.split("/").pop();
 
-    const publicUrl =
-      `https://node.socialsanitation.com/api/v1/docs/${fileName}`;
+    const publicUrl = docUrl(fileName);
 
     /* ================= UPDATE PDF + PAYMENT LINK ================= */
 
@@ -1626,7 +1626,7 @@ const sendInvoiceCron = async () => {
 
       const fileName = pdfPath.split("/").pop();
 
-      const publicUrl = `https://node.socialsanitation.com/api/v1/docs/${fileName}`;
+      const publicUrl = docUrl(fileName);
 
       await invoice.update({
         pdf_url: publicUrl,
@@ -1636,13 +1636,7 @@ const sendInvoiceCron = async () => {
       /* ---------- SEND EMAIL ---------- */
 
       if (user?.email) {
-        const senderMap = {
-          2: "m.williams@socialsanitation.com",
-          5: "y.claudio@socialsanitation.com",
-        };
-
-        const senderEmail =
-          senderMap[user.assigned_to] || config.mail.senderEmail;
+        const senderEmail = invoiceSenderEmail(user.assigned_to);
 
         await sendInvoiceEmailWithPDF(user, invoice, pdfPath, senderEmail);
       }
@@ -2195,8 +2189,7 @@ const sendInvoiceBalance = async (invoice_id) => {
     });
 
     const fileName = pdfPath.split("/").pop();
-    const publicUrl =
-      `https://node.socialsanitation.com/api/v1/docs/${fileName}`;
+    const publicUrl = docUrl(fileName);
 
     // Save the generated link and PDF, but do not mark the balance as sent yet.
     await invoice.update({
@@ -2204,13 +2197,7 @@ const sendInvoiceBalance = async (invoice_id) => {
       pdf_url: publicUrl,
     });
 
-    const senderMap = {
-      2: "m.williams@socialsanitation.com",
-      5: "y.claudio@socialsanitation.com",
-    };
-
-    const senderEmail =
-      senderMap[user.assigned_to] || config.mail.senderEmail;
+    const senderEmail = invoiceSenderEmail(user.assigned_to);
 
     // If this fails, payment_stage remains DEPOSIT_PAID and balance_sent_at
     // remains null, allowing the cron to retry on a later run.
@@ -3059,8 +3046,6 @@ const DATE_FIELDS = [
   "due_date",
   "signing_date",
 ];
-const DOCS_DIR = path.resolve(__dirname, "../../../public/uploads/docs");
-const PUBLIC_DOCS_BASE = "https://node.socialsanitation.com/api/v1/docs/";
 
 const cleanText = (value) =>
   value === undefined || value === null
@@ -3342,13 +3327,13 @@ const uploadHistoricalInvoicePDF = async (invoice_id, file) => {
     }
 
     const newFileName = file.filename || path.basename(file.path);
-    const publicUrl = `${PUBLIC_DOCS_BASE}${newFileName}`;
+    const publicUrl = docUrl(newFileName);
 
     // Replacing a PDF: remove the previous upload so old files don't pile up
     if (invoice.pdf_url && invoice.pdf_url !== publicUrl) {
       const oldFileName = path.basename(invoice.pdf_url);
       if (oldFileName.startsWith("docs-")) {
-        await safeUnlink(path.join(DOCS_DIR, oldFileName));
+        await safeUnlink(path.join(UPLOAD_DIRS.docs, oldFileName));
       }
     }
 

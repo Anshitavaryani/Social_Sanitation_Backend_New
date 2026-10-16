@@ -267,3 +267,9 @@ test("guest login is gone: it handed anyone an app token, with the role taken fr
   const res = await call("POST", "/api/v1/user/auth/guestLogin", { headers: { role_id: "7" } });
   assert.equal(res.status, 404);
 });
+
+test("the logo emails link to is served by the API", async () => {
+  const res = await fetch(`${baseUrl}/api/v1/assets/logo.jpg`);
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get("content-type"), "image/jpeg");
+});

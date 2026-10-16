@@ -1,6 +1,7 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
+const { IMAGE_FILE_URI } = require("../../config/storage");
 
 const {
 	User,
@@ -115,7 +116,7 @@ const updateUserProfile = async (body, files) => {
 					title: "Profile Image",
 					file_type: "Image",
 					file_name: currImage.filename,
-					file_uri: "/images",
+					file_uri: IMAGE_FILE_URI,
 					file_size: currImage.size,
 				};
 				await UserAttachment.create(userAttachmentObj);
@@ -123,7 +124,7 @@ const updateUserProfile = async (body, files) => {
 				// Set profileImage variable to the updated image information
 				profileImage = {
 					file_name: currImage.filename,
-					file_uri: "/images",
+					file_uri: IMAGE_FILE_URI,
 					file_size: currImage.size,
 				};
 			}

@@ -1,6 +1,7 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
+const { IMAGE_FILE_URI } = require("../../config/storage");
 const {
 	Product,
 	ProductRequest,
@@ -28,7 +29,7 @@ const createProduct = async (reqBody, files) => {
 					title: "Product Image",
 					file_type: "Image",
 					file_name: currImage.filename,
-					file_uri: "/images",
+					file_uri: IMAGE_FILE_URI,
 					file_size: currImage.size,
 				});
 			}
@@ -110,7 +111,7 @@ const updateProductById = async (id, reqBody, files) => {
 				title: "Product Image",
 				file_type: "Image",
 				file_name: image.filename,
-				file_uri: "/images",
+				file_uri: IMAGE_FILE_URI,
 				file_size: image.size,
 			}));
 			await ProductAttachment.bulkCreate(imageAttachments);
@@ -261,7 +262,7 @@ const requestStock = async (reqBody, files) => {
 					title: "Product Request Image",
 					file_type: "Image",
 					file_name: currImage.filename,
-					file_uri: "/images",
+					file_uri: IMAGE_FILE_URI,
 					file_size: currImage.size,
 				});
 			}

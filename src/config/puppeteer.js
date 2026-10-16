@@ -1,6 +1,8 @@
 /** @format */
 
 const puppeteer = require("puppeteer-core");
+const { UPLOAD_DIRS } = require("./storage");
+const { logoDataUri } = require("./company");
 const config = require("./config");
 const fs = require("fs");
 const path = require("path");
@@ -258,7 +260,7 @@ const generateQuotePDF = async (data) => {
   <div class="header">
     <img
       class="logo"
-      src="https://socialsanitation.com/wp-content/uploads/2022/12/New-Logo.jpg"
+      src="${logoDataUri()}"
       alt="Company Logo"
     >
 
@@ -597,7 +599,7 @@ const generateQuotePDF = async (data) => {
 </html>
 `;
 
-  const pdfDir = path.resolve(__dirname, "../../public/uploads/docs");
+  const pdfDir = UPLOAD_DIRS.docs;
 
   const pdfPath = path.join(pdfDir, `quote-${ref_no}.pdf`);
 
@@ -1902,7 +1904,7 @@ const generatePDF = async (
 
 	`;
 
-  const pdfDir = path.resolve(__dirname, "../../public/uploads/docs");
+  const pdfDir = UPLOAD_DIRS.docs;
   const pdfFileName = `hiring-form-${submissionId}-${Date.now()}.pdf`;
 
   const pdfPath = path.join(pdfDir, pdfFileName);
@@ -3216,7 +3218,7 @@ ${
 
 </html>`;
 
-  const pdfDir = path.resolve(__dirname, "../../public/uploads/docs");
+  const pdfDir = UPLOAD_DIRS.docs;
 
   const pdfFileName = `hiring-form-${submissionId}-${Date.now()}.pdf`;
 
@@ -3835,7 +3837,7 @@ const generateInvoicePDF = async (data) => {
 			<div class="logo-col">
 				<img
 					class="logo"
-					src="https://socialsanitation.com/wp-content/uploads/2022/12/New-Logo.jpg"
+					src="${logoDataUri()}"
 				/>
 			</div>
 
@@ -4058,7 +4060,7 @@ const generateInvoicePDF = async (data) => {
 </html>
 `;
 
-  const pdfDir = path.resolve(__dirname, "../../public/uploads/docs");
+  const pdfDir = UPLOAD_DIRS.docs;
   const pdfPath = path.join(pdfDir, `invoice-${invoice_ref_no}.pdf`);
 
   if (!fs.existsSync(pdfDir)) {
@@ -4274,7 +4276,7 @@ const generateServiceRequestPDF = async (data) => {
 
 <body>
     <div class="header">
-        <img class="logo" src="https://socialsanitation.com/wp-content/uploads/2022/12/New-Logo.jpg"
+        <img class="logo" src="${logoDataUri()}"
             alt="Company Logo" />
         <div class="title">SERVICE REQUEST</div>
     </div>
@@ -4431,8 +4433,7 @@ const generateServiceRequestPDF = async (data) => {
 </html>
 `;
 
-  const PUBLIC_DIR = path.resolve(__dirname, "../../public");
-  const pdfDir = path.join(PUBLIC_DIR, "uploads/docs");
+  const pdfDir = UPLOAD_DIRS.docs;
 
   if (!fs.existsSync(pdfDir)) {
     fs.mkdirSync(pdfDir, { recursive: true });

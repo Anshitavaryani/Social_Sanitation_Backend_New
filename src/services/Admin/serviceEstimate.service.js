@@ -1,6 +1,8 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
+const { UPLOAD_DIRS, docUrl } = require("../../config/storage");
+const { COMPANY, STAFF } = require("../../config/company");
 const { contractStatusTypes } = require("../../config/types");
 const path = require("path");
 const { Op } = require("sequelize");
@@ -203,9 +205,9 @@ const generateEstimatePDFService = async (reqBody) => {
       where: { user_id },
     });
 
-    let bdmName = "Marco Williams";
-    let bdmEmail = "m.williams@socialsanitation.com";
-    let bdmPhone = "(813) 296-9695";
+    let bdmName = STAFF.ESTIMATE_CONTACT.NAME;
+    let bdmEmail = STAFF.ESTIMATE_CONTACT.EMAIL;
+    let bdmPhone = COMPANY.PHONE;
 
     if (bdmMapping) {
       const bdm = await Admin.findOne({
@@ -216,7 +218,7 @@ const generateEstimatePDFService = async (reqBody) => {
       if (bdm) {
         bdmName = bdm.name;
         bdmEmail = bdm.email;
-        bdmPhone = bdm.mobile || "(813) 296-9695";
+        bdmPhone = bdm.mobile || COMPANY.PHONE;
       }
     }
 
@@ -227,8 +229,7 @@ const generateEstimatePDFService = async (reqBody) => {
 
     const fileName = `Social-Sanitation-Service-Estimate-${safeClientName}.pdf`;
 
-    const PUBLIC_DIR = path.resolve(__dirname, "../../../public");
-    const pdfDir = path.join(PUBLIC_DIR, "uploads/docs");
+    const pdfDir = UPLOAD_DIRS.docs;
 
     if (!fs.existsSync(pdfDir)) {
       fs.mkdirSync(pdfDir, { recursive: true });
@@ -302,14 +303,14 @@ const generateEstimatePDFService = async (reqBody) => {
       },
       pdfPath,
     );
-    const signerName = "Marco Williams";
+    const signerName = STAFF.ESTIMATE_CONTACT.NAME;
     const envelopeId = await createEnvelope({
       pdfPath,
       signerEmail: userDocs.email,
       signerName: signerName,
     });
 
-    const publicUrl = `https://node.socialsanitation.com/api/v1/docs/${fileName}`;
+    const publicUrl = docUrl(fileName);
 
     const estimate = await ServiceEstimate.create({
       user_id,
@@ -395,8 +396,7 @@ const downloadScopeOfWorkPdfService = async (userId) => {
     // downloads for the same user) from overwriting the same file on disk.
     const fileName = `Scope-of-Work-${safeClientName}-${Date.now()}.pdf`;
 
-    const PUBLIC_DIR = path.resolve(__dirname, "../../../public");
-    const pdfDir = path.join(PUBLIC_DIR, "uploads/docs");
+    const pdfDir = UPLOAD_DIRS.docs;
 
     if (!fs.existsSync(pdfDir)) {
       fs.mkdirSync(pdfDir, { recursive: true });
@@ -416,7 +416,7 @@ const downloadScopeOfWorkPdfService = async (userId) => {
     // through a custom response handler.
     fs.writeFileSync(pdfPath, pdfBuffer);
 
-    const fileUrl = `https://node.socialsanitation.com/api/v1/docs/${fileName}`;
+    const fileUrl = docUrl(fileName);
 
     return { fileUrl, fileName };
   } catch (error) {
@@ -627,9 +627,9 @@ const updateServiceEstimate = async (reqBody) => {
       where: { user_id },
     });
 
-    let bdmName = "Marco Williams";
-    let bdmEmail = "m.williams@socialsanitation.com";
-    let bdmPhone = "(813) 296-9695";
+    let bdmName = STAFF.ESTIMATE_CONTACT.NAME;
+    let bdmEmail = STAFF.ESTIMATE_CONTACT.EMAIL;
+    let bdmPhone = COMPANY.PHONE;
 
     if (bdmMapping) {
       const bdm = await Admin.findOne({
@@ -640,7 +640,7 @@ const updateServiceEstimate = async (reqBody) => {
       if (bdm) {
         bdmName = bdm.name;
         bdmEmail = bdm.email;
-        bdmPhone = bdm.mobile || "(813) 296-9695";
+        bdmPhone = bdm.mobile || COMPANY.PHONE;
       }
     }
 
@@ -650,8 +650,7 @@ const updateServiceEstimate = async (reqBody) => {
 
     const fileName = `Social-Sanitation-Service-Estimate-${safeClientName}.pdf`;
 
-    const PUBLIC_DIR = path.resolve(__dirname, "../../../public");
-    const pdfDir = path.join(PUBLIC_DIR, "uploads/docs");
+    const pdfDir = UPLOAD_DIRS.docs;
 
     if (!fs.existsSync(pdfDir)) {
       fs.mkdirSync(pdfDir, { recursive: true });
@@ -694,7 +693,7 @@ const updateServiceEstimate = async (reqBody) => {
       signerName: userDocs.user_profile.name,
     });
 
-    const publicUrl = `https://node.socialsanitation.com/api/v1/docs/${fileName}`;
+    const publicUrl = docUrl(fileName);
 
     await estimate.update({
       client_company_name,
@@ -786,7 +785,7 @@ const resumeSigningService = async (estimateId) => {
     }
 
     const signerEmail = estimate.client_email;
-    const signerName = "Marco Williams";
+    const signerName = STAFF.ESTIMATE_CONTACT.NAME;
 
     const signingUrl = await getSigningUrl({
       envelopeId: estimate.docusign_envelope_id,
@@ -840,8 +839,7 @@ const generateContractAgreementService = async (reqBody) => {
 
     const fileName = `Contract-Agreement-${client_company_name}.pdf`;
 
-    const PUBLIC_DIR = path.resolve(__dirname, "../../../public");
-    const pdfDir = path.join(PUBLIC_DIR, "uploads/docs");
+    const pdfDir = UPLOAD_DIRS.docs;
 
     if (!fs.existsSync(pdfDir)) {
       fs.mkdirSync(pdfDir, { recursive: true });
@@ -878,7 +876,7 @@ const generateContractAgreementService = async (reqBody) => {
 
     console.log(envelopeId, "envelopeId");
 
-    const publicUrl = `https://node.socialsanitation.com/api/v1/docs/${fileName}`;
+    const publicUrl = docUrl(fileName);
 
     console.log({
       user_id,
@@ -1016,8 +1014,7 @@ const updateContractAgreement = async (reqBody) => {
 
     const fileName = `Contract-Agreement-${client_company_name}.pdf`;
 
-    const PUBLIC_DIR = path.resolve(__dirname, "../../../public");
-    const pdfDir = path.join(PUBLIC_DIR, "uploads/docs");
+    const pdfDir = UPLOAD_DIRS.docs;
 
     if (!fs.existsSync(pdfDir)) {
       fs.mkdirSync(pdfDir, { recursive: true });
@@ -1053,9 +1050,11 @@ const updateContractAgreement = async (reqBody) => {
 
     /* ================= UPDATE RECORD ================= */
 
-    const publicUrl = `https://node.socialsanitation.com/api/v1/docs/${fileName}`;
+    const publicUrl = docUrl(fileName);
 
     await contract.update({
+      client_name: signerName,
+      client_email: userDocs.email,
       client_company_name,
       client_legal_name,
       client_representative,
@@ -1154,8 +1153,9 @@ const resumeContractAgreement = async (estimateId) => {
       );
     }
 
-    const signerEmail = "anshitavaryani@gmail.com";
-    const signerName = "Marco Williams";
+    // the contract envelope's signer is the client (createContractEnvelope)
+    const signerEmail = estimate.client_email;
+    const signerName = estimate.client_name || "Client";
 
     const signingUrl = await getSigningUrl({
       envelopeId: estimate.docusign_envelope_id,

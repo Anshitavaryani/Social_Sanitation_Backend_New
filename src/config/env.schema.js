@@ -25,8 +25,12 @@ const envSchema = Joi.object({
     .default("America/New_York")
     .description("Time zone the business runs on: \"today\", weeks, months and cron jobs"),
   ACCESSDOMAINS: Joi.string().required().description("Origins allowed to call the API (CORS), comma separated"),
-  API_BASE_URL: optional(Joi.string()).description("Public base URL of this API"),
-  ADMIN_BASE_URL: optional(Joi.string()).description("Public base URL of the admin panel"),
+  API_BASE_URL: optional(Joi.string().uri({ scheme: ["http", "https"] }))
+    .default("https://node.socialsanitation.com/api/v1")
+    .description("Public URL of this API, ending in /api/v1: document and logo links, the Twilio status callback"),
+  ADMIN_BASE_URL: optional(Joi.string().uri({ scheme: ["http", "https"] }))
+    .default("https://admin.socialsanitation.com")
+    .description("Public URL of the admin panel: links in emails, the Square checkout and DocuSign return pages"),
   DEFAULT_AMOUNT: optional(Joi.number()).default(5).description("Default amount of a new payment row"),
   PUPPETEER_EXECUTABLE_PATH: optional(Joi.string())
     .default("/root/.cache/puppeteer/chrome/linux-136.0.7103.92/chrome-linux64/chrome")

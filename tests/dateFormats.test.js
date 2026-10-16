@@ -61,7 +61,9 @@ const htmlOf = async (render) => {
 };
 
 // The given dates appear as MM-DD-YYYY and never in their stored form or another style
-const assertDisplayed = (html, expected, raw = []) => {
+const assertDisplayed = (rendered, expected, raw = []) => {
+  // embedded images are not text (their base64 can contain "NaN")
+  const html = rendered.replace(/data:image\/[a-z]+;base64,[A-Za-z0-9+/=]+/g, "data:image");
   for (const shown of expected) assert.ok(html.includes(shown), `shows ${shown}`);
   for (const stored of raw) assert.ok(!html.includes(stored), `does not show the stored form ${stored}`);
   assert.doesNotMatch(html, /\b\d{1,2}\/\d{1,2}\/\d{4}\b/, "no MM/DD/YYYY or M/D/YYYY dates");

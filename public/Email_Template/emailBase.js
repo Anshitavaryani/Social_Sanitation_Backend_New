@@ -1,4 +1,4 @@
-const LOGO_URL = "https://socialsanitation.com/wp-content/uploads/2022/12/New-Logo.jpg"; // replace with your actual hosted logo URL
+const { LOGO_URL } = require("../../src/config/company");
 
 const emailBase = ({ title, preheader = "", bodyHtml }) => `
 <!DOCTYPE html>

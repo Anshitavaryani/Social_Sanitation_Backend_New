@@ -1,6 +1,7 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
+const { IMAGE_FILE_URI } = require("../../config/storage");
 const bcrypt = require("bcryptjs");
 const { dayjs, inZone, isValidTimeZone, DATETIME_FORMAT } = require("../../utils/time");
 
@@ -202,7 +203,7 @@ const register = async (body, files, headers) => {
 					title: "Profile Image",
 					file_type: "Image",
 					file_name: currImage.filename,
-					file_uri: "/images",
+					file_uri: IMAGE_FILE_URI,
 					file_size: currImage.size,
 				};
 				await UserAttachment.create(userAttachmentObj);

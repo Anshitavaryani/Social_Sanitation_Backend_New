@@ -1,6 +1,8 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
+const { UPLOAD_DIRS, docUrl } = require("../../config/storage");
+const { COMPANY } = require("../../config/company");
 const { attendanceStatusTypes, bookingListFilterTypes, bookingTypes, invoicePaymentStatusTypes, jobStatusTypes, paymentStatusTypes, quoteStatusTypes, userStatusTypes } = require("../../config/types");
 const { Sequelize, Op } = require("sequelize");
 const path = require("path");
@@ -1514,12 +1516,12 @@ const adminAddUser = async (reqBody) => {
     // Existing email logic
     // ============================
 
-    let supportEmail = "socialsanitation@gmail.com";
+    let supportEmail = COMPANY.EMAIL;
 
     if (Number(role_id) === ROLE.CLIENT) {
-      supportEmail = "clean.quote@socialsanitation.com";
+      supportEmail = COMPANY.CLIENT_SUPPORT_EMAIL;
     } else if (EMPLOYEE_ROLE_IDS.includes(Number(role_id))) {
-      supportEmail = "reports@socialsanitation.com";
+      supportEmail = COMPANY.EMPLOYEE_SUPPORT_EMAIL;
     }
 
     const isSend = await sendUserCredentials(
@@ -3164,7 +3166,7 @@ const submitServiceQuote = async (reqBody) => {
 
     const pdfFileName = path.basename(pdfPath);
 
-    const pdfPublicUrl = `https://node.socialsanitation.com/api/v1/docs/${pdfFileName}`;
+    const pdfPublicUrl = docUrl(pdfFileName);
 
     await quote.update({
       pdf_url: pdfPublicUrl,
@@ -3765,7 +3767,7 @@ const editServiceQuote = async (reqBody) => {
 
     const pdfFileName = path.basename(pdfPath);
 
-    const pdfPublicUrl = `https://node.socialsanitation.com/api/v1/docs/${pdfFileName}`;
+    const pdfPublicUrl = docUrl(pdfFileName);
 
     await quote.update({
       pdf_url: pdfPublicUrl,
@@ -3892,8 +3894,7 @@ const submitServiceRequest = async (reqBody) => {
 
     const fileName = `service-request-${finalRefNo}.pdf`;
 
-    const PUBLIC_DIR = path.resolve(__dirname, "../../../public");
-    const pdfDir = path.join(PUBLIC_DIR, "uploads/docs");
+    const pdfDir = UPLOAD_DIRS.docs;
 
     if (!fs.existsSync(pdfDir)) {
       fs.mkdirSync(pdfDir, { recursive: true });
@@ -4059,8 +4060,7 @@ const editServiceRequest = async (reqBody) => {
 
     const fileName = `service-request-${request.ref_no}.pdf`;
 
-    const PUBLIC_DIR = path.resolve(__dirname, "../../../public");
-    const pdfDir = path.join(PUBLIC_DIR, "uploads/docs");
+    const pdfDir = UPLOAD_DIRS.docs;
 
     if (!fs.existsSync(pdfDir)) {
       fs.mkdirSync(pdfDir, { recursive: true });

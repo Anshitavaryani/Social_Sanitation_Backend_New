@@ -1,4 +1,5 @@
 const fs = require("fs");
+const { UPLOAD_DIRS } = require("../../config/storage");
 const path = require("path");
 const { status: httpStatus } = require("http-status");
 const { inspectionReviewStatusTypes, inspectionStatusTypes } = require("../../config/types");
@@ -25,7 +26,7 @@ const {
 const { getUserScope } = require("../Admin/serviceEstimate.service");
 const { sendInspectionCompletedEmail } = require("./email.service");
 
-const INSPECTION_IMAGES_DIR = path.resolve(__dirname, "../../../public/uploads/images");
+const INSPECTION_IMAGES_DIR = UPLOAD_DIRS.images;
 
 // Inspection images are stored as "/<filename>" in InspectionItemImage.image
 const deleteInspectionImageFile = (storedImage) => {

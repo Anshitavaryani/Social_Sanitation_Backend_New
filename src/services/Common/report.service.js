@@ -1,6 +1,7 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
+const { IMAGE_FILE_URI } = require("../../config/storage");
 
 const ApiError = require("../../utils/ApiError");
 const { reportTypes } = require("../../config/types");
@@ -46,7 +47,7 @@ const reportBooking = async (body, files, id) => {
 					title: "REPORT BOOKING",
 					file_type: "Image",
 					file_name: currImage.filename,
-					file_uri: "/images",
+					file_uri: IMAGE_FILE_URI,
 					file_size: currImage.size,
 				};
 				await BookingAttachment.create(bookingAttachmentObj);

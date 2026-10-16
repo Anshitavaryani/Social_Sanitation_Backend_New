@@ -1,11 +1,10 @@
 const multer = require("multer");
+const { UPLOAD_DIRS } = require("./storage");
 const path = require("path");
 const { randomBytes } = require("crypto");
 const { status: httpStatus } = require("http-status");
 const ApiError = require("../utils/ApiError");
 const { LIMITS } = require("./rules");
-
-const PUBLIC_DIR = path.resolve(__dirname, "../../public");
 
 // Largest file accepted in one upload field (images, PDFs, documents)
 const MAX_FILE_MB = LIMITS.MAX_UPLOAD_FILE_MB;
@@ -14,15 +13,15 @@ const MAX_FILE_MB = LIMITS.MAX_UPLOAD_FILE_MB;
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     if (file.fieldname === "videos") {
-      cb(null, PUBLIC_DIR + "/uploads/videos");
+      cb(null, UPLOAD_DIRS.videos);
     } else if (file.fieldname === "images") {
-      cb(null, PUBLIC_DIR + "/uploads/images");
+      cb(null, UPLOAD_DIRS.images);
     } else if (file.fieldname === "gifs") {
-      cb(null, PUBLIC_DIR + "/uploads/gifs");
+      cb(null, UPLOAD_DIRS.gifs);
     } else if (file.fieldname === "docs") {
-      cb(null, PUBLIC_DIR + "/uploads/docs");
+      cb(null, UPLOAD_DIRS.docs);
     } else if (file.fieldname === "audios") {
-      cb(null, PUBLIC_DIR + "/uploads/audios");
+      cb(null, UPLOAD_DIRS.audios);
     } else {
       cb(new Error("Invalid fieldname"));
     }

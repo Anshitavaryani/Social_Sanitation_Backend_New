@@ -136,6 +136,15 @@ const loadConfigWith = (overrides) => {
   }
 };
 
+test("public URLs default to the live addresses, must be full http(s) URLs, and lose a trailing slash", () => {
+  const defaults = loadConfigWith({ API_BASE_URL: undefined, ADMIN_BASE_URL: undefined });
+  assert.equal(defaults.apiBaseUrl, "https://node.socialsanitation.com/api/v1");
+  assert.equal(defaults.adminBaseUrl, "https://admin.socialsanitation.com");
+  const local = loadConfigWith({ API_BASE_URL: "http://localhost:3000/api/v1/", ADMIN_BASE_URL: "http://localhost:3001/" });
+  assert.deepEqual([local.apiBaseUrl, local.adminBaseUrl], ["http://localhost:3000/api/v1", "http://localhost:3001"]);
+  assert.throws(() => loadConfigWith({ API_BASE_URL: "node.socialsanitation.com/api/v1" }), /API_BASE_URL/);
+});
+
 test("an empty optional setting takes its default", () => {
   const fresh = loadConfigWith({
     PORT: "",

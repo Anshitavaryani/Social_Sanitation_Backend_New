@@ -1,4 +1,5 @@
 const docusign = require("docusign-esign");
+const { adminPanelUrl } = require("../../config/company");
 const { getDocusignClient } = require("./docusignAuth.service");
 const config = require("../../config/config");
 
@@ -13,7 +14,7 @@ const getSigningUrl = async ({
 
   const viewRequest = new docusign.RecipientViewRequest();
 
-  viewRequest.returnUrl = "https://admin.socialsanitation.com/docusign-success";
+  viewRequest.returnUrl = adminPanelUrl("docusign-success");
   viewRequest.authenticationMethod = "none";
   viewRequest.email = signerEmail;
   viewRequest.userName = signerName;

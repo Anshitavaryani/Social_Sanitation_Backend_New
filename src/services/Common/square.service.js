@@ -1,5 +1,6 @@
 /** @format */
 const axios = require("axios");
+const { adminPanelUrl } = require("../../config/company");
 const { currancyTypes, paymentPurposeTypes, paymentStatusTypes } = require("../../config/types");
 const { randomUUID: uuidv4 } = require("crypto");
 const { Payment } = require("../../models");
@@ -52,7 +53,7 @@ const checkoutBody = ({ itemName, amountCents, customerEmail, extraTipSettings =
 
   checkout_options: {
     allow_tipping: true,
-    redirect_url: "https://admin.socialsanitation.com/checkout",
+    redirect_url: adminPanelUrl("checkout"),
     tip_settings: {
       separate_tip_screen: false,
       enable_custom_tip_amount: true,

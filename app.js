@@ -32,7 +32,7 @@ const errorHandler = require("./src/utils/errorHandler.js");
 const responseWrapper = require("./src/config/responseWrapper.js");
 const { adminAuthMiddleware } = require("./src/middlewares");
 require("./src/models");
-const PUBLIC_DIR = path.resolve(__dirname, "./public");
+const { PUBLIC_DIR, UPLOAD_DIRS, SERVED_UPLOAD_FOLDERS, ASSETS_DIR } = require("./src/config/storage");
 
 const { initializeApp, cert } = require("firebase-admin/app");
 const {
@@ -297,19 +297,14 @@ app.delete("/api/v1/logs", adminAuthMiddleware.validateJWTtoken, async (req, res
   return responseWrapper(res, "", "All log files deleted successfully");
 });
 
-app.use("/api/v1/images", express.static(`${PUBLIC_DIR}/uploads/images`));
-app.use("/api/v1/videos", express.static(`${PUBLIC_DIR}/uploads/videos`));
-app.use("/api/v1/gifs", express.static(`${PUBLIC_DIR}/uploads/gifs`));
-app.use("/api/v1/docs", express.static(`${PUBLIC_DIR}/uploads/docs`));
-app.use("/api/v1/songs", express.static(`${PUBLIC_DIR}/uploads/songs`));
-
-
-// All File Apis
-app.use("/images", express.static(`${PUBLIC_DIR}/uploads/images`));
-app.use("/videos", express.static(`${PUBLIC_DIR}/uploads/videos`));
-app.use("/gifs", express.static(`${PUBLIC_DIR}/uploads/gifs`));
-app.use("/docs", express.static(`${PUBLIC_DIR}/uploads/docs`));
-app.use("/songs", express.static(`${PUBLIC_DIR}/uploads/songs`));
+// Uploaded files at /api/v1/<folder> and /<folder>, and the fixed images emails link to (storage.js)
+for (const folder of SERVED_UPLOAD_FOLDERS) {
+  app.use(`/api/v1/${folder}`, express.static(UPLOAD_DIRS[folder]));
+}
+app.use("/api/v1/assets", express.static(ASSETS_DIR));
+for (const folder of SERVED_UPLOAD_FOLDERS) {
+  app.use(`/${folder}`, express.static(UPLOAD_DIRS[folder]));
+}
 
 // send back a 404 error for any unknown api request
 app.use((req, res, next) => {

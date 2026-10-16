@@ -1,9 +1,10 @@
 /** @format */
 
 const puppeteer = require("puppeteer-core");
+const { assetDataUri } = require("./storage");
+const { COMPANY, logoDataUri } = require("./company");
 const config = require("./config");
 const { formatDisplayDate } = require("../utils/time");
-const axios = require("axios");
 
 const renderScopeTables = (sections) => {
   if (!sections || !sections.length) {
@@ -116,26 +117,14 @@ const generateEstimatePDF = async (data, pdfPath) => {
 
   const scopeHTML = renderScopeTables(scopeSections);
 
-  async function getBase64(url) {
-    const res = await axios.get(url, { responseType: "arraybuffer" });
-    return `data:image/png;base64,${Buffer.from(res.data).toString("base64")}`;
-  }
-
   const formattedSignedDate = signed_date
     ? formatDisplayDate(signed_date)
     : "";
 
-  const fridgeImg = await getBase64(
-    "https://node.socialsanitation.com/api/v1/images/images-1771932382236.png",
-  );
-
-  const hallImg = await getBase64(
-    "https://node.socialsanitation.com/api/v1/images/images-1771932394372.png",
-  );
-
-  const acordImg = await getBase64(
-    "https://node.socialsanitation.com/api/v1/images/images-1773208110544.png",
-  );
+  // fixed images in public/assets; they used to be downloaded from the live server for every PDF
+  const hallwayImg = assetDataUri("estimate-hallway.png");
+  const refrigeratorImg = assetDataUri("estimate-refrigerator.png");
+  const acordImg = assetDataUri("acord-logo.png");
 
   const htmlContent = `
 <!doctype html>
@@ -744,7 +733,7 @@ const generateEstimatePDF = async (data, pdfPath) => {
 	<div class="pdf-page cover-page">
 		<!-- LOGO -->
 		<img class="logo"
-			src="https://socialsanitation.com/wp-content/uploads/2022/12/New-Logo.jpg"
+			src="${logoDataUri()}"
 			alt="Social Sanitation Logo" />
 
 		<!-- TITLE -->
@@ -840,7 +829,7 @@ const generateEstimatePDF = async (data, pdfPath) => {
 	<div class="pdf-page">
 		<!-- SIMPLE HEADER -->
 		<div class="simple-header">
-			<img src="https://admin.socialsanitation.com/static/media/WhatsApp%20Image%202024-11-20%20at%209.55.51%20AM%20(1)%201.90014a54009164cf4e08.png"
+			<img src="${logoDataUri()}"
 				class="header-logo" />
 			<div class="header-title">Capability Statement</div>
 		</div>
@@ -856,7 +845,7 @@ const generateEstimatePDF = async (data, pdfPath) => {
 					<strong>UEI:</strong> DXMEZLDCENG6<br />
 					<strong>CAGE Code:</strong> 173M3<br />
 					<strong>Physical Address:</strong> 5201 N.44th St Tampa FL 33610<br />
-					<strong>Website:</strong> socialsanitation.com
+					<strong>Website:</strong> ${COMPANY.WEBSITE}
 				</div>
 
 				<div class="content-text">
@@ -999,7 +988,7 @@ const generateEstimatePDF = async (data, pdfPath) => {
 		<!-- TOP AREA -->
 		<div class="services-top">
 			<!-- LOGO TOP LEFT -->
-			<img src="https://admin.socialsanitation.com/static/media/WhatsApp%20Image%202024-11-20%20at%209.55.51%20AM%20(1)%201.90014a54009164cf4e08.png"
+			<img src="${logoDataUri()}"
 				class="services-logo" />
 
 			<!-- CENTER HEADING -->
@@ -1068,7 +1057,7 @@ const generateEstimatePDF = async (data, pdfPath) => {
 	<!-- PAGE 7 -->
 	<div class="pdf-page maintenance-page">
 		<div class="maintenance-top">
-			<img src="https://admin.socialsanitation.com/static/media/WhatsApp%20Image%202024-11-20%20at%209.55.51%20AM%20(1)%201.90014a54009164cf4e08.png"
+			<img src="${logoDataUri()}"
 				class="maintenance-logo" />
 			<div style="text-align: center">
 				<div class="maintenance-heading">SERVICES</div>
@@ -1080,11 +1069,11 @@ const generateEstimatePDF = async (data, pdfPath) => {
 			<div class="maintenance-left">
 				<h3>Maintenance Programs</h3>
 
-				<img src="${fridgeImg}" />
+				<img src="${hallwayImg}" />
 
 				<div class="image-caption">Refrigerator Deep Clean</div>
 
-				<img src="${hallImg}" />
+				<img src="${refrigeratorImg}" />
 			</div>
 
 			<!-- RIGHT SIDE TEXT -->
@@ -1137,7 +1126,7 @@ const generateEstimatePDF = async (data, pdfPath) => {
 	<div class="pdf-page maintenance-page">
 		<!-- HEADER (same layout as page 6 & 7) -->
 		<div class="maintenance-top">
-			<img src="https://admin.socialsanitation.com/static/media/WhatsApp%20Image%202024-11-20%20at%209.55.51%20AM%20(1)%201.90014a54009164cf4e08.png"
+			<img src="${logoDataUri()}"
 				class="maintenance-logo" />
 			<div style="text-align: center">
 				<div class="maintenance-heading">Extended Services</div>
@@ -1208,7 +1197,7 @@ const generateEstimatePDF = async (data, pdfPath) => {
 		<div style="display: flex; align-items: stretch; margin-bottom: 40px">
 			<!-- LEFT LOGO -->
 			<div style="width: 35%; display: flex; align-items: center">
-				<img src="https://admin.socialsanitation.com/static/media/WhatsApp%20Image%202024-11-20%20at%209.55.51%20AM%20(1)%201.90014a54009164cf4e08.png"
+				<img src="${logoDataUri()}"
 					style="width: 140px" />
 			</div>
 
@@ -1875,7 +1864,7 @@ const generateEstimatePDF = async (data, pdfPath) => {
 	<div class="pdf-page maintenance-page">
 		<!-- HEADER -->
 		<div class="maintenance-top">
-			<img src="https://admin.socialsanitation.com/static/media/WhatsApp%20Image%202024-11-20%20at%209.55.51%20AM%20(1)%201.90014a54009164cf4e08.png"
+			<img src="${logoDataUri()}"
 				class="maintenance-logo" />
 			<div style="text-align: center">
 				<div class="maintenance-heading">Service Estimate</div>

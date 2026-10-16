@@ -1,6 +1,7 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
+const { UPLOAD_DIRS, docUrl } = require("../../config/storage");
 const { contractStatusTypes, quoteStatusTypes } = require("../../config/types");
 const catchAsync = require("../../utils/catchAsync");
 const { serviceEstimateService } = require("../../services");
@@ -192,8 +193,7 @@ const handleDocusignWebhook = async (req, res) => {
       return res.status(200).send("Download failed");
     }
 
-    const PUBLIC_DIR = path.resolve(__dirname, "../../../public");
-    const pdfDir = path.join(PUBLIC_DIR, "uploads/docs");
+    const pdfDir = UPLOAD_DIRS.docs;
 
     if (!fs.existsSync(pdfDir)) {
       fs.mkdirSync(pdfDir, { recursive: true });
@@ -262,7 +262,7 @@ const handleDocusignWebhook = async (req, res) => {
       const savePath = path.join(pdfDir, signedFileName);
 
       fs.writeFileSync(savePath, signedPdfBuffer);
-      const signedPublicUrl = `https://node.socialsanitation.com/api/v1/docs/${signedFileName}`;
+      const signedPublicUrl = docUrl(signedFileName);
       await document.update({
         status: contractStatusTypes.SIGNED,
         signed_file_name: signedFileName,

@@ -25,8 +25,9 @@ module.exports = {
     DEFAULT_TIMEZONE: envVars.DEFAULT_TIMEZONE,
     businessTimeZone: envVars.BUSINESS_TIMEZONE,
     accessDomains: envVars.ACCESSDOMAINS,
-    API_BASE_URL: envVars.API_BASE_URL,
-    ADMIN_BASE_URL: envVars.ADMIN_BASE_URL,
+    // Public URLs, without a trailing slash (storage.js and company.js build links from them)
+    apiBaseUrl: envVars.API_BASE_URL.replace(/\/+$/, ''),
+    adminBaseUrl: envVars.ADMIN_BASE_URL.replace(/\/+$/, ''),
     DEFAULT_AMOUNT: envVars.DEFAULT_AMOUNT,
     PUPPETEER_EXECUTABLE_PATH: envVars.PUPPETEER_EXECUTABLE_PATH,
     GOOGLE_API_KEY: envVars.GOOGLE_API_KEY,

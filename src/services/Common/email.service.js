@@ -1,5 +1,6 @@
 /** @format */
 const { status: httpStatus } = require("http-status");
+const { COMPANY, APP_STORE_LINKS, adminPanelUrl, LOGO_URL } = require("../../config/company");
 const { attendanceStatusTypes } = require("../../config/types");
 const { formatDisplayDate, formatTime12h } = require("../../utils/time");
 const {
@@ -53,13 +54,11 @@ const sendForgotPasswordOTP = async (to, otp) => {
 const sendUserCredentials = async (
   to,
   password,
-  supportEmail = "socialsanitation@gmail.com",
+  supportEmail = COMPANY.EMAIL,
 ) => {
   try {
-    const iosLink =
-      "https://apps.apple.com/in/app/social-sanitation-user/id6743349377";
-    const androidLink =
-      "https://play.google.com/store/apps/details?id=com.socialsanitation.user";
+    const iosLink = APP_STORE_LINKS.IOS;
+    const androidLink = APP_STORE_LINKS.ANDROID;
 
     await sendMailViaGraph({
       to,
@@ -116,11 +115,9 @@ const sendUserCredentials = async (
 
 const sendUpdatedUserCredentials = async (to, password) => {
   try {
-    const supportEmail = "socialsanitation@gmail.com";
-    const iosLink =
-      "https://apps.apple.com/in/app/social-sanitation-user/id6743349377";
-    const androidLink =
-      "https://play.google.com/store/apps/details?id=com.socialsanitation.user";
+    const supportEmail = COMPANY.EMAIL;
+    const iosLink = APP_STORE_LINKS.IOS;
+    const androidLink = APP_STORE_LINKS.ANDROID;
 
     await sendMailViaGraph({
       to,
@@ -220,7 +217,7 @@ const sendAdminCredentials = async (to, password) => {
 
 const sendEmailToAdmin = async (user, bookingDoc, serviceDoc) => {
   try {
-    const adminEmail = "socialsanitation@gmail.com";
+    const adminEmail = COMPANY.EMAIL;
     const subject = "New Booking Notification - Social Sanitation App";
 
     const date = formatDisplayDate(bookingDoc.date);
@@ -249,8 +246,8 @@ const sendEmailToAdmin = async (user, bookingDoc, serviceDoc) => {
 
 			<p>
 				For more details and to take action, please visit:<br />
-				<a href="https://admin.socialsanitation.com/">
-					https://admin.socialsanitation.com/
+				<a href="${adminPanelUrl()}">
+					${adminPanelUrl()}
 				</a>
 			</p>
 
@@ -528,7 +525,7 @@ const sendReviewEmailWithPDF = async (
     const html = `
       <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 10px; padding: 20px;">
         <div style="text-align: center; margin-bottom: 20px;">
-          <img src="https://admin.socialsanitation.com/static/media/image.9ca7d2fa78ea8b9aa2c1.png" width="150" alt="Social Sanitation Logo" />
+          <img src="${LOGO_URL}" width="150" alt="Social Sanitation Logo" />
         </div>
 
         <p>Hi <strong>${userName || "Valued Customer"}</strong>,</p>
@@ -560,7 +557,7 @@ const sendReviewEmailWithPDF = async (
         </p>
 
         <div style="text-align: center; margin-top: 30px;">
-          <img src="https://admin.socialsanitation.com/static/media/image.9ca7d2fa78ea8b9aa2c1.png" width="120" alt="Company Logo" />
+          <img src="${LOGO_URL}" width="120" alt="Company Logo" />
         </div>
       </div>
     `;
@@ -613,7 +610,7 @@ const sendFormEmailWithPDF = async (toEmail, pdfPath) => {
 const sendFormToAdminWithPDF = async (userEmail, pdfPath) => {
   try {
     await sendMailViaGraph({
-      to: "socialsanitation@gmail.com",
+      to: COMPANY.EMAIL,
       subject: "New Hiring Form Submission Received",
       html: `
         <div style="font-family: Arial, sans-serif; color: #333;">
@@ -645,7 +642,7 @@ const sendGroupedAttendanceEmail = async ({
   bookingAddress,
 }) => {
   try {
-    const adminEmail = "socialsanitation@gmail.com";
+    const adminEmail = COMPANY.EMAIL;
 
     const firstName = employees[0].name.split(" ")[0];
 
@@ -702,7 +699,7 @@ const sendClockOutDistanceEmail = async ({
   userLat,
   userLng,
 }) => {
-  const adminEmail = "socialsanitation@gmail.com";
+  const adminEmail = COMPANY.EMAIL;
 
   const html = `
     <p>Dear Admin,</p>
@@ -728,7 +725,7 @@ const sendClockOutDistanceEmail = async ({
 };
 
 const sendAutoClockOutEmail = async ({ date, employees }) => {
-  const adminEmail = "socialsanitation@gmail.com";
+  const adminEmail = COMPANY.EMAIL;
 
   const html = `
     <p>Dear Admin,</p>
