@@ -15,6 +15,7 @@ const isSameOrBefore = require("dayjs/plugin/isSameOrBefore");
 const isSameOrAfter = require("dayjs/plugin/isSameOrAfter");
 const isBetween = require("dayjs/plugin/isBetween");
 const isoWeek = require("dayjs/plugin/isoWeek");
+const config = require("../config/config");
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -24,7 +25,7 @@ dayjs.extend(isSameOrAfter);
 dayjs.extend(isBetween);
 dayjs.extend(isoWeek);
 
-const BUSINESS_TZ = process.env.BUSINESS_TIMEZONE || "America/New_York";
+const BUSINESS_TZ = config.businessTimeZone;
 
 const DATE_FORMAT = "YYYY-MM-DD";
 

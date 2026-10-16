@@ -10,29 +10,21 @@ const responseWrapper = require("../../config/responseWrapper");
 const config = require("../../config/config");
 
 const squareEnvironment =
-  config.SQUARE_ENVIRONMENT === "production"
+  config.square.environment === "production"
     ? SquareEnvironment.Production
     : SquareEnvironment.Sandbox;
 
 const client = new SquareClient({
-  token: config.SQUARE_ACCESS_TOKEN,
+  token: config.square.accessToken,
   environment: squareEnvironment,
 });
 
 const getSquareKeys = catchAsync(async (req, res) => {
   try {
-    const squareAppId = config.SQUARE_APP_ID; // Corrected environment variable
-    const squareLocationId = config.SQUARE_LOCATION_ID;
-
-    console.log("Square App ID:", squareAppId); // Log Square App ID
-    console.log("Square Location ID:", squareLocationId); // Log Square Location ID
-
     const response = {
-      squareAppId,
-      squareLocationId,
+      squareAppId: config.square.appId,
+      squareLocationId: config.square.locationId,
     };
-
-    console.log(response, "response");
 
     return responseWrapper(res, response, "Square keys fetched successfully.");
   } catch (error) {
@@ -191,13 +183,13 @@ const createPayment = catchAsync(async (req, res) => {
 // Square signs each webhook with the subscription's signature key. Without the key configured the
 // event is processed unverified (previous behaviour) and a warning is logged.
 const isAuthenticSquareWebhook = async (req) => {
-  const signatureKey = process.env.SQUARE_WEBHOOK_SIGNATURE_KEY;
+  const signatureKey = config.square.webhookSignatureKey;
   if (!signatureKey) {
     console.warn("SQUARE_WEBHOOK_SIGNATURE_KEY is not set: Square webhook signature not verified");
     return true;
   }
   const notificationUrl =
-    process.env.SQUARE_WEBHOOK_URL || `${req.protocol}://${req.get("host")}${req.originalUrl}`;
+    config.square.webhookUrl || `${req.protocol}://${req.get("host")}${req.originalUrl}`;
   return WebhooksHelper.verifySignature({
     requestBody: req.rawBody || "",
     signatureHeader: req.get("x-square-hmacsha256-signature") || "",

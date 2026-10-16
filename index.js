@@ -1,11 +1,14 @@
+const config = require("./src/config/config.js");
+
+// Process-wide settings, before anything else loads: the server clock runs on DEFAULT_TIMEZONE,
+// and TLS certificates are always verified, whatever NODE_TLS_REJECT_UNAUTHORIZED says in .env
+process.env.TZ = config.DEFAULT_TIMEZONE;
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "1";
+
 const app = require("./app.js");
 const http = require("http");
 const { dayjs } = require("./src/utils/time.js");
-
-const config = require("./src/config/config.js");
 const logger = require("./src/config/logger.js");
-
-process.env.TZ = config.DEFAULT_TIMEZONE;
 
 // Create HTTP server (Nginx handles SSL)
 const server = http.createServer(app);
@@ -18,7 +21,7 @@ server.listen(config.port, "127.0.0.1", () => {
     `Server is Working Fine😊 & Listening to PORT: ${
       config.port
     } | Default Timezone is: ${
-      process.env.TZ
+      config.DEFAULT_TIMEZONE
     } | Current date and time: ${currentTime.format("YYYY-MM-DD HH:mm:ss")}`
   );
 });

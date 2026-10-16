@@ -2,6 +2,22 @@
 const axios = require("axios");
 const { randomUUID: uuidv4 } = require("crypto");
 const { Payment } = require("../../models");
+const config = require("../../config/config");
+
+// Square REST API for payment links (squarePayment.controller.js uses the SDK with the same settings)
+const SQUARE_API_VERSION = "2024-10-17";
+
+const paymentLinksUrl = () =>
+  `${
+    config.square.environment === "production" ? "https://connect.squareup.com" : "https://connect.squareupsandbox.com"
+  }/v2/online-checkout/payment-links`;
+
+const squareHeaders = () => ({
+  Authorization: `Bearer ${config.square.accessToken}`,
+  "Square-Version": SQUARE_API_VERSION,
+});
+
+const squareJsonHeaders = () => ({ "Content-Type": "application/json", ...squareHeaders() });
 
 async function generateSquarePaymentLink({
   amount,
@@ -16,7 +32,7 @@ async function generateSquarePaymentLink({
       idempotency_key: uuidv4(),
 
       order: {
-        location_id: process.env.SQUARE_LOCATION_ID,
+        location_id: config.square.locationId,
         line_items: [
           {
             name: `Service Quote #${refNo}`,
@@ -52,19 +68,7 @@ async function generateSquarePaymentLink({
       pre_populate_buyer_email: customerEmail,
     };
 
-    const headers = {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.SQUARE_ACCESS_TOKEN}`,
-      "Square-Version": "2024-10-17",
-    };
-
-    const url =
-      process.env.SQUARE_ENVIRONMENT === "production"
-        ? "https://connect.squareup.com/v2/online-checkout/payment-links"
-        : "https://connect.squareupsandbox.com/v2/online-checkout/payment-links";
-
-    const response = await axios.post(url, body, { headers });
-    console.log(response, "res");
+    const response = await axios.post(paymentLinksUrl(), body, { headers: squareJsonHeaders() });
 
     const paymentLink = response.data.payment_link;
     const paymentLinkId = paymentLink.id;
@@ -100,17 +104,7 @@ async function generateSquarePaymentLink({
 }
 
 async function deleteSquarePaymentLink(paymentLinkId) {
-  const url =
-    process.env.SQUARE_ENVIRONMENT === "production"
-      ? `https://connect.squareup.com/v2/online-checkout/payment-links/${paymentLinkId}`
-      : `https://connect.squareupsandbox.com/v2/online-checkout/payment-links/${paymentLinkId}`;
-
-  await axios.delete(url, {
-    headers: {
-      Authorization: `Bearer ${process.env.SQUARE_ACCESS_TOKEN}`,
-      "Square-Version": "2024-10-17",
-    },
-  });
+  await axios.delete(`${paymentLinksUrl()}/${paymentLinkId}`, { headers: squareHeaders() });
 }
 
 async function generateContractPaymentLink({
@@ -124,7 +118,7 @@ async function generateContractPaymentLink({
       idempotency_key: uuidv4(),
 
       order: {
-        location_id: process.env.SQUARE_LOCATION_ID,
+        location_id: config.square.locationId,
 
         line_items: [
           {
@@ -160,18 +154,7 @@ async function generateContractPaymentLink({
       pre_populate_buyer_email: customerEmail,
     };
 
-    const headers = {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.SQUARE_ACCESS_TOKEN}`,
-      "Square-Version": "2024-10-17",
-    };
-
-    const url =
-      process.env.SQUARE_ENVIRONMENT === "production"
-        ? "https://connect.squareup.com/v2/online-checkout/payment-links"
-        : "https://connect.squareupsandbox.com/v2/online-checkout/payment-links";
-
-    const response = await axios.post(url, body, { headers });
+    const response = await axios.post(paymentLinksUrl(), body, { headers: squareJsonHeaders() });
 
     const paymentLink = response.data.payment_link;
     const paymentLinkId = paymentLink.id;
@@ -257,7 +240,7 @@ async function generateInvoicePaymentLink({
       idempotency_key: uuidv4(),
 
       order: {
-        location_id: process.env.SQUARE_LOCATION_ID,
+        location_id: config.square.locationId,
 
         line_items: [
           {
@@ -294,18 +277,7 @@ async function generateInvoicePaymentLink({
       pre_populate_buyer_email: customerEmail,
     };
 
-    const headers = {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.SQUARE_ACCESS_TOKEN}`,
-      "Square-Version": "2024-10-17",
-    };
-
-    const url =
-      process.env.SQUARE_ENVIRONMENT === "production"
-        ? "https://connect.squareup.com/v2/online-checkout/payment-links"
-        : "https://connect.squareupsandbox.com/v2/online-checkout/payment-links";
-
-    const response = await axios.post(url, body, { headers });
+    const response = await axios.post(paymentLinksUrl(), body, { headers: squareJsonHeaders() });
 
     const paymentLink = response.data.payment_link;
 

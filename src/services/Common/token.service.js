@@ -68,10 +68,7 @@ const generateAuthTokens = async (user, fcm_token) => {
       );
     }
 
-    const accessTokenExpires = dayjs().add(
-      config.jwt.accessExpirationMinutes,
-      "days"
-    );
+    const accessTokenExpires = dayjs().add(config.jwt.accessExpirationDays, "days");
     const accessToken = generateToken(
       user.id,
       accessTokenExpires,

@@ -3,6 +3,7 @@
 const docusign = require("docusign-esign");
 const fs = require("fs");
 const { getDocusignClient } = require("./docusignAuth.service");
+const config = require("../../config/config");
 
 const createEnvelope = async ({ pdfPath, signerEmail, signerName }) => {
   const dsApiClient = await getDocusignClient();
@@ -67,7 +68,7 @@ const createEnvelope = async ({ pdfPath, signerEmail, signerName }) => {
   envelopeDefinition.status = "sent";
 
   const results = await envelopesApi.createEnvelope(
-    process.env.DOCUSIGN_ACCOUNT_ID,
+    config.docusign.accountId,
     { envelopeDefinition }
   );
 
@@ -185,7 +186,7 @@ const createContractEnvelope = async ({
   envelopeDefinition.status = "sent";
 
   const results = await envelopesApi.createEnvelope(
-    process.env.DOCUSIGN_ACCOUNT_ID,
+    config.docusign.accountId,
     { envelopeDefinition },
   );
 
@@ -241,7 +242,7 @@ const createServiceRequestEnvelope = async ({
   envelopeDefinition.status = "sent";
 
   const results = await envelopesApi.createEnvelope(
-    process.env.DOCUSIGN_ACCOUNT_ID,
+    config.docusign.accountId,
     { envelopeDefinition },
   );
 

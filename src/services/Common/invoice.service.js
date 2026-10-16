@@ -28,6 +28,7 @@ const {
 const { generateInvoicePDF } = require("../../config/puppeteer");
 const { sendInvoiceEmailWithPDF } = require("./email.service");
 const ApiError = require("../../utils/ApiError");
+const config = require("../../config/config");
 const { generateInvoicePaymentLink, deleteSquarePaymentLink } = require("./square.service");
 const sequelize = require("../../config/central.db");
 const { paymentStatusTypes } = require("../../config/types");
@@ -1672,7 +1673,7 @@ const sendInvoiceCron = async () => {
         };
 
         const senderEmail =
-          senderMap[user.assigned_to] || process.env.AZURE_SENDER_EMAIL;
+          senderMap[user.assigned_to] || config.mail.senderEmail;
 
         await sendInvoiceEmailWithPDF(user, invoice, pdfPath, senderEmail);
       }
@@ -2254,7 +2255,7 @@ const sendInvoiceBalance = async (invoice_id) => {
     };
 
     const senderEmail =
-      senderMap[user.assigned_to] || process.env.AZURE_SENDER_EMAIL;
+      senderMap[user.assigned_to] || config.mail.senderEmail;
 
     // If this fails, payment_stage remains DEPOSIT_PAID and balance_sent_at
     // remains null, allowing the cron to retry on a later run.

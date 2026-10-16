@@ -4,6 +4,7 @@ require("./helpers/env");
 const { test, before, after } = require("node:test");
 const assert = require("node:assert/strict");
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 const { mockPackage, mockDatabase, mockFirebase, loadFromRoot } = require("./helpers/mocks");
 
 mockPackage("node-cron", { schedule: () => ({ stop() {} }) });
@@ -85,6 +86,8 @@ test("admin: the token from the real login works on admin endpoints", async () =
   const token = login.json.data.token;
   assert.ok(token);
   assert.equal(login.json.data.password, undefined, "the login response carries no password hash");
+  const { iat, exp } = jwt.decode(token);
+  assert.equal(exp - iat, 5 * 24 * 60 * 60, "admin tokens last JWT_ADMIN_ACCESS_EXPIRATION_DAYS (default 5)");
 
   const count = await call("GET", "/api/v1/admin/user/getUserCount", { token });
   assert.equal(count.status, 200, JSON.stringify(count.json));
@@ -118,6 +121,8 @@ test("app user: the token from the real login works on shared endpoints, not on 
   );
   assert.equal(login.status, 200, JSON.stringify(login.json));
   const token = login.json.data.tokens.access.token;
+  const { iat, exp } = jwt.decode(token);
+  assert.ok(Math.abs(exp - iat - 30 * 24 * 60 * 60) <= 1, "app tokens last JWT_ACCESS_EXPIRATION_DAYS (30 in tests)");
 
   const shared = await quiet(() => call("GET", "/api/v1/user/getUserAddressByUserId/9", { token }));
   assert.notEqual(shared.status, 401, JSON.stringify(shared.json));

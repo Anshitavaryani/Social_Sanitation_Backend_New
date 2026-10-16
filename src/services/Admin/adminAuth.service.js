@@ -69,7 +69,7 @@ const loginAdminUser = async (reqBody) => {
         is_backlisted: false,
       },
       Buffer.from(config.jwt.secret, "hex"),
-      { algorithm: "HS256", expiresIn: "5d" }
+      { algorithm: "HS256", expiresIn: `${config.jwt.adminAccessExpirationDays}d` }
     );
 
     // Check if id and role_id are present in UserAuth table
@@ -212,7 +212,7 @@ const verifyOTP = async (email, otp, otp_type) => {
           is_backlisted: false,
         },
         Buffer.from(config.jwt.secret, "hex"),
-        { algorithm: "HS256", expiresIn: "1d" }
+        { algorithm: "HS256", expiresIn: `${config.jwt.adminResetExpirationDays}d` }
       );
       user.remember_token = token;
     }

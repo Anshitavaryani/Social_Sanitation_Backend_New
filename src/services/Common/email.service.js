@@ -1,8 +1,5 @@
 /** @format */
 const { status: httpStatus } = require("http-status");
-const nodemailer = require("nodemailer");
-const config = require("../../config/config");
-const logger = require("../../config/logger");
 const { dayjs } = require("../../utils/time");
 const {
   forgotPasswordSendOTPFormat,
@@ -15,19 +12,6 @@ const {
 } = require("../../config/microsoftGraph.helper");
 const employeeEquipmentAssignmentFormat = require("../../../public/Email_Template/equipmentReportTemplate");
 const inspectionCompletedFormat = require("../../../public/Email_Template/inspectionCompletedFormat");
-
-const transport = nodemailer.createTransport(config.email.smtp);
-
-if (config.env !== "test") {
-  transport
-    .verify()
-    .then(() => logger.info("Connected to email server successfully😊."))
-    .catch(() =>
-      logger.warn(
-        "Unable to connect to email server. Make sure you have configured the SMTP options in .env 🥺",
-      ),
-    );
-}
 
 const sendEmailVerification = async (to, otp) => {
   try {

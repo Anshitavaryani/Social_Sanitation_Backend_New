@@ -64,6 +64,7 @@ test("removed and deprecated packages stay out of package.json", () => {
     "uuid",
     "swagger-jsdoc",
     "swagger-ui-express",
+    "nodemailer",
   ]) {
     assert.equal(deps[name], undefined, `${name} should not be a dependency`);
   }

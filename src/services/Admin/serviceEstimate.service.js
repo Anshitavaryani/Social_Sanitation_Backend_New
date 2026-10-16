@@ -868,7 +868,6 @@ const generateContractAgreementService = async (reqBody) => {
     /* ===== DOCUSIGN ===== */
 
     const signerName = userDocs.user_profile.name || "Client";
-    console.log("ACCOUNT ID:", process.env.DOCUSIGN_ACCOUNT_ID);
     const envelopeId = await createContractEnvelope({
       pdfPath,
       clientEmail: userDocs.email,

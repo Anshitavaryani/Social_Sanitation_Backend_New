@@ -1,5 +1,6 @@
 const docusign = require("docusign-esign");
 const { getDocusignClient } = require("./docusignAuth.service");
+const config = require("../../config/config");
 
 const downloadSignedPDF = async (envelopeId) => {
 
@@ -7,7 +8,7 @@ const downloadSignedPDF = async (envelopeId) => {
   const envelopesApi = new docusign.EnvelopesApi(dsApiClient);
 
   const document = await envelopesApi.getDocument(
-    process.env.DOCUSIGN_ACCOUNT_ID,
+    config.docusign.accountId,
     envelopeId,
     "combined"
   );

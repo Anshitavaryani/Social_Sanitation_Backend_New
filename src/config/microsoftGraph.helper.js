@@ -2,12 +2,13 @@ const { Client } = require("@microsoft/microsoft-graph-client");
 const { ConfidentialClientApplication } = require("@azure/msal-node");
 const fs = require("fs");
 const path = require("path");
+const config = require("./config");
 
 const msalClient = new ConfidentialClientApplication({
   auth: {
-    clientId: process.env.AZURE_CLIENT_ID,
-    clientSecret: process.env.AZURE_CLIENT_SECRET,
-    authority: `https://login.microsoftonline.com/${process.env.AZURE_TENANT_ID}`,
+    clientId: config.mail.clientId,
+    clientSecret: config.mail.clientSecret,
+    authority: `https://login.microsoftonline.com/${config.mail.tenantId}`,
   },
 });
 
@@ -68,7 +69,7 @@ async function sendMailViaGraph({
   }
 
   await graphClient
-    .api(`/users/${process.env.AZURE_SENDER_EMAIL}/sendMail`)
+    .api(`/users/${config.mail.senderEmail}/sendMail`)
     .post({
       message,
       saveToSentItems: true,

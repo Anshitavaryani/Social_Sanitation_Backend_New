@@ -22,6 +22,7 @@ global.fetch = async (url, init = {}) => {
 
 const crypto = require("crypto");
 const controller = loadFromRoot("src/controllers/Common/squarePayment.controller.js");
+const config = loadFromRoot("src/config/config.js");
 
 const makeUser = (overrides = {}) => ({
   id: 7,
@@ -212,21 +213,21 @@ const signedWebhook = (body, { key = "test-signature-key", url = "https://api.ex
 };
 
 test("webhook with a valid Square signature is processed", async () => {
-  process.env.SQUARE_WEBHOOK_SIGNATURE_KEY = "test-signature-key";
-  process.env.SQUARE_WEBHOOK_URL = "https://api.example.com/api/v1/payment/square/webhooks";
+  config.square.webhookSignatureKey = "test-signature-key";
+  config.square.webhookUrl = "https://api.example.com/api/v1/payment/square/webhooks";
   try {
     const { res } = await runHandler(controller.handlePaymentWebhook, signedWebhook({ type: "refund.created" }));
     assert.equal(res.statusCode, 200);
     assert.equal(res.body.message, "Event ignored");
   } finally {
-    delete process.env.SQUARE_WEBHOOK_SIGNATURE_KEY;
-    delete process.env.SQUARE_WEBHOOK_URL;
+    config.square.webhookSignatureKey = undefined;
+    config.square.webhookUrl = undefined;
   }
 });
 
 test("webhook with a forged or missing signature is rejected with 401 before anything is touched", async () => {
-  process.env.SQUARE_WEBHOOK_SIGNATURE_KEY = "test-signature-key";
-  process.env.SQUARE_WEBHOOK_URL = "https://api.example.com/api/v1/payment/square/webhooks";
+  config.square.webhookSignatureKey = "test-signature-key";
+  config.square.webhookUrl = "https://api.example.com/api/v1/payment/square/webhooks";
   let lookedUp = false;
   models.Payment.findOne = async () => {
     lookedUp = true;
@@ -245,8 +246,8 @@ test("webhook with a forged or missing signature is rejected with 401 before any
     }
     assert.equal(lookedUp, false, "no payment record was read or updated");
   } finally {
-    delete process.env.SQUARE_WEBHOOK_SIGNATURE_KEY;
-    delete process.env.SQUARE_WEBHOOK_URL;
+    config.square.webhookSignatureKey = undefined;
+    config.square.webhookUrl = undefined;
   }
 });
 

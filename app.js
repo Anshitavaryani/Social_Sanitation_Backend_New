@@ -49,16 +49,12 @@ const { sendInvoiceCron, generateRecurringInvoicesCron, sendDueBalancesCron } = 
 
 initializeApp({
   credential: cert({
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+    projectId: config.firebase.projectId,
+    clientEmail: config.firebase.clientEmail,
+    privateKey: config.firebase.privateKey,
   }),
-  databaseURL:
-    process.env.FIREBASE_DATABASE_URL ||
-    "https://social-sanitation-default-rtdb.firebaseio.com",
-  storageBucket:
-    process.env.FIREBASE_STORAGE_BUCKET ||
-    "social-sanitation.firebasestorage.app",
+  databaseURL: config.firebase.databaseUrl,
+  storageBucket: config.firebase.storageBucket,
 });
 
 cron.schedule(
@@ -218,8 +214,6 @@ if (config.env !== "test") {
 }
 
 app.use(express.static(PUBLIC_DIR));
-
-process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 1;
 
 // CORS: only origins listed in ACCESSDOMAINS (credentials.js + corsConfigs.js)
 app.use(credentials);
