@@ -21,7 +21,7 @@ const { sendUserCredentials, sendEmailWithPDF, sendReviewEmailWithPDF, sendServi
 const {
   generateQuotePDF,
   generateServiceRequestPDF,
-} = require("../../config/puppeteer");
+} = require("../Common/pdf.service");
 const {
   generateSquarePaymentLink,
   deleteSquarePaymentLink,

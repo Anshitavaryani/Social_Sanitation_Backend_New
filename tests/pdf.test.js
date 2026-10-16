@@ -3,12 +3,15 @@
 //   PUPPETEER_EXECUTABLE_PATH=/path/to/chrome npm test
 // Skipped when PUPPETEER_EXECUTABLE_PATH is not set to an existing file.
 require("./helpers/env");
-const { test } = require("node:test");
+const { test, after } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const { loadFromRoot } = require("./helpers/mocks");
+
+// The shared Chrome would otherwise stay open for its idle time after the last PDF
+after(() => loadFromRoot("src/config/pdfBrowser.js").closePdfBrowser());
 
 const chrome = process.env.PUPPETEER_EXECUTABLE_PATH;
 const skip = !chrome || !fs.existsSync(chrome) ? "PUPPETEER_EXECUTABLE_PATH not set to a Chrome binary" : false;
@@ -28,7 +31,7 @@ const items = [
 ];
 
 test("invoice PDF renders", { skip, timeout: 120000 }, async () => {
-  const { generateInvoicePDF } = loadFromRoot("src/config/puppeteer.js");
+  const { generateInvoicePDF } = loadFromRoot("src/services/Common/pdf.service.js");
   const pdfPath = await generateInvoicePDF({
     invoice_ref_no: `TEST-${process.pid}`,
     event_name: "Office cleaning",
@@ -49,7 +52,7 @@ test("invoice PDF renders", { skip, timeout: 120000 }, async () => {
 });
 
 test("quote PDF renders", { skip, timeout: 120000 }, async () => {
-  const { generateQuotePDF } = loadFromRoot("src/config/puppeteer.js");
+  const { generateQuotePDF } = loadFromRoot("src/services/Common/pdf.service.js");
   const result = await generateQuotePDF({
     ref_no: `TESTQ-${process.pid}`,
     service_dates: "2026-10-20",
@@ -66,7 +69,7 @@ test("quote PDF renders", { skip, timeout: 120000 }, async () => {
 });
 
 test("service request PDF renders to the caller's path", { skip, timeout: 120000 }, async () => {
-  const { generateServiceRequestPDF } = loadFromRoot("src/config/puppeteer.js");
+  const { generateServiceRequestPDF } = loadFromRoot("src/services/Common/pdf.service.js");
   const pdfPath = tmpPdf("service-request.pdf");
   await generateServiceRequestPDF({
     ref_no: "SR-1",
@@ -84,7 +87,7 @@ test("service request PDF renders to the caller's path", { skip, timeout: 120000
 });
 
 test("service estimate PDF renders without the removed contact fields", { skip, timeout: 120000 }, async () => {
-  const { generateEstimatePDF } = loadFromRoot("src/config/serviceEstimate.js");
+  const { generateEstimatePDF } = loadFromRoot("src/services/Common/estimatePdf.service.js");
   const pdfPath = tmpPdf("estimate.pdf");
   await generateEstimatePDF(
     {

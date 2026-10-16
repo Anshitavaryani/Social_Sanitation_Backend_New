@@ -5,7 +5,7 @@ const logger = require("../../config/logger");
 const { IMAGE_FILE_URI, docUrl } = require("../../config/storage");
 const ApiError = require("../../utils/ApiError");
 const { FormSubmission, FormSection, FormAttachment } = require("../../models");
-const { generatePDF, generateSpanishPDF } = require("../../config/puppeteer");
+const { generatePDF, generateSpanishPDF } = require("./pdf.service");
 const {
   sendFormEmailWithPDF,
   sendFormToAdminWithPDF,

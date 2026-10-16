@@ -24,8 +24,8 @@ module.exports = [
     },
   },
   {
-    // HTML templates rendered by Puppeteer run code inside the browser page
-    files: ["src/config/puppeteer.js", "src/config/serviceEstimate.js"],
+    // The image wait it passes to page.evaluate runs inside the browser page
+    files: ["src/config/pdfBrowser.js"],
     languageOptions: {
       globals: { ...globals.browser },
     },

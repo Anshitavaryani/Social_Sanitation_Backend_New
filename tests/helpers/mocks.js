@@ -104,6 +104,24 @@ const mockDatabase = () => {
   return { models, sequelize };
 };
 
+// puppeteer-core stand-in: one browser whose tabs come from newPage() (a tab gets a close() if it has
+// none); launch options are recorded. Nothing starts Chrome.
+const mockPuppeteer = (newPage = () => ({})) => {
+  const launches = [];
+  mockPackage("puppeteer-core", {
+    launch: async (options) => {
+      launches.push(options);
+      return {
+        connected: true,
+        newPage: async () => ({ close: async () => {}, ...(await newPage()) }),
+        on() {},
+        close: async () => {},
+      };
+    },
+  });
+  return { launches };
+};
+
 // An in-memory Firebase Realtime Database. Reads return whatever a test seeded
 // at that exact path (or "no data"), writes are recorded, nothing hits the network.
 const snapshotOf = (key, value) => ({
@@ -224,6 +242,7 @@ module.exports = {
   fakeSequelize,
   mockDatabase,
   mockFirebase,
+  mockPuppeteer,
   fakeResponse,
   runHandler,
 };

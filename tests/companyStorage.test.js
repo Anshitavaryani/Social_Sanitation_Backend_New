@@ -7,7 +7,7 @@ const assert = require("node:assert/strict");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const { ROOT, ENTRY_FILES, mockModule, mockPackage, mockDatabase, loadFromRoot } = require("./helpers/mocks");
+const { ROOT, ENTRY_FILES, mockModule, mockPackage, mockPuppeteer, mockDatabase, loadFromRoot } = require("./helpers/mocks");
 
 const espree = require(require.resolve("espree", { paths: [ROOT] }));
 
@@ -24,7 +24,7 @@ const page = {
   evaluate: async () => undefined,
   evaluateHandle: async () => ({ dispose: async () => {} }),
 };
-mockPackage("puppeteer-core", { launch: async () => ({ newPage: async () => page, close: async () => {} }) });
+mockPuppeteer(() => page);
 const downloads = [];
 mockPackage("axios", {
   get: async (url) => {
@@ -36,15 +36,15 @@ mockPackage("axios", {
 const storage = loadFromRoot("src/config/storage.js");
 const company = loadFromRoot("src/config/company.js");
 const config = loadFromRoot("src/config/config.js");
-const estimatePdf = loadFromRoot("src/config/serviceEstimate.js");
-const pdf = loadFromRoot("src/config/puppeteer.js"); // the real templates, before the stand-in below
+const estimatePdf = loadFromRoot("src/services/Common/estimatePdf.service.js");
+const pdf = loadFromRoot("src/services/Common/pdf.service.js"); // the real templates, before the stand-in below
 
 // The services below run as in production up to DocuSign, the PDF and the emails, which are recorded
 const resent = [];
 mockModule("src/services/Common/docusignSigning.service.js", {
   resendSigningEmail: async (envelopeId) => resent.push(envelopeId),
 });
-mockModule("src/config/puppeteer.js", { generatePDF: async (form, s, d, c, id) => `/tmp/hiring-${id}.pdf`, generateSpanishPDF: async () => "/tmp/x.pdf" });
+mockModule("src/services/Common/pdf.service.js", { generatePDF: async (form, s, d, c, id) => `/tmp/hiring-${id}.pdf`, generateSpanishPDF: async () => "/tmp/x.pdf" });
 const emailsSent = [];
 mockModule("src/services/Common/email.service.js", new Proxy({}, { get: (t, name) => async (...args) => emailsSent.push([name, ...args]) }));
 

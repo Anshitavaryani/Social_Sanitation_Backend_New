@@ -4,6 +4,7 @@ const logger = require("./src/config/logger.js");
 const { initFirebase } = require("./src/config/firebase.js");
 const { ensureUploadDirs } = require("./src/config/storage.js");
 const { startJobs, stopJobs } = require("./src/jobs");
+const { closePdfBrowser } = require("./src/config/pdfBrowser.js");
 
 // Time a run in progress gets to finish when pm2 stops or restarts the worker (its kill_timeout is
 // longer), and after an uncaught exception
@@ -14,10 +15,13 @@ let stopping = false;
 const shutDown = (code, graceMs) => {
   if (stopping) return;
   stopping = true;
-  stopJobs(graceMs).finally(() => {
-    logger.info("Worker stopped");
-    process.exit(code);
-  });
+  stopJobs(graceMs)
+    .catch(() => {})
+    .then(closePdfBrowser)
+    .finally(() => {
+      logger.info("Worker stopped");
+      process.exit(code);
+    });
 };
 
 // pm2 stops with SIGINT, the system with SIGTERM

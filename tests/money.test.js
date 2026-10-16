@@ -26,7 +26,7 @@ mockModule("src/services/Common/square.service.js", {
   generateInvoicePaymentLink: async (args) => invoiceLinks.push(args) && { paymentUrl: "U", paymentLinkId: "L" },
   deleteSquarePaymentLink: async () => {},
 });
-mockModule("src/config/puppeteer.js", { generateInvoicePDF: async () => "/tmp/RHK1.pdf" });
+mockModule("src/services/Common/pdf.service.js", { generateInvoicePDF: async () => "/tmp/RHK1.pdf" });
 const invoiceService = loadFromRoot("src/services/Common/invoice.service.js");
 
 const DEPOSIT_MESSAGE = "Deposit percentage must be greater than 0 and less than 100.";

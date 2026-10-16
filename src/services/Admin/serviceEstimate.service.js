@@ -13,7 +13,7 @@ const {
   generateEstimatePDF,
   generateContractPDF,
   generateScopeOfWorkPdfBuffer,
-} = require("../../config/serviceEstimate");
+} = require("../Common/estimatePdf.service");
 const {
   User,
   ServiceEstimate,

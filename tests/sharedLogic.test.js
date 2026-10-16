@@ -6,14 +6,13 @@ const assert = require("node:assert/strict");
 const fs = require("fs");
 const path = require("path");
 const jwt = require("jsonwebtoken");
-const { ROOT, mockPackage, mockDatabase, loadFromRoot, runHandler } = require("./helpers/mocks");
+const { ROOT, mockPuppeteer, mockDatabase, loadFromRoot, runHandler } = require("./helpers/mocks");
 
 const espree = require(require.resolve("espree", { paths: [ROOT] }));
 
 const { models, sequelize } = mockDatabase();
 
-const launches = [];
-mockPackage("puppeteer-core", { launch: async (options) => launches.push(options) && { close: async () => {} } });
+const { launches } = mockPuppeteer();
 
 // What an instance save sends to the database
 let written;
@@ -72,20 +71,22 @@ test("models share the destroy hook instead of writing their own timestamp hooks
 });
 
 test("Chrome for PDFs is launched in one place, with the configured binary", async () => {
-  const { launchPdfBrowser } = loadFromRoot("src/config/puppeteer.js");
+  const { launchPdfBrowser } = loadFromRoot("src/config/pdfBrowser.js");
   const config = loadFromRoot("src/config/config.js");
   await launchPdfBrowser();
   assert.deepEqual(launches[0], {
     headless: true,
     executablePath: config.PUPPETEER_EXECUTABLE_PATH,
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    handleSIGINT: false,
+    handleSIGTERM: false,
   });
   const elsewhere = [];
   const walk = (dir) =>
     fs.readdirSync(dir, { withFileTypes: true }).forEach((entry) => {
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) return walk(full);
-      if (entry.name.endsWith(".js") && full !== path.join(ROOT, "src/config/puppeteer.js") && /puppeteer\.launch\(/.test(fs.readFileSync(full, "utf8"))) {
+      if (entry.name.endsWith(".js") && full !== path.join(ROOT, "src/config/pdfBrowser.js") && /puppeteer\.launch\(/.test(fs.readFileSync(full, "utf8"))) {
         elsewhere.push(path.relative(ROOT, full));
       }
     });

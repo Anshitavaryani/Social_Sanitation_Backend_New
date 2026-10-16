@@ -9,6 +9,7 @@ const app = require("./app.js");
 const http = require("http");
 const { dayjs, DATETIME_FORMAT } = require("./src/utils/time.js");
 const logger = require("./src/config/logger.js");
+const { closePdfBrowser } = require("./src/config/pdfBrowser.js");
 
 // Create HTTP server (Nginx handles SSL)
 const server = http.createServer(app);
@@ -26,16 +27,16 @@ server.listen(config.port, "127.0.0.1", () => {
   );
 });
 
-// Server exit operations
+// Stop: finish the requests in progress, close the PDF browser, exit
+let stopping = false;
 const exitHandler = () => {
-  if (server) {
-    server.close(() => {
-      logger.info("Server closed");
-      process.exit(0);
-    });
-  } else {
+  if (stopping) return;
+  stopping = true;
+  server.close(async () => {
+    await closePdfBrowser();
+    logger.info("Server closed");
     process.exit(0);
-  }
+  });
 };
 
 // After an uncaught exception the process state is undefined: stop accepting
@@ -43,7 +44,7 @@ const exitHandler = () => {
 process.on("uncaughtException", (error) => {
   logger.error("Uncaught Exception:", error);
   setTimeout(() => process.exit(1), 10000).unref();
-  server.close(() => process.exit(1));
+  server.close(() => closePdfBrowser().finally(() => process.exit(1)));
 });
 
 // Keep the API running on unhandled promise rejections
@@ -51,4 +52,6 @@ process.on("unhandledRejection", (reason) => {
   logger.error("Unhandled Rejection:", reason);
 });
 
+// pm2 stops with SIGINT, the system with SIGTERM
+process.on("SIGINT", exitHandler);
 process.on("SIGTERM", exitHandler);

@@ -44,10 +44,12 @@ test("an uncaught exception is logged and the API process exits with code 1", as
   assert.equal(code, 1);
 });
 
-test("SIGTERM shuts the API down cleanly with code 0", async () => {
-  const { code, output } = await run("index.js", { signal: "SIGTERM" });
-  assert.equal(code, 0);
-  assert.match(output, /Server closed/);
+test("the API shuts down cleanly with code 0 on SIGINT (pm2) and SIGTERM", async () => {
+  for (const signal of ["SIGINT", "SIGTERM"]) {
+    const { code, output } = await run("index.js", { signal });
+    assert.equal(code, 0, signal);
+    assert.match(output, /Server closed/, signal);
+  }
 });
 
 test("the worker starts the jobs and stops cleanly on SIGINT (pm2) and SIGTERM", async () => {

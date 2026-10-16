@@ -30,7 +30,7 @@ const {
   Payment,
   InvoiceRecurring,
 } = require("../../models");
-const { generateInvoicePDF } = require("../../config/puppeteer");
+const { generateInvoicePDF } = require("./pdf.service");
 const { sendInvoiceEmailWithPDF } = require("./email.service");
 const ApiError = require("../../utils/ApiError");
 const toBoolean = require("../../utils/toBoolean");

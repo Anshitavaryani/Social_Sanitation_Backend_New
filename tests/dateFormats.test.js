@@ -5,7 +5,7 @@ const { test, after } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("fs");
 const path = require("path");
-const { ROOT, ENTRY_FILES, mockModule, mockPackage, mockDatabase, loadFromRoot } = require("./helpers/mocks");
+const { ROOT, ENTRY_FILES, mockModule, mockPackage, mockPuppeteer, mockDatabase, loadFromRoot } = require("./helpers/mocks");
 
 const espree = require(require.resolve("espree", { paths: [ROOT] }));
 
@@ -29,7 +29,7 @@ const fakePage = {
   evaluate: async () => undefined,
   evaluateHandle: async () => ({ dispose: async () => {} }),
 };
-mockPackage("puppeteer-core", { launch: async () => ({ newPage: async () => fakePage, close: async () => {} }) });
+mockPuppeteer(() => fakePage);
 // estimate PDFs download their images
 mockPackage("axios", { get: async () => ({ data: Buffer.from("89504e470d0a1a0a", "hex") }) });
 
@@ -104,7 +104,7 @@ test("date checks are strict and date helpers keep their old results", () => {
 });
 
 test("quote, invoice and service request PDFs show MM-DD-YYYY", async () => {
-  const pdf = loadFromRoot("src/config/puppeteer.js");
+  const pdf = loadFromRoot("src/services/Common/pdf.service.js");
   const items = [{ description: "Janitorial", quantity: 2, unit_price: 150.5, multiplier: 1 }];
   const party = { to_company_name: "Test Co", address_1: "1 Main St", address_2: "Tampa FL", items, signature: "" };
 
@@ -142,7 +142,7 @@ test("quote, invoice and service request PDFs show MM-DD-YYYY", async () => {
 });
 
 test("hiring form PDFs (English and Spanish) show MM-DD-YYYY", async () => {
-  const pdf = loadFromRoot("src/config/puppeteer.js");
+  const pdf = loadFromRoot("src/services/Common/pdf.service.js");
   const form = {
     personalInfo: { firstName: "Ana", lastName: "Lopez", dateOfBirth: "1990-05-01", dateAvailable: "2026-11-02" },
     previousEmployment: {
@@ -160,7 +160,7 @@ test("hiring form PDFs (English and Spanish) show MM-DD-YYYY", async () => {
 });
 
 test("estimate and contract PDFs show MM-DD-YYYY; a contract date that is not a date prints as typed", async () => {
-  const pdf = loadFromRoot("src/config/serviceEstimate.js");
+  const pdf = loadFromRoot("src/services/Common/estimatePdf.service.js");
   const dir = fs.mkdtempSync(path.join(require("os").tmpdir(), "ss-dates-"));
 
   const estimate = await htmlOf(() =>
