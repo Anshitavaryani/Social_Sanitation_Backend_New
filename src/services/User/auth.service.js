@@ -3,7 +3,7 @@
 const { status: httpStatus } = require("http-status");
 const bcrypt = require("bcryptjs");
 const { randomInt } = require("crypto");
-const moment = require("moment");
+const { dayjs, inZone, isValidTimeZone } = require("../../utils/time");
 
 const {
 	OTP,
@@ -366,18 +366,26 @@ const logout = async (reqBody, headers) => {
 
 const saveLoginTiming = async (user, token, reqBody, timezone) => {
 	try {
-		const loginTimeUTC = moment.utc();
-		const loginTimeLocal = moment.tz(loginTimeUTC, timezone);
+		const loginTimeUTC = dayjs.utc();
 
-		const timeZoneDoc = await Timezone.findOne({
-			where: { time_zone: timezone, is_active: true },
-		});
+		const timeZoneDoc = isValidTimeZone(timezone)
+			? await Timezone.findOne({
+					where: { time_zone: timezone, is_active: true },
+				})
+			: null;
+
+		// The timing row needs a known timezone; without one, skip it instead of failing the login
+		if (!timeZoneDoc) {
+			console.warn("Login timing not recorded: unknown timezone header", timezone);
+			return null;
+		}
 
 		let obj = {
 			user_id: user.id,
 			role_id: user.role_id,
-			login_time_utc: loginTimeUTC,
-			login_time_local: loginTimeLocal.format("YYYY-MM-DD hh:mm:ss"),
+			login_time_utc: loginTimeUTC.toDate(),
+			// Local wall-clock time, 24-hour (was "hh", which dropped AM/PM)
+			login_time_local: inZone(loginTimeUTC, timezone).format("YYYY-MM-DD HH:mm:ss"),
 			ip_address: reqBody.ip_address,
 			token_id: token.access.id,
 			time_zone: timeZoneDoc.id,
@@ -395,15 +403,17 @@ const saveLoginTiming = async (user, token, reqBody, timezone) => {
 
 const saveLogoutTiming = async (tokenDoc, timezone) => {
 	try {
-		const logoutTimeUTC = moment.utc();
-		const logoutTimeLocal = moment.tz(logoutTimeUTC, timezone);
+		const logoutTimeUTC = dayjs.utc();
 
 		let loginTimingDocDoc = await userLoginTiming.findOne({
 			where: { token_id: tokenDoc.id },
 		});
 		if (loginTimingDocDoc) {
-			loginTimingDocDoc.logout_time_utc = logoutTimeUTC;
-			loginTimingDocDoc.logout_time_local = logoutTimeLocal;
+			loginTimingDocDoc.logout_time_utc = logoutTimeUTC.toDate();
+			// Local wall-clock time like login_time_local (was stored as the UTC instant)
+			loginTimingDocDoc.logout_time_local = inZone(logoutTimeUTC, timezone).format(
+				"YYYY-MM-DD HH:mm:ss"
+			);
 			await loginTimingDocDoc.save();
 			return loginTimingDocDoc;
 		}

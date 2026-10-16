@@ -17,8 +17,18 @@ const {
 	sendLeaveStatusEmail,
 	sendAutoClockOutEmail,
 } = require("./email.service");
-const convertToEST = require("../../config/timeManagement");
-const moment = require("moment");
+const {
+	dayjs,
+	inZone,
+	BUSINESS_TZ,
+	dateInTz,
+	dayBoundsUtc,
+	calendarDateUtc,
+	nowWallClock,
+	toCalendarDate,
+	addDays,
+	isoWeekStart,
+} = require("../../utils/time");
 const { getDatabase } = require("firebase-admin/database");
 
 // attendce apis
@@ -36,20 +46,18 @@ const clockIn = async (reqBody, headers, files) => {
 		}
 
 		// Parse employee time as EST
-		const employeeClockIn = moment
-			.tz(clock_in_time, "America/New_York")
-			.toDate();
+		const employeeClockIn = inZone(clock_in_time, BUSINESS_TZ).toDate();
 
 		if (isNaN(employeeClockIn.getTime())) {
 			throw new ApiError(400, "Invalid clock-in time format.");
 		}
 
-		const employeeClockInEST = moment(employeeClockIn)
-			.tz("America/New_York")
+		const employeeClockInEST = dayjs(employeeClockIn)
+			.tz(BUSINESS_TZ)
 			.format("YYYY-MM-DD HH:mm:ss");
 
-		const employeeDateEST = moment(employeeClockIn)
-			.tz("America/New_York")
+		const employeeDateEST = dayjs(employeeClockIn)
+			.tz(BUSINESS_TZ)
 			.format("YYYY-MM-DD");
 
 		console.log({
@@ -77,13 +85,12 @@ const clockIn = async (reqBody, headers, files) => {
 		// ⚡ FIXED: Correct booking date matching using date_in_utc + time_in_utc
 		const todaysBookings = bookings.filter((b) => {
 			// Combine date + time_in_utc into full UTC datetime
-			const bookingStartUTC = moment.tz(
-				`${moment(b.date_in_utc).format("YYYY-MM-DD")}T${b.time_in_utc}`,
-				"UTC",
+			const bookingStartUTC = dayjs.utc(
+				`${toCalendarDate(b.date_in_utc)}T${b.time_in_utc}`,
 			);
 
 			// Convert that UTC to EST
-			const bookingStartEST = bookingStartUTC.clone().tz("America/New_York");
+			const bookingStartEST = bookingStartUTC.tz(BUSINESS_TZ);
 
 			const bookingDateEST = bookingStartEST.format("YYYY-MM-DD");
 
@@ -180,17 +187,15 @@ const clockOut = async (reqBody, headers, files) => {
 		}
 
 		// FIX: Interpret employee device time as EST
-		const employeeClockOut = moment
-			.tz(clock_out_time, "America/New_York")
-			.toDate();
+		const employeeClockOut = inZone(clock_out_time, BUSINESS_TZ).toDate();
 
 		if (isNaN(employeeClockOut.getTime())) {
 			throw new ApiError(400, "Invalid clock-out time format.");
 		}
 
 		// Convert for EST-readable logs
-		const employeeClockOutEST = moment(employeeClockOut)
-			.tz("America/New_York")
+		const employeeClockOutEST = dayjs(employeeClockOut)
+			.tz(BUSINESS_TZ)
 			.format("YYYY-MM-DD HH:mm:ss");
 
 		// Find active attendance
@@ -273,13 +278,11 @@ const applyBreak = async (reqBody, headers) => {
 
 		// Use current UTC time as break start
 		const nowUTC = new Date();
-		const nowEST = moment
-			.tz(nowUTC, "America/New_York")
-			.format("YYYY-MM-DD HH:mm:ss");
+		const nowEST = dayjs(nowUTC).tz(BUSINESS_TZ).format("YYYY-MM-DD HH:mm:ss");
 
 		const breakEndUTC = new Date(nowUTC.getTime() + duration * 60000);
-		const breakEndEST = moment
-			.tz(breakEndUTC, "America/New_York")
+		const breakEndEST = dayjs(breakEndUTC)
+			.tz(BUSINESS_TZ)
 			.format("YYYY-MM-DD HH:mm:ss");
 
 		// 🔑 Find active attendance (clocked in, not clocked out, not on leave)
@@ -541,7 +544,7 @@ const applyForLeave = async (reqBody, headers) => {
 			leave_reason,
 			leave_status: leaveStatusTypes.PENDING,
 			leave_date: date,
-			leave_date_est: convertToEST(date),
+			leave_date_est: `${toCalendarDate(date)} 00:00:00`,
 		}));
 
 		// Insert new leave requests
@@ -687,70 +690,44 @@ const getAttendanceByUserId = async (reqBody, id) => {
 	try {
 		const { filterType, start_date, end_date } = reqBody;
 
-		let dateStart, dateEnd;
+		// Range as New York calendar days; no or unknown filter means today
+		const today = dateInTz();
+		let startDay = today;
+		let endDay = today;
 
-		if (filterType === "TODAY") {
-			dateStart = moment().tz("America/New_York").startOf("day").toDate();
-			dateEnd = moment().tz("America/New_York").endOf("day").toDate();
-		} else if (filterType === "YESTERDAY") {
-			dateStart = moment()
-				.tz("America/New_York")
-				.subtract(1, "day")
-				.startOf("day")
-				.toDate();
-			dateEnd = moment()
-				.tz("America/New_York")
-				.subtract(1, "day")
-				.endOf("day")
-				.toDate();
+		if (filterType === "YESTERDAY") {
+			startDay = addDays(today, -1);
+			endDay = startDay;
 		} else if (filterType === "THIS_WEEK") {
-			// Monday to Sunday in EST
-			dateStart = moment()
-				.tz("America/New_York")
-				.startOf("week")
-				.add(1, "day")
-				.startOf("day")
-				.toDate(); // Monday
-			dateEnd = moment(dateStart).add(6, "days").endOf("day").toDate(); // Sunday
+			// Monday to Sunday (a Sunday belongs to the week that started the Monday before)
+			startDay = isoWeekStart(today);
+			endDay = addDays(startDay, 6);
 		} else if (filterType === "THIS_MONTH") {
-			dateStart = moment().tz("America/New_York").startOf("month").toDate();
-			dateEnd = moment().tz("America/New_York").endOf("month").toDate();
+			startDay = dayjs(today).startOf("month").format("YYYY-MM-DD");
+			endDay = dayjs(today).endOf("month").format("YYYY-MM-DD");
 		} else if (filterType === "PREVIOUS_MONTH") {
-			dateStart = moment()
-				.tz("America/New_York")
-				.subtract(1, "month")
-				.startOf("month")
-				.toDate();
-			dateEnd = moment()
-				.tz("America/New_York")
-				.subtract(1, "month")
-				.endOf("month")
-				.toDate();
+			const previousMonth = dayjs(today).startOf("month").subtract(1, "month");
+			startDay = previousMonth.format("YYYY-MM-DD");
+			endDay = previousMonth.endOf("month").format("YYYY-MM-DD");
 		} else if (filterType === "CUSTOM" && start_date && end_date) {
-			dateStart = new Date(start_date);
-			dateEnd = new Date(end_date);
+			startDay = toCalendarDate(start_date) || today;
+			endDay = toCalendarDate(end_date) || today;
 		}
 
-		// 🔹 Fetch clock-in records (PRESENT)
+		// 🔹 Fetch clock-in records (PRESENT): created_at is a UTC instant
 		const presentRecords = await Attendance.findAll({
 			where: {
 				user_id: id,
 				is_active: true,
 				clock_in: { [Op.ne]: null },
-				[Op.and]: Sequelize.where(
-					Sequelize.fn("DATE", Sequelize.col("created_at")),
-					{
-						[Op.between]: [
-							moment(dateStart).format("YYYY-MM-DD"),
-							moment(dateEnd).format("YYYY-MM-DD"),
-						],
-					},
-				),
+				created_at: {
+					[Op.between]: [dayBoundsUtc(startDay).start, dayBoundsUtc(endDay).end],
+				},
 			},
 			order: [["created_at", "ASC"]],
 		});
 
-		// 🔹 Fetch leave records
+		// 🔹 Fetch leave records: leave_date is a calendar date at UTC midnight
 		const leaveRecords = await Attendance.findAll({
 			where: {
 				user_id: id,
@@ -759,10 +736,7 @@ const getAttendanceByUserId = async (reqBody, id) => {
 				[Op.and]: Sequelize.where(
 					Sequelize.fn("DATE", Sequelize.col("leave_date")),
 					{
-						[Op.between]: [
-							moment(dateStart).format("YYYY-MM-DD"),
-							moment(dateEnd).format("YYYY-MM-DD"),
-						],
+						[Op.between]: [startDay, endDay],
 					},
 				),
 			},
@@ -771,11 +745,7 @@ const getAttendanceByUserId = async (reqBody, id) => {
 
 		// 🔹 Initialize all dates in range as ABSENT
 		const attendanceMap = {};
-		let currentDate = moment(dateStart);
-		const finalDate = moment(dateEnd);
-
-		while (currentDate <= finalDate) {
-			const dateKey = currentDate.format("YYYY-MM-DD");
+		for (let dateKey = startDay; dateKey <= endDay; dateKey = addDays(dateKey, 1)) {
 			attendanceMap[dateKey] = {
 				date: dateKey,
 				status: "ABSENT",
@@ -788,16 +758,15 @@ const getAttendanceByUserId = async (reqBody, id) => {
 				clock_in_image_uri: null,
 				clock_out_image_uri: null,
 			};
-			currentDate.add(1, "day");
 		}
 
 		// 🔹 Populate PRESENT records with EST conversion
 		presentRecords.forEach((record) => {
 			const clockInEST = record.clock_in
-				? moment(record.clock_in).tz("America/New_York")
+				? dayjs(record.clock_in).tz(BUSINESS_TZ)
 				: null;
 			const clockOutEST = record.clock_out
-				? moment(record.clock_out).tz("America/New_York")
+				? dayjs(record.clock_out).tz(BUSINESS_TZ)
 				: null;
 
 			const dateKey = clockInEST ? clockInEST.format("YYYY-MM-DD") : null;
@@ -820,8 +789,7 @@ const getAttendanceByUserId = async (reqBody, id) => {
 
 		// 🔹 Populate ON LEAVE if no clock-in found that day
 		leaveRecords.forEach((record) => {
-			const leaveDateEST = moment(record.leave_date).tz("America/New_York");
-			const dateKey = leaveDateEST.format("YYYY-MM-DD");
+			const dateKey = toCalendarDate(record.leave_date);
 
 			if (
 				attendanceMap[dateKey] &&
@@ -854,7 +822,8 @@ const getAttendanceByUserId = async (reqBody, id) => {
 const getAllAttendance = async (reqBody) => {
 	try {
 		const { date, month, year } = reqBody;
-		const today = new Date();
+		// Today's New York date at UTC midnight (getFullYear/getMonth/toISOString read it as-is)
+		const today = calendarDateUtc().toDate();
 
 		let selectedDate;
 		let selectedMonth;
@@ -933,7 +902,7 @@ const getAllAttendance = async (reqBody) => {
 						Sequelize.where(
 							Sequelize.fn(
 								"DATE_FORMAT",
-								Sequelize.col("leave_date_est"),
+								Sequelize.col("leave_date"),
 								"%Y-%m",
 							),
 							`${selectedYear}-${String(monthIndex + 1).padStart(2, "0")}`,
@@ -953,10 +922,9 @@ const getAllAttendance = async (reqBody) => {
 							const rec = allAttendance.find(
 								(att) =>
 									att.user_id === user.id &&
-									(new Date(att.clock_in_est).toISOString().startsWith(day) ||
-										new Date(att.leave_date_est || "")
-											.toISOString()
-											.startsWith(day)),
+									((att.clock_in_est &&
+										new Date(att.clock_in_est).toISOString().startsWith(day)) ||
+										(att.is_on_leave && toCalendarDate(att.leave_date) === day)),
 							);
 
 							if (!rec) {
@@ -1092,7 +1060,7 @@ const getAttendanceStatusWithBooking = async ({
 							"DATE",
 							Sequelize.col("employee_details_booking.date"),
 						),
-						moment(date).format("YYYY-MM-DD"),
+						toCalendarDate(date),
 					),
 				},
 				attributes: ["id", "time", "date"],
@@ -1109,19 +1077,20 @@ const getAttendanceStatusWithBooking = async ({
 	const booking = bookingAssignment.employee_details_booking;
 
 	// 🕐 Build booking start time
-	const bookingStart = moment(
-		`${moment(date).format("YYYY-MM-DD")} ${booking.time}`,
+	// booking.time and clock_in_est are New York wall time; compare everything in that convention
+	const bookingStart = dayjs.utc(
+		`${toCalendarDate(date)} ${booking.time}`,
 		"YYYY-MM-DD HH:mm:ss",
 	);
 
-	const lateThreshold = bookingStart.clone().add(1, "hours");
-	const absentThreshold = bookingStart.clone().add(2, "hours");
+	const lateThreshold = bookingStart.add(1, "hours");
+	const absentThreshold = bookingStart.add(2, "hours");
 
-	const now = moment();
+	const now = dayjs.utc(nowWallClock());
 
 	// ✅ If clock-in exists
 	if (attendanceRecord?.clock_in_est) {
-		const clockIn = moment(attendanceRecord.clock_in_est);
+		const clockIn = dayjs.utc(attendanceRecord.clock_in_est);
 
 		if (clockIn.isAfter(lateThreshold)) return "LATE";
 		return "PRESENT";
@@ -1173,11 +1142,10 @@ const getTodayAttendanceStats = async (reqBody) => {
 		const userIds = users.map((u) => u.id);
 
 		// Step 2: Parse date from request body or use today's date
-		const baseDate = date ? new Date(date) : new Date();
-		baseDate.setHours(0, 0, 0, 0);
-
-		const nextDate = new Date(baseDate);
-		nextDate.setDate(baseDate.getDate() + 1);
+		const day = (date && toCalendarDate(date)) || dateInTz();
+		const { start: dayStart, end: dayEnd } = dayBoundsUtc(day);
+		const baseDate = calendarDateUtc(day).toDate();
+		const nextDate = calendarDateUtc(addDays(day, 1)).toDate();
 
 		// Step 3: Get attendance records for the given date
 		const presentRecords = await Attendance.findAll({
@@ -1186,8 +1154,7 @@ const getTodayAttendanceStats = async (reqBody) => {
 				is_active: true,
 				clock_in: { [Op.ne]: null },
 				created_at: {
-					[Op.gte]: baseDate,
-					[Op.lt]: nextDate,
+					[Op.between]: [dayStart, dayEnd],
 				},
 			},
 		});
@@ -1314,19 +1281,13 @@ const getDailyPresenceForMonth = async (reqBody) => {
 		});
 
 		attendanceRecords.forEach((rec) => {
-			const date = moment
-				.utc(rec.clock_in)
-				.tz("America/New_York")
-				.format("YYYY-MM-DD"); // ✅ FIXED
+			const date = dayjs.utc(rec.clock_in).tz(BUSINESS_TZ).format("YYYY-MM-DD");
 			if (dateWiseMap[date]) {
 				const userName = userMap[rec.user_id];
 				if (userName) {
-					const clockInEST = moment
-						.utc(rec.clock_in)
-						.tz("America/New_York")
-						.toISOString();
+					const clockInEST = dayjs.utc(rec.clock_in).tz(BUSINESS_TZ).toISOString();
 					const clockOutEST = rec.clock_out
-						? moment.utc(rec.clock_out).tz("America/New_York").toISOString()
+						? dayjs.utc(rec.clock_out).tz(BUSINESS_TZ).toISOString()
 						: null;
 
 					dateWiseMap[date].push({
@@ -1362,7 +1323,7 @@ const getDailyPresenceForMonth = async (reqBody) => {
 const autoClockOutEmployees = async () => {
 	try {
 		console.log("helloo this is working fine");
-		const now = moment().tz("America/New_York").toDate();
+		const now = new Date();
 
 		const incomplete = await Attendance.findAll({
 			where: {
@@ -1401,7 +1362,7 @@ const autoClockOutEmployees = async () => {
 		await Promise.all(
 			incomplete.map(async (record) => {
 				const clockIn = new Date(record.clock_in);
-				const autoClockOut = moment(clockIn).add(12, "hours").toDate();
+				const autoClockOut = dayjs(clockIn).add(12, "hours").toDate();
 
 				if (now >= autoClockOut) {
 					// Calculate total hours
@@ -1411,8 +1372,8 @@ const autoClockOutEmployees = async () => {
 					const minutes = diffMins % 60;
 					const total_hours = `${hours} hours ${minutes} minutes`;
 
-					const clock_out_est = moment(autoClockOut)
-						.tz("America/New_York")
+					const clock_out_est = dayjs(autoClockOut)
+						.tz(BUSINESS_TZ)
 						.format("YYYY-MM-DD HH:mm:ss");
 
 					await record.update({
@@ -1455,7 +1416,7 @@ const autoClockOutEmployees = async () => {
 
 			// 🔔 Send Email
 			await sendAutoClockOutEmail({
-				date: moment().tz("America/New_York").format("YYYY-MM-DD"),
+				date: dateInTz(),
 				employees: employeesWithoutClockOut,
 			});
 		}
@@ -1483,13 +1444,6 @@ const syncClockInData = async () => {
 			console.log("❌ No drivers data found in Firebase");
 			return;
 		}
-
-		const startOfDay = moment.utc().startOf("day").toDate();
-		const endOfDay = moment.utc().endOf("day").toDate();
-
-		console.log(
-			`🔍 Looking for attendance between ${startOfDay} and ${endOfDay}`,
-		);
 
 		for (const userId in driversData) {
 			const { clockIn } = driversData[userId];
@@ -1656,13 +1610,7 @@ const getAllBreaks = async (reqBody) => {
 		const { date } = reqBody;
 
 		// ---- STEP 1: Determine selected date in EST ----
-		let selectedDateEST = date
-			? moment.tz(date, "America/New_York")
-			: moment.tz("America/New_York");
-
-		const dayStartEST = selectedDateEST.clone().startOf("day");
-
-		const dayKey = dayStartEST.format("YYYY-MM-DD");
+		const dayKey = (date && toCalendarDate(date)) || dateInTz();
 
 		// ---- STEP 2: Fetch users ----
 		const users = await User.findAll({
@@ -1687,8 +1635,8 @@ const getAllBreaks = async (reqBody) => {
 		const filteredBreaks = allBreaks.filter((b) => {
 			if (!b.attendence_break || !b.attendence_break.clock_in_est) return false;
 
-			const attendanceDay = moment
-				.tz(b.attendence_break.clock_in_est, "America/New_York")
+			const attendanceDay = dayjs
+				.utc(b.attendence_break.clock_in_est)
 				.format("YYYY-MM-DD");
 
 			return attendanceDay === dayKey;
@@ -1743,10 +1691,10 @@ const manualClockInOut = async (reqBody) => {
 
 		// Convert EST time to UTC Date object
 		const toUTC = (time) =>
-			time ? moment.tz(time, "America/New_York").utc().toDate() : null;
+			time ? inZone(time, BUSINESS_TZ).utc().toDate() : null;
 		const toESTString = (time) =>
 			time
-				? moment.tz(time, "America/New_York").format("YYYY-MM-DD HH:mm:ss")
+				? inZone(time, BUSINESS_TZ).format("YYYY-MM-DD HH:mm:ss")
 				: null;
 
 		// Combine date + time into EST datetime strings
@@ -1761,7 +1709,7 @@ const manualClockInOut = async (reqBody) => {
 		if (clockInUTC && clockOutUTC) {
 			// Handle overnight shift (clock-out next day)
 			if (clockOutUTC < clockInUTC) {
-				clockOutUTC = moment(clockOutUTC).add(1, "day").toDate();
+				clockOutUTC = toUTC(`${addDays(toCalendarDate(date), 1)} ${clock_out}`);
 			}
 
 			const diffMins = Math.floor((clockOutUTC - clockInUTC) / (1000 * 60));
@@ -1807,7 +1755,10 @@ const manualClockInOut = async (reqBody) => {
 			// Now calculate total_hours
 			if (clockInUTC && clockOutUTC) {
 				if (clockOutUTC < clockInUTC) {
-					clockOutUTC = moment(clockOutUTC).add(1, "day").toDate();
+					// Overnight shift against the stored clock-in: move clock-out to the next day and save that
+					clockOutUTC = toUTC(`${addDays(toCalendarDate(date), 1)} ${clock_out}`);
+					record.clock_out = clockOutUTC;
+					record.clock_out_est = toESTString(clockOutUTC);
 				}
 				const diffMins = Math.floor((clockOutUTC - clockInUTC) / (1000 * 60));
 				const hours = Math.floor(diffMins / 60);
@@ -1823,9 +1774,10 @@ const manualClockInOut = async (reqBody) => {
 				user_id: employee_id,
 				role_id: role_id || null,
 				clock_in: clockInUTC,
-				clock_in_est: toESTString(clockInEST),
+				clock_in_est: toESTString(clockInUTC),
 				clock_out: clockOutUTC,
-				clock_out_est: toESTString(clockOutEST),
+				// from the corrected instant, so an overnight clock-out shows the next day
+				clock_out_est: toESTString(clockOutUTC),
 				total_hours: totalHours || "0 hours 0 minutes",
 				added_by_admin: true,
 			});

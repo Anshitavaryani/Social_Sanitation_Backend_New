@@ -1,6 +1,6 @@
 const app = require("./app.js");
 const http = require("http");
-const moment = require("moment");
+const { dayjs } = require("./src/utils/time.js");
 
 const config = require("./src/config/config.js");
 const logger = require("./src/config/logger.js");
@@ -11,7 +11,7 @@ process.env.TZ = config.DEFAULT_TIMEZONE;
 const server = http.createServer(app);
 
 // Get the current date and time
-const currentTime = moment();
+const currentTime = dayjs();
 
 server.listen(config.port, "127.0.0.1", () => {
   logger.info(

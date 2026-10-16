@@ -3,7 +3,7 @@ const { status: httpStatus } = require("http-status");
 const nodemailer = require("nodemailer");
 const config = require("../../config/config");
 const logger = require("../../config/logger");
-const moment = require("moment");
+const { dayjs } = require("../../utils/time");
 const {
   forgotPasswordSendOTPFormat,
   emailVerificationFormat,
@@ -504,10 +504,10 @@ const sendInvoiceEmailWithPDF = async (user, invoice, pdfPath, senderEmail) => {
       const [start, end] = invoice.service_dates.split(" - ");
 
       formattedStart = start
-        ? moment(start, "YYYY-MM-DD").format("MM/DD/YYYY")
+        ? dayjs(start, "YYYY-MM-DD").format("MM/DD/YYYY")
         : "";
 
-      formattedEnd = end ? moment(end, "YYYY-MM-DD").format("MM/DD/YYYY") : "";
+      formattedEnd = end ? dayjs(end, "YYYY-MM-DD").format("MM/DD/YYYY") : "";
     }
 
     await sendMailViaGraphWithSender({

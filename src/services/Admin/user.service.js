@@ -4,7 +4,7 @@ const { status: httpStatus } = require("http-status");
 const bcrypt = require("bcryptjs");
 const { Sequelize, Op } = require("sequelize");
 const path = require("path");
-const moment = require("moment");
+const { dayjs, dateInTz, addDays, nowWallClock } = require("../../utils/time");
 const fs = require("fs");
 const { Admin, User, Profile, UserAttachment, userLoginTiming, Service, Booking, ServiceAttachment, BookingAssignment, UserAddress, Payment, ClientChecklistDetail, ClientChecklist, QuoteItem, ServiceQuote, Country, State, City, ReviewLink, Attendance, Break, UserToken, UserOAuth, Invoice, FormSubmission, FormSection } = require("../../models");
 const ApiError = require("../../utils/ApiError");
@@ -4861,8 +4861,8 @@ const getLiveWorkingEmployees = async (reqBody) => {
     }
 
     // ✅ Convert to EST (IMPORTANT)
-    const startOfDay = new Date(`${date}T00:00:00`);
-    const endOfDay = new Date(`${date}T23:59:59`);
+    const startOfDay = new Date(`${date}T00:00:00Z`);
+    const endOfDay = new Date(`${date}T23:59:59Z`);
 
     const bookings = await Booking.findAll({
       where: {
@@ -4921,7 +4921,7 @@ const getLiveWorkingEmployees = async (reqBody) => {
               employee_name: emp.employee_profile.user_profile?.name || "N/A",
               booking_name: booking.booking_name,
               booking_id: booking.id,
-              clock_in: moment(attendance.clock_in_est).format(
+              clock_in: dayjs.utc(attendance.clock_in_est).format(
                 "YYYY-MM-DD HH:mm:ss",
               ),
               clock_in_lat: attendance.clock_in_lat,
@@ -4948,18 +4948,11 @@ const getLiveWorkingEmployees = async (reqBody) => {
 
 const getLateAbsentEmployees = async (reqBody) => {
   try {
-    const now = new Date();
-
-    const nowEST = new Date(
-      now.toLocaleString("en-US", { timeZone: "America/New_York" }),
-    );
-
-    const todayEST = now.toLocaleDateString("en-CA", {
-      timeZone: "America/New_York",
-    });
-
-    const startOfDay = new Date(`${todayEST}T00:00:00`);
-    const endOfDay = new Date(`${todayEST}T23:59:59`);
+    // Attendance *_est columns hold New York wall time, so compare in that convention
+    const todayEST = dateInTz();
+    const nowEST = nowWallClock();
+    const startOfDay = new Date(`${todayEST}T00:00:00Z`);
+    const endOfDay = new Date(`${todayEST}T23:59:59Z`);
 
     const bookings = await Booking.findAll({
       where: {
@@ -4982,7 +4975,7 @@ const getLateAbsentEmployees = async (reqBody) => {
     const result = [];
 
     for (const booking of bookings) {
-      const bookingStart = new Date(`${todayEST}T${booking.time}`);
+      const bookingStart = new Date(`${todayEST}T${booking.time}Z`);
 
       const lateThreshold = new Date(
         bookingStart.getTime() + 1 * 60 * 60 * 1000,
@@ -5071,11 +5064,9 @@ const getLateAbsentEmployees = async (reqBody) => {
 
 const getUpcomingScheduledBookings = async () => {
   try {
-    const timezone = "America/New_York";
+    const startDate = dateInTz();
 
-    const startDate = moment().tz(timezone).format("YYYY-MM-DD");
-
-    const endDate = moment().tz(timezone).add(7, "days").format("YYYY-MM-DD");
+    const endDate = addDays(startDate, 7);
 
     /* ✅ FETCH UPCOMING BOOKINGS */
 
@@ -5221,7 +5212,7 @@ const getUpcomingScheduledBookings = async () => {
         /* ✅ DATEONLY SAFE */
 
         date: booking.date
-          ? moment(booking.date).utc().format("MM-DD-YYYY")
+          ? dayjs.utc(booking.date).format("MM-DD-YYYY")
           : null,
 
         time: booking.time,

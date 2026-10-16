@@ -4,7 +4,7 @@ const puppeteer = require("puppeteer-core");
 const config = require("./config");
 const fs = require("fs");
 const path = require("path");
-const moment = require("moment");
+const { dayjs } = require("../utils/time");
 
 const getLayoutConfig = (itemCount) => {
   if (itemCount <= 5) {
@@ -3670,19 +3670,19 @@ const generateInvoicePDF = async (data) => {
   /* ===== FORMAT DATES ===== */
 
   const formattedServiceStart = service_start
-    ? moment(service_start, "YYYY-MM-DD").format("MM/DD/YYYY")
+    ? dayjs(service_start, "YYYY-MM-DD").format("MM/DD/YYYY")
     : "";
 
   const formattedServiceEnd = service_end
-    ? moment(service_end, "YYYY-MM-DD").format("MM/DD/YYYY")
+    ? dayjs(service_end, "YYYY-MM-DD").format("MM/DD/YYYY")
     : "";
 
   const formattedBillingDate = billing_date
-    ? moment(billing_date, "YYYY-MM-DD").format("MM/DD/YYYY")
+    ? dayjs(billing_date, "YYYY-MM-DD").format("MM/DD/YYYY")
     : "";
 
   const formattedDueDate = due_date
-    ? moment(due_date, "YYYY-MM-DD").format("MM/DD/YYYY")
+    ? dayjs(due_date, "YYYY-MM-DD").format("MM/DD/YYYY")
     : "";
 
   const formatAmount = (value) => {
@@ -4067,7 +4067,7 @@ const generateInvoicePDF = async (data) => {
 				<p style="margin: 0; font-size: 12px; font-weight: bold; text-align: center">
 					${
             invoice_date
-              ? moment(invoice_date, "YYYY-MM-DD").format("MMMM DD, YYYY")
+              ? dayjs(invoice_date, "YYYY-MM-DD").format("MMMM DD, YYYY")
               : "Month-Day-Year"
           }
 				</p>

@@ -1,7 +1,7 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
-const moment = require("moment");
+const { inZone, dateInTz } = require("../../utils/time");
 const { Booking, Service, Profile, User, UserAttachment, ServiceAttachment, UserAddress, BookingAssignment, Country, State, City, BDMUser, Admin, BookingAttachment, ServiceChecklist, BookingServiceChecklist, ServiceChecklistMapping, Notification, ServiceChecklistHeading, GuestBookingAddress } = require("../../models");
 const ApiError = require("../../utils/ApiError");
 const { Op } = require("sequelize");
@@ -46,10 +46,10 @@ const createBooking = async (reqBody, files, headers) => {
 
     // Function to compute UTC date and time
     const computeUTCDateAndTime = (date, time) => {
-      const localDateTime = moment.tz(
+      const localDateTime = inZone(
         `${date} ${time}`,
-        "YYYY-MM-DD HH:mm:ss",
         timezone,
+        "YYYY-MM-DD HH:mm:ss",
       );
       return {
         date_in_utc: localDateTime.utc().format("YYYY-MM-DD"),
@@ -987,8 +987,8 @@ const getTodaysBooking = async (body) => {
     const { user } = body;
 
     // Get the current date range (start & end of today)
-    const todayStart = moment().startOf("day").format("YYYY-MM-DD");
-    const todayEnd = moment().endOf("day").format("YYYY-MM-DD");
+    const todayStart = dateInTz();
+    const todayEnd = todayStart;
 
     // Fetch today's bookings assigned to the service provider (employee)
     const bookingDoc = await Booking.findAndCountAll({

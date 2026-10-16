@@ -1,7 +1,18 @@
 /** @format */
 
 const { status: httpStatus } = require("http-status");
-const moment = require("moment");
+const {
+  dayjs,
+  inZone,
+  BUSINESS_TZ,
+  dateInTz,
+  nowWallClock,
+  calendarDateUtc,
+  toCalendarDate,
+  bookingUtcParts,
+  addDays,
+  isoWeekStart,
+} = require("../../utils/time");
 const { randomUUID: uuidv4 } = require("crypto");
 
 const { Booking, Service, Profile, User, UserAttachment, ServiceAttachment, UserAddress, BookingAssignment, Country, State, City, BookingAttachment, BDMUser, Admin, Attendance, GuestBookingAddress, Break, AttendancePayroll } = require("../../models");
@@ -15,7 +26,7 @@ const { getDatabase, ServerValue } = require("firebase-admin/database");
 
 const getAllBookings = async (reqBody) => {
   try {
-    const today = moment().startOf("day").toDate();
+    const today = calendarDateUtc().toDate();
 
     const { booking_status, period } = reqBody;
 
@@ -34,7 +45,7 @@ const getAllBookings = async (reqBody) => {
         payment_status: "SUCCESS",
       };
     } else if (booking_status === "COMPLETED") {
-      const today = moment().startOf("day");
+      const today = calendarDateUtc();
       if (period === "today") {
         whereCondition = {
           booking_status: ["SUCCESS", "ACCEPTED", "PENDING", "RESCHEDULED"],
@@ -88,7 +99,7 @@ const getAllBookings = async (reqBody) => {
       };
     } else if (booking_status === "UPCOMING") {
       if (period === "today") {
-        const today = moment().startOf("day");
+        const today = calendarDateUtc();
         whereCondition = {
           booking_status: ["ACCEPTED"],
           is_active: true,
@@ -99,7 +110,7 @@ const getAllBookings = async (reqBody) => {
           },
         };
       } else if (period === "current_week") {
-        const endOfWeek = moment().endOf("isoWeek");
+        const endOfWeek = calendarDateUtc(addDays(isoWeekStart(), 6)).endOf("day");
         whereCondition = {
           booking_status: ["ACCEPTED"],
           is_active: true,
@@ -110,7 +121,7 @@ const getAllBookings = async (reqBody) => {
           },
         };
       } else if (period === "current_month") {
-        const endOfMonth = moment().endOf("month");
+        const endOfMonth = calendarDateUtc().endOf("month");
         whereCondition = {
           booking_status: ["ACCEPTED"],
           is_active: true,
@@ -459,7 +470,7 @@ async function updateRecurringBookingWithEditMode(
       const bookingDateStr =
         typeof bookingDoc.date === "string"
           ? bookingDoc.date.split("T")[0]
-          : moment(bookingDoc.date).format("YYYY-MM-DD");
+          : toCalendarDate(bookingDoc.date);
 
       // 1. Decide delete condition
       const whereCondition =
@@ -487,28 +498,7 @@ async function updateRecurringBookingWithEditMode(
       });
 
       // 6. Convert date & time to UTC
-      const computeUTCDateAndTime = (date, time, time_zone) => {
-        const local = moment.tz(
-          `${date} ${time}`,
-          "YYYY-MM-DD HH:mm:ss",
-          time_zone,
-        );
-
-        if (!local.isValid()) {
-          console.warn("❌ Invalid date or time:", { date, time, time_zone });
-          return {
-            date_in_utc: null,
-            time_in_utc: null,
-          };
-        }
-
-        return {
-          date_in_utc: local.utc().format("YYYY-MM-DD"),
-          time_in_utc: local.utc().format("HH:mm:ss"),
-        };
-      };
-
-      const { date_in_utc, time_in_utc } = computeUTCDateAndTime(
+      const { date_in_utc, time_in_utc } = bookingUtcParts(
         bookingDoc.date,
         bookingDoc.time,
         bookingDoc.time_zone, // assume you store timezone
@@ -603,30 +593,7 @@ const updateBookingStatus = async (reqBody) => {
     console.log("INPUT TIME:", time);
     console.log("time_zone:", bookingDoc.time_zone);
 
-    const computeUTCDateAndTime = (date, time, time_zone) => {
-      const local = moment.tz(
-        `${date} ${time}`,
-        "YYYY-MM-DD HH:mm:ss",
-        time_zone,
-      );
-
-      if (!local.isValid()) {
-        console.warn("❌ Invalid date or time:", { date, time, time_zone });
-        return {
-          date_in_utc: null,
-          time_in_utc: null,
-        };
-      }
-
-      return {
-        date_in_utc: local.utc().format("YYYY-MM-DD"),
-        time_in_utc: local.utc().format("HH:mm:ss"),
-      };
-    };
-    const formatDate = (inputDate) =>
-      typeof inputDate === "string"
-        ? inputDate.split("T")[0]
-        : moment.utc(inputDate).format("YYYY-MM-DD");
+    const formatDate = (inputDate) => toCalendarDate(inputDate);
 
     let effectiveDate =
       date || (bookingDoc.date ? formatDate(bookingDoc.date) : null);
@@ -636,7 +603,7 @@ const updateBookingStatus = async (reqBody) => {
     console.log("⏱️ Effective Time:", effectiveTime);
 
     if (effectiveDate && effectiveTime && bookingDoc.time_zone) {
-      const { date_in_utc, time_in_utc } = computeUTCDateAndTime(
+      const { date_in_utc, time_in_utc } = bookingUtcParts(
         effectiveDate,
         effectiveTime,
         bookingDoc.time_zone,
@@ -1018,12 +985,7 @@ const createRecurringBookings = async ({
     // ── CRITICAL FIX: pure UTC calendar dates.
     // Native Date getDate/setDate/getDay are local-timezone methods and
     // shift the day by −1 when the server runs in any TZ west of UTC.
-    const originalMoment = moment.utc(
-      typeof baseBooking.date === "string"
-        ? baseBooking.date.split("T")[0]
-        : moment(baseBooking.date).format("YYYY-MM-DD"),
-      "YYYY-MM-DD",
-    );
+    const originalMoment = calendarDateUtc(toCalendarDate(baseBooking.date));
 
     recurring_every = parseInt(recurring_every, 10) || 1;
 
@@ -1042,16 +1004,9 @@ const createRecurringBookings = async ({
 
     let endMoment = null;
     if (recurrence_end_type === "on_date") {
-      endMoment = moment
-        .utc(
-          typeof recurrence_end_value === "string"
-            ? recurrence_end_value.split("T")[0]
-            : moment(recurrence_end_value).format("YYYY-MM-DD"),
-          "YYYY-MM-DD",
-        )
-        .endOf("day");
+      endMoment = calendarDateUtc(toCalendarDate(recurrence_end_value)).endOf("day");
     } else if (recurrence_end_type === "never") {
-      endMoment = moment.utc().add(10, "years").endOf("day");
+      endMoment = dayjs.utc().add(10, "years").endOf("day");
     }
 
     let count = 0;
@@ -1067,14 +1022,11 @@ const createRecurringBookings = async ({
       );
       console.log("🆔 Generated booking ID:", newBookingId);
 
-      const localDateTime = moment.tz(
-        `${nextDateStr} ${baseBooking.time}`,
-        "YYYY-MM-DD HH:mm:ss",
+      const { date_in_utc, time_in_utc } = bookingUtcParts(
+        nextDateStr,
+        baseBooking.time,
         baseBooking.time_zone,
       );
-
-      const date_in_utc = localDateTime.utc().format("YYYY-MM-DD");
-      const time_in_utc = localDateTime.utc().format("HH:mm:ss");
 
       const newBooking = await Booking.create({
         booking_name: baseBooking.booking_name,
@@ -1143,7 +1095,7 @@ const createRecurringBookings = async ({
           break;
         }
 
-        const weekStart = cursor.clone().startOf("week"); // Sunday in moment
+        const weekStart = cursor.clone().startOf("week"); // Sunday
 
         for (const dayIdx of repeatOnIndexes) {
           const candidate = weekStart.clone().add(dayIdx, "days");
@@ -1299,20 +1251,8 @@ const adminCreateBooking = async (reqBody, headers) => {
 
     const bdmUser = await BDMUser.findOne({ where: { user_id } });
 
-    const computeUTCDateAndTime = (date, time) => {
-      const localDateTime = moment.tz(
-        `${date} ${time}`,
-        "YYYY-MM-DD HH:mm:ss",
-        timezone,
-      );
-      return {
-        date_in_utc: localDateTime.utc().format("YYYY-MM-DD"),
-        time_in_utc: localDateTime.utc().format("HH:mm:ss"),
-      };
-    };
-
     const bookingId = await generateBookingId(serviceDoc.id, date);
-    const { date_in_utc, time_in_utc } = computeUTCDateAndTime(date, time);
+    const { date_in_utc, time_in_utc } = bookingUtcParts(date, time, timezone);
 
     const bookingObj = {
       user_id,
@@ -1353,10 +1293,7 @@ const adminCreateBooking = async (reqBody, headers) => {
         (day) => weekdayMap[day],
       );
       // Use UTC day-of-week so it is independent of server timezone
-      const baseDay = moment.utc(
-        typeof date === "string" ? date.split("T")[0] : date,
-        "YYYY-MM-DD",
-      ).day();
+      const baseDay = calendarDateUtc(toCalendarDate(date)).day();
       if (!repeatOnIndexes.includes(baseDay)) {
         skipInitialBooking = true;
       }
@@ -1467,20 +1404,8 @@ const adminCreateBookingForGuest = async (reqBody) => {
       throw new ApiError(httpStatus.BAD_REQUEST, "Invalid service_id");
     }
 
-    const computeUTCDateAndTime = (date, time) => {
-      const localDateTime = moment.tz(
-        `${date} ${time}`,
-        "YYYY-MM-DD HH:mm:ss",
-        timezone,
-      );
-      return {
-        date_in_utc: localDateTime.utc().format("YYYY-MM-DD"),
-        time_in_utc: localDateTime.utc().format("HH:mm:ss"),
-      };
-    };
-
     const bookingId = await generateBookingId(serviceDoc.id, date);
-    const { date_in_utc, time_in_utc } = computeUTCDateAndTime(date, time);
+    const { date_in_utc, time_in_utc } = bookingUtcParts(date, time, timezone);
 
     const bookingObj = {
       client_name,
@@ -1509,10 +1434,7 @@ const adminCreateBookingForGuest = async (reqBody) => {
       Sat: 6,
     };
     // Use UTC day-of-week so it is independent of server timezone
-    const baseDay = moment.utc(
-      typeof date === "string" ? date.split("T")[0] : date,
-      "YYYY-MM-DD",
-    ).day();
+    const baseDay = calendarDateUtc(toCalendarDate(date)).day();
     const repeatOnIndexes = (reqBody.repeat_on_days || []).map(
       (day) => weekdayMap[day],
     );
@@ -1629,12 +1551,7 @@ const createRecurringGuestBookings = async ({
     const recurrenceList = [];
 
     // ── CRITICAL FIX: pure UTC calendar dates (same as createRecurringBookings)
-    const originalMoment = moment.utc(
-      typeof baseBooking.date === "string"
-        ? baseBooking.date.split("T")[0]
-        : moment(baseBooking.date).format("YYYY-MM-DD"),
-      "YYYY-MM-DD",
-    );
+    const originalMoment = calendarDateUtc(toCalendarDate(baseBooking.date));
 
     recurring_every = parseInt(recurring_every, 10) || 1;
     const weekdayMap = {
@@ -1652,16 +1569,9 @@ const createRecurringGuestBookings = async ({
 
     let endMoment = null;
     if (recurrence_end_type === "on_date") {
-      endMoment = moment
-        .utc(
-          typeof recurrence_end_value === "string"
-            ? recurrence_end_value.split("T")[0]
-            : moment(recurrence_end_value).format("YYYY-MM-DD"),
-          "YYYY-MM-DD",
-        )
-        .endOf("day");
+      endMoment = calendarDateUtc(toCalendarDate(recurrence_end_value)).endOf("day");
     } else if (recurrence_end_type === "never") {
-      endMoment = moment.utc().add(10, "years").endOf("day");
+      endMoment = dayjs.utc().add(10, "years").endOf("day");
     }
 
     let count = 0;
@@ -1674,14 +1584,11 @@ const createRecurringGuestBookings = async ({
         nextDateStr,
       );
 
-      const localDateTime = moment.tz(
-        `${nextDateStr} ${baseBooking.time}`,
-        "YYYY-MM-DD HH:mm:ss",
+      const { date_in_utc, time_in_utc } = bookingUtcParts(
+        nextDateStr,
+        baseBooking.time,
         baseBooking.time_zone,
       );
-
-      const date_in_utc = localDateTime.utc().format("YYYY-MM-DD");
-      const time_in_utc = localDateTime.utc().format("HH:mm:ss");
 
       const newBooking = await Booking.create({
         booking_name: baseBooking.booking_name,
@@ -1893,8 +1800,8 @@ const getMonthlyBookingCalendar = async (reqBody) => {
     });
 
     // Date range with time for full day coverage
-    const startDate = moment(`${year}-${month}-01`).startOf("day").toDate();
-    const endDate = moment(`${year}-${month}-${daysInMonth}`)
+    const startDate = calendarDateUtc(allDates[0]).toDate();
+    const endDate = calendarDateUtc(allDates[allDates.length - 1])
       .endOf("day")
       .toDate();
 
@@ -1986,11 +1893,7 @@ const getMonthlyBookingCalendar = async (reqBody) => {
     });
 
     for (const booking of bookings) {
-      const normalizedDate = moment.utc(
-        typeof booking.date === "string"
-          ? booking.date.split("T")[0]
-          : booking.date,
-      ).format("YYYY-MM-DD");
+      const normalizedDate = toCalendarDate(booking.date);
       if (!bookingsByDate[normalizedDate]) {
         bookingsByDate[normalizedDate] = [];
       }
@@ -2016,49 +1919,12 @@ const getMonthlyBookingCalendar = async (reqBody) => {
 
 const sendAttendanceAlerts = async () => {
   try {
-    const now = new Date();
+    // Attendance *_est columns hold New York wall time, so compare in that convention
+    const todayEST = dateInTz();
+    const nowEST = nowWallClock();
+    const startOfDay = new Date(`${todayEST}T00:00:00Z`);
+    const endOfDay = new Date(`${todayEST}T23:59:59Z`);
 
-    // 🔍 Raw server time
-    console.log("🌍 Server now (raw):", now);
-
-    // 🔍 EST via en-US (full datetime)
-    const nowEST_enUS = now.toLocaleString("en-US", {
-      timeZone: "America/New_York",
-    });
-
-    // 🔍 EST via en-CA (ISO-like)
-    const nowEST_enCA = now.toLocaleString("en-CA", {
-      timeZone: "America/New_York",
-    });
-
-    console.log("🕒 nowEST (en-US):", nowEST_enUS);
-    console.log("🕒 nowEST (en-CA):", nowEST_enCA);
-
-    // ⚠️ Your current conversion
-    const nowEST = new Date(nowEST_enUS);
-    console.log("🚨 Parsed nowEST Date object:", nowEST);
-
-    // 📅 todayEST formats
-    const todayEST_enUS = now.toLocaleDateString("en-US", {
-      timeZone: "America/New_York",
-    });
-
-    const todayEST_enCA = now.toLocaleDateString("en-CA", {
-      timeZone: "America/New_York",
-    });
-
-    console.log("📅 todayEST (en-US):", todayEST_enUS);
-    console.log("📅 todayEST (en-CA):", todayEST_enCA);
-
-    // 👉 Use this one in your query
-    const todayEST = todayEST_enCA;
-
-    console.log("✅ Final todayEST used in query:", todayEST);
-
-    const startOfDay = new Date(`${todayEST}T00:00:00`);
-    const endOfDay = new Date(`${todayEST}T23:59:59`);
-
-    console.log("📅 EST Range:", { startOfDay, endOfDay });
 
     const bookings = await Booking.findAll({
       where: {
@@ -2109,7 +1975,6 @@ const sendAttendanceAlerts = async () => {
     });
 
     console.log("📦 Bookings found:", bookings.length);
-    console.log("📦 Bookings found:", bookings);
 
     for (const booking of bookings) {
       console.log("🔹 Checking Booking:", booking.booking_name, booking.time);
@@ -2121,7 +1986,7 @@ const sendAttendanceAlerts = async () => {
         continue;
       }
 
-      const bookingStart = new Date(`${todayEST}T${booking.time}`);
+      const bookingStart = new Date(`${todayEST}T${booking.time}Z`);
 
       const lateThreshold = new Date(
         bookingStart.getTime() + 1 * 60 * 60 * 1000,
@@ -2362,12 +2227,12 @@ const getDayOverview = async (reqBody, res) => {
   try {
     const { date } = reqBody;
 
-    if (!date || !moment(date, "YYYY-MM-DD", true).isValid()) {
+    if (!date || !dayjs(date, "YYYY-MM-DD", true).isValid()) {
       throw new ApiError(httpStatus.BAD_REQUEST, "Invalid or missing date");
     }
 
-    const startOfDay = moment(date).startOf("day").toDate();
-    const endOfDay = moment(date).endOf("day").toDate();
+    const startOfDay = dayjs.utc(date).startOf("day").toDate();
+    const endOfDay = dayjs.utc(date).endOf("day").toDate();
 
     const bookings = await Booking.findAll({
       where: {
@@ -2484,9 +2349,9 @@ const getDayOverview = async (reqBody, res) => {
 
             if (breakRecords.length > 0) {
               breaks = breakRecords.map((b) => ({
-                break_start_est: moment(b.break_start_est).format("HH:mm:ss"),
+                break_start_est: dayjs.utc(b.break_start_est).format("HH:mm:ss"),
                 break_end_est: b.break_end_est
-                  ? moment(b.break_end_est).format("HH:mm:ss")
+                  ? dayjs.utc(b.break_end_est).format("HH:mm:ss")
                   : null,
                 status: b.status,
                 duration_minutes: b.duration_minutes,
@@ -2631,13 +2496,9 @@ const getBookingOverviewById = async (id) => {
       throw new ApiError(httpStatus.NOT_FOUND, "Booking not found");
     }
 
-    const date = moment.utc(
-      typeof booking.date === "string"
-        ? booking.date.split("T")[0]
-        : booking.date,
-    ).format("YYYY-MM-DD");
-    const startOfDay = moment(date).startOf("day").toDate();
-    const endOfDay = moment(date).endOf("day").toDate();
+    const date = toCalendarDate(booking.date);
+    const startOfDay = dayjs.utc(date).startOf("day").toDate();
+    const endOfDay = dayjs.utc(date).endOf("day").toDate();
 
     const assignedEmployees = booking.booking_employee_details || [];
 
@@ -2688,21 +2549,21 @@ const getBookingOverviewById = async (id) => {
           id: emp.employee_profile?.id,
           name: emp.employee_profile?.user_profile?.name || null,
           clock_in: attendance?.clock_in_est
-            ? moment(attendance.clock_in_est).format("HH:mm:ss")
+            ? dayjs.utc(attendance.clock_in_est).format("HH:mm:ss")
             : null,
           clock_in_lat: attendance?.clock_in_lat || null,
           clock_in_lang: attendance?.clock_in_lng || null,
           clock_out: attendance?.clock_out_est
-            ? moment(attendance.clock_out_est).format("HH:mm:ss")
+            ? dayjs.utc(attendance.clock_out_est).format("HH:mm:ss")
             : null,
           clock_out_lat: attendance?.clock_out_lat || null,
           clock_out_lang: attendance?.clock_out_lng || null,
           total_hours: attendance?.total_hours || null,
           number_of_breaks: breaks.length,
           breaks: breaks.map((b) => ({
-            break_start_est: moment(b.break_start_est).format("HH:mm:ss"),
+            break_start_est: dayjs.utc(b.break_start_est).format("HH:mm:ss"),
             break_end_est: b.break_end_est
-              ? moment(b.break_end_est).format("HH:mm:ss")
+              ? dayjs.utc(b.break_end_est).format("HH:mm:ss")
               : null,
             status: b.status,
             duration_minutes: b.duration_minutes,
@@ -2891,12 +2752,12 @@ const getDayOverviewForGantt = async (reqBody) => {
   try {
     const { date } = reqBody;
 
-    if (!date || !moment(date, "YYYY-MM-DD", true).isValid()) {
+    if (!date || !dayjs(date, "YYYY-MM-DD", true).isValid()) {
       throw new ApiError(httpStatus.BAD_REQUEST, "Invalid or missing date");
     }
 
-    const startOfDay = moment(date).startOf("day").toDate();
-    const endOfDay = moment(date).endOf("day").toDate();
+    const startOfDay = dayjs.utc(date).startOf("day").toDate();
+    const endOfDay = dayjs.utc(date).endOf("day").toDate();
 
     // 1️⃣ GET ALL EMPLOYEES (role_id 7, 8, 9)
     const allEmployees = await User.findAll({
@@ -2943,10 +2804,10 @@ const getDayOverviewForGantt = async (reqBody) => {
     const employeeBookingMap = {}; // { employeeId: { start, end } }
 
     for (const booking of bookings) {
-      const start = moment(booking.time, "HH:mm:ss");
+      const start = dayjs.utc(booking.time, "HH:mm:ss");
       const end = booking.end_time_by_admin
-        ? moment(booking.end_time_by_admin, "HH:mm:ss")
-        : moment(booking.time, "HH:mm:ss").add(2, "hours");
+        ? dayjs.utc(booking.end_time_by_admin, "HH:mm:ss")
+        : dayjs.utc(booking.time, "HH:mm:ss").add(2, "hours");
 
       for (const emp of booking.booking_employee_details) {
         const empId = emp.employee_profile?.id;
@@ -2981,13 +2842,13 @@ const getDayOverviewForGantt = async (reqBody) => {
 };
 
 const getEmployeeDayOverview = async ({ date }) => {
-  if (!date || !moment(date, "YYYY-MM-DD", true).isValid()) {
+  if (!date || !dayjs(date, "YYYY-MM-DD", true).isValid()) {
     throw new ApiError(httpStatus.BAD_REQUEST, "Invalid or missing date");
   }
 
   // EST day window (same as working API)
-  const startOfDay = moment(date).startOf("day").toDate();
-  const endOfDay = moment(date).endOf("day").toDate();
+  const startOfDay = dayjs.utc(date).startOf("day").toDate();
+  const endOfDay = dayjs.utc(date).endOf("day").toDate();
 
   // 1️⃣ Employees
   const employees = await User.findAll({
@@ -3056,11 +2917,11 @@ const getEmployeeDayOverview = async ({ date }) => {
         booking_id: booking?.id || null,
 
         clock_in: attendance?.clock_in_est
-          ? moment(attendance.clock_in_est).format("HH:mm:ss")
+          ? dayjs.utc(attendance.clock_in_est).format("HH:mm:ss")
           : null,
 
         clock_out: attendance?.clock_out_est
-          ? moment(attendance.clock_out_est).format("HH:mm:ss")
+          ? dayjs.utc(attendance.clock_out_est).format("HH:mm:ss")
           : null,
 
         total_hours: attendance?.total_hours || null,
@@ -3089,14 +2950,14 @@ const getEmployeeRangeOverview = async ({
   if (
     !start_date ||
     !end_date ||
-    !moment(start_date, "YYYY-MM-DD", true).isValid() ||
-    !moment(end_date, "YYYY-MM-DD", true).isValid()
+    !dayjs(start_date, "YYYY-MM-DD", true).isValid() ||
+    !dayjs(end_date, "YYYY-MM-DD", true).isValid()
   ) {
     throw new ApiError(httpStatus.BAD_REQUEST, "Invalid date range");
   }
 
-  const startDate = moment(start_date).startOf("day").toDate();
-  const endDate = moment(end_date).endOf("day").toDate();
+  const startDate = dayjs.utc(start_date).startOf("day").toDate();
+  const endDate = dayjs.utc(end_date).endOf("day").toDate();
 
   // ✅ 2. Employees
   const employeeWhere = {
@@ -3150,9 +3011,7 @@ const getEmployeeRangeOverview = async ({
   // Map: employee_id + date → booking
   const bookingMap = {};
   bookings.forEach((b) => {
-    const dateKey = moment.utc(
-      typeof b.date === "string" ? b.date.split("T")[0] : b.date,
-    ).format("YYYY-MM-DD");
+    const dateKey = toCalendarDate(b.date);
 
     b.booking_employee_details.forEach((a) => {
       const key = `${a.employee_id}_${dateKey}`;
@@ -3173,7 +3032,7 @@ const getEmployeeRangeOverview = async ({
 
   const attendanceMap = {};
   attendances.forEach((att) => {
-    const dateKey = moment(att.clock_in_est).format("YYYY-MM-DD");
+    const dateKey = dayjs.utc(att.clock_in_est).format("YYYY-MM-DD");
     const key = `${att.user_id}_${dateKey}`;
     attendanceMap[key] = att;
   });
@@ -3195,7 +3054,7 @@ const getEmployeeRangeOverview = async ({
   // ✅ 6. Generate date range loop
   const results = [];
 
-  let current = moment(startDate);
+  let current = dayjs.utc(startDate);
 
   while (current.isSameOrBefore(endDate, "day")) {
     const dateKey = current.format("YYYY-MM-DD");
@@ -3221,11 +3080,11 @@ const getEmployeeRangeOverview = async ({
         booking_id: bookingId,
 
         clock_in: attendance?.clock_in_est
-          ? moment(attendance.clock_in_est).format("HH:mm:ss")
+          ? dayjs.utc(attendance.clock_in_est).format("HH:mm:ss")
           : null,
 
         clock_out: attendance?.clock_out_est
-          ? moment(attendance.clock_out_est).format("HH:mm:ss")
+          ? dayjs.utc(attendance.clock_out_est).format("HH:mm:ss")
           : null,
 
         total_hours: attendance?.total_hours || null,
@@ -3238,7 +3097,7 @@ const getEmployeeRangeOverview = async ({
       });
     }
 
-    current.add(1, "day");
+    current = current.add(1, "day");
   }
 
   return {
@@ -3272,13 +3131,11 @@ const updateEmployeeTimesheet = async (reqBody) => {
 
     /* ---------------- TIME HELPERS ---------------- */
     const toUTC = (estDateTime) =>
-      estDateTime
-        ? moment.tz(estDateTime, "America/New_York").utc().toDate()
-        : null;
+      estDateTime ? inZone(estDateTime, BUSINESS_TZ).utc().toDate() : null;
 
     const toESTString = (utcDate) =>
       utcDate
-        ? moment(utcDate).tz("America/New_York").format("YYYY-MM-DD HH:mm:ss")
+        ? dayjs(utcDate).tz(BUSINESS_TZ).format("YYYY-MM-DD HH:mm:ss")
         : null;
 
     const clockInEST = clock_in ? `${date} ${clock_in}` : null;
@@ -3289,7 +3146,7 @@ const updateEmployeeTimesheet = async (reqBody) => {
 
     /* ----------- HANDLE OVERNIGHT SHIFT ----------- */
     if (clockInUTC && clockOutUTC && clockOutUTC < clockInUTC) {
-      clockOutUTC = moment(clockOutUTC).add(1, "day").toDate();
+      clockOutUTC = toUTC(`${addDays(toCalendarDate(date), 1)} ${clock_out}`);
     }
 
     /* ---------------- FIND ATTENDANCE ---------------- */
@@ -3384,28 +3241,18 @@ const updateEmployeeTimesheet = async (reqBody) => {
   }
 };
 
+// Today through today + days (New York calendar dates), in the bookings.date convention
 const getESTRange = (days = 14) => {
-  const nowEST = new Date(
-    new Date().toLocaleString("en-US", { timeZone: "America/New_York" }),
-  );
-
-  const start = new Date(nowEST);
-  start.setHours(0, 0, 0, 0);
-
-  const end = new Date(nowEST);
-  end.setDate(end.getDate() + days);
-  end.setHours(23, 59, 59, 999);
-
-  return { start, end };
+  const today = dateInTz();
+  return {
+    start: calendarDateUtc(today).toDate(),
+    end: calendarDateUtc(addDays(today, days)).endOf("day").toDate(),
+  };
 };
 
 const formatDateEST = (date) => {
   // Pure calendar date – never use native Date local methods
-  const m = moment.utc(
-    typeof date === "string" ? date.split("T")[0] : date,
-    "YYYY-MM-DD",
-  );
-  return m.format("MM/DD/YYYY");
+  return calendarDateUtc(toCalendarDate(date)).format("MM/DD/YYYY");
 };
 
 const formatTime12h = (timeStr) => {

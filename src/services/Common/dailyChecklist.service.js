@@ -11,7 +11,7 @@ const {
 } = require("../../models");
 const ApiError = require("../../utils/ApiError");
 const { Sequelize, Op } = require("sequelize");
-const moment = require("moment");
+const { dayjs, dateInTz, dayBoundsUtc, zonedTimeToUtc, isoWeekStart, addDays } = require("../../utils/time");
 
 const createDailyChecklist = async (reqBody) => {
 	try {
@@ -243,8 +243,8 @@ const deleteDailyChecklist = async (body) => {
 const markDailyChecklistItemAsCompleted = async (reqBody, id) => {
 	try {
 		const { user } = reqBody;
-		const today = new Date();
-		today.setHours(0, 0, 0, 0); // Midnight for date comparison
+		// Start of today in New York (not UTC midnight, which is 8 pm ET)
+		const today = dayBoundsUtc().start;
 
 		// Step 1: Check if the checklist item exists
 		const checklistItem = await DailyChecklist.findByPk(id);
@@ -304,13 +304,8 @@ const getDailyChecklistWithTodayStatus = async (reqBody) => {
 	try {
 		const { user } = reqBody;
 
-		// Get today's start and end in EST
-		const nowEST = moment.tz("America/New_York");
-		const todayStart = nowEST.clone().startOf("day"); // Today 12:00 AM
-		const todayEnd = nowEST.clone().endOf("day"); // Today 11:59 PM
-
-		const todayStartDate = todayStart.toDate();
-		const todayEndDate = todayEnd.toDate();
+		// Today's start and end in New York
+		const { start: todayStartDate, end: todayEndDate } = dayBoundsUtc();
 
 		const headings = await DailyChecklistHeading.findAll({
 			where: {
@@ -374,14 +369,10 @@ const getWeeklyChecklistWithStatus = async (reqBody) => {
 
 		const user = await User.findByPk(user_id);
 
-		// Monday 12:00 AM EST to next Monday 12:00 AM EST
-		const nowEST = moment.tz("America/New_York");
-		const weekStart = nowEST
-			.clone()
-			.startOf("week")
-			.add(1, "day")
-			.startOf("day"); // Monday
-		const weekEnd = weekStart.clone().add(7, "days"); // Next Monday
+		// Monday 12:00 AM to next Monday 12:00 AM in New York (Sunday belongs to the week that started on Monday)
+		const weekStartDate = isoWeekStart(dateInTz());
+		const weekStart = zonedTimeToUtc(weekStartDate);
+		const weekEnd = zonedTimeToUtc(addDays(weekStartDate, 7));
 
 		// Fetch all checklist headings and tasks with user status for the week
 		const headings = await DailyChecklistHeading.findAll({
@@ -427,17 +418,15 @@ const getWeeklyChecklistWithStatus = async (reqBody) => {
 		const result = {};
 
 		for (let i = 0; i < 7; i++) {
-			const date = weekStart.clone().add(i, "days");
-			const dateKey = date.format("YYYY-MM-DD");
-			const dayStart = date.clone().startOf("day");
-			const dayEnd = date.clone().endOf("day");
+			const dateKey = addDays(weekStartDate, i);
+			const { start: dayStart, end: dayEnd } = dayBoundsUtc(dateKey);
 
 			const grouped = {};
 
 			// Group tasks under their heading
 			allTasks.forEach((task) => {
 				const isCompleted = task.checklist.some((entry) => {
-					const entryTime = moment(entry.created_at).tz("America/New_York");
+					const entryTime = dayjs(entry.created_at);
 					return (
 						entryTime.isSameOrAfter(dayStart) &&
 						entryTime.isSameOrBefore(dayEnd) &&

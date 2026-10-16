@@ -12,6 +12,8 @@ const { privateKey } = generateKeyPairSync("rsa", {
 const TEST_JWT_SECRET = "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90";
 
 Object.assign(process.env, {
+  // Same clock as the server (index.js sets TZ from DEFAULT_TIMEZONE=UTC)
+  TZ: "UTC",
   NODE_ENV: "test",
   DEBUG: "none",
   APP_NAME: "social_sanitation_test",

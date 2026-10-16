@@ -28,6 +28,7 @@ const fakeModel = (name) => ({
   findOne: async () => null,
   findByPk: async () => null,
   findAll: async () => [],
+  findAndCountAll: async () => ({ count: 0, rows: [] }),
   count: async () => 0,
   create: async (values) => ({ id: 1, ...values }),
   bulkCreate: async (rows) => rows,

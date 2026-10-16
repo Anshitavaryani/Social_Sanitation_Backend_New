@@ -1,6 +1,6 @@
 const jwt = require("jsonwebtoken");
 const { status: httpStatus } = require("http-status");
-const moment = require("moment");
+const { dayjs } = require("../../utils/time");
 const config = require("../../config/config");
 
 const { tokenTypes } = require("../../config/types");
@@ -18,7 +18,7 @@ const generateToken = (
   try {
     const payload = {
       sub: userId,
-      iat: moment().unix(),
+      iat: dayjs().unix(),
       exp: expires.unix(),
       type,
       role_id: role_id,
@@ -68,7 +68,7 @@ const generateAuthTokens = async (user, fcm_token) => {
       );
     }
 
-    const accessTokenExpires = moment().add(
+    const accessTokenExpires = dayjs().add(
       config.jwt.accessExpirationMinutes,
       "days"
     );
@@ -82,7 +82,7 @@ const generateAuthTokens = async (user, fcm_token) => {
     let tokenDoc = await saveToken(
       accessToken,
       user.id,
-      moment.utc(accessTokenExpires).format("YYYY-MM-DD HH:mm:ss"),
+      dayjs.utc(accessTokenExpires).format("YYYY-MM-DD HH:mm:ss"),
       tokenTypes.ACCESS,
       user.role_id,
       fcm_token

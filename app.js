@@ -2,7 +2,7 @@
 
 const express = require("express");
 const helmet = require("helmet");
-const moment = require("moment-timezone");
+const { dayjs, BUSINESS_TZ } = require("./src/utils/time.js");
 const cors = require("cors");
 const compression = require("compression");
 const { status: httpStatus } = require("http-status");
@@ -67,7 +67,7 @@ cron.schedule(
       console.error("syncClockInData failed:", err);
     }
   },
-  { timezone: "America/New_York" },
+  { timezone: BUSINESS_TZ },
 );
 
 cron.schedule(
@@ -79,7 +79,7 @@ cron.schedule(
       console.error("syncClockOutData failed:", err);
     }
   },
-  { timezone: "America/New_York" },
+  { timezone: BUSINESS_TZ },
 );
 
 cron.schedule(
@@ -91,7 +91,7 @@ cron.schedule(
       console.error("sendAttendanceAlerts failed:", err);
     }
   },
-  { timezone: "America/New_York" },
+  { timezone: BUSINESS_TZ },
 );
 
 cron.schedule(
@@ -103,7 +103,7 @@ cron.schedule(
       console.error("notifyAdminIfClockoutFar failed:", err);
     }
   },
-  { timezone: "America/New_York" },
+  { timezone: BUSINESS_TZ },
 );
 
 cron.schedule(
@@ -115,7 +115,7 @@ cron.schedule(
       console.error("autoCompleteExpiredBreaks failed:", err);
     }
   },
-  { timezone: "America/New_York" },
+  { timezone: BUSINESS_TZ },
 );
 
 // Run every 10 minutes
@@ -129,7 +129,7 @@ cron.schedule(
       console.error("autoClockOutEmployees failed:", err);
     }
   },
-  { timezone: "America/New_York" },
+  { timezone: BUSINESS_TZ },
 );
 
 cron.schedule(
@@ -142,9 +142,7 @@ cron.schedule(
       console.error("expireQuotesJob failed:", err);
     }
   },
-  {
-    timezone: "America/New_York",
-  },
+  { timezone: BUSINESS_TZ },
 );
 
 cron.schedule(
@@ -157,9 +155,7 @@ cron.schedule(
       console.error(err);
     }
   },
-  {
-    timezone: "America/New_York",
-  },
+  { timezone: BUSINESS_TZ },
 );
 
 cron.schedule(
@@ -171,9 +167,7 @@ cron.schedule(
       console.error(err);
     }
   },
-  {
-    timezone: "America/New_York",
-  },
+  { timezone: BUSINESS_TZ },
 );
 
 cron.schedule(
@@ -185,7 +179,7 @@ cron.schedule(
       console.error("sendDueBalancesCron failed:", err);
     }
   },
-  { timezone: "America/New_York" },
+  { timezone: BUSINESS_TZ },
 );
 
 app.use(helmet());
@@ -256,7 +250,7 @@ app.use(
 const LOG_DIR = path.join(__dirname, "logs");
 
 app.get("/api/v1/logs", adminAuthMiddleware.validateJWTtoken, async (req, res) => {
-  const logFilePath = path.join(LOG_DIR, `${moment().format("YYYY-MM-DD")}.log`);
+  const logFilePath = path.join(LOG_DIR, `${dayjs().format("YYYY-MM-DD")}.log`);
   try {
     const data = await fs.promises.readFile(logFilePath, "utf8");
     return responseWrapper(res, data.split("\n"), "success");

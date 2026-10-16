@@ -1,7 +1,7 @@
 const { status: httpStatus } = require("http-status");
 const ApiError = require("../../utils/ApiError");
 const { Op } = require("sequelize");
-const moment = require("moment");
+const { dayjs, monthBoundsUtc } = require("../../utils/time");
 const {
   Equipment,
   EmployeeEquipmentAssignment,
@@ -747,12 +747,7 @@ const getMonthlyEmployeeEquipmentRecords = async (query) => {
       );
     }
 
-    const startDate = moment(
-      `${month}-01`,
-      "YYYY-MM-DD",
-    ).startOf("month");
-
-    const endDate = moment(startDate).endOf("month");
+    const { start: startDate, end: endDate } = monthBoundsUtc(month);
 
     const offset =
       (Number(page) - 1) * Number(limit);
@@ -808,7 +803,7 @@ const getMonthlyEmployeeEquipmentRecords = async (query) => {
 
           where: {
             assigned_date: {
-              [Op.lte]: endDate.toDate(),
+              [Op.lte]: endDate,
             },
 
             [Op.or]: [
@@ -818,7 +813,7 @@ const getMonthlyEmployeeEquipmentRecords = async (query) => {
               {
                 actual_return_date: {
                   [Op.gte]:
-                    startDate.toDate(),
+                    startDate,
                 },
               },
             ],
@@ -974,20 +969,11 @@ const getMonthlyEmployeeEquipmentRecords = async (query) => {
       month: {
         value: month,
 
-        label:
-          startDate.format(
-            "MMMM YYYY",
-          ),
+        label: dayjs(`${month}-01`).format("MMMM YYYY"),
 
-        start_date:
-          startDate.format(
-            "YYYY-MM-DD",
-          ),
+        start_date: `${month}-01`,
 
-        end_date:
-          endDate.format(
-            "YYYY-MM-DD",
-          ),
+        end_date: dayjs(`${month}-01`).endOf("month").format("YYYY-MM-DD"),
       },
 
       records,
