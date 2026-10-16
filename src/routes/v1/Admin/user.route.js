@@ -8,7 +8,8 @@ const { publicRoute, requireAdmin } = require("../../../middlewares/access.middl
 
 router.get('/getAllUsers',[adminAuthMiddleware.validateJWTtoken],userController.getAllUsers);
 router.get('/getUserById', requireAdmin,userController.getUserById);
-router.post('/getBookinsByUserId', requireAdmin,userController.getBookinsByUserId);
+// URL spelled as the admin panel calls it
+router.post('/getBookinsByUserId', requireAdmin,userController.getBookingsByUserId);
 router.post('/getBookingByEmployeeId', requireAdmin,userController.getBookingByEmployeeId);
 router.get('/getAllDrivers',[adminAuthMiddleware.validateJWTtoken],userController.getAllDrivers);
 router.post('/deleteUser', requireAdmin,userController.deleteUser);

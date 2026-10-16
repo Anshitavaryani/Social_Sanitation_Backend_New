@@ -148,15 +148,15 @@ test("business analytics now reports overdue invoices and overdue revenue", asyn
 test("notification toggle responds with the matching message (message is declared)", async () => {
   let nextStatus = true;
   mockModule("src/services/index.js", {
-    userOpService: { notificationToogle: async () => ({ notification_status: nextStatus }) },
+    userOpService: { notificationToggle: async () => ({ notification_status: nextStatus }) },
   });
   const controller = loadFromRoot("src/controllers/User/user.controller.js");
 
-  let { res, err } = await runHandler(controller.notificationToogle, { body: { user: { id: 1 } } });
+  let { res, err } = await runHandler(controller.notificationToggle, { body: { user: { id: 1 } } });
   assert.equal(err, undefined);
   assert.equal(res.body.message, "Notification turned On!");
 
   nextStatus = false;
-  ({ res } = await runHandler(controller.notificationToogle, { body: { user: { id: 1 } } }));
+  ({ res } = await runHandler(controller.notificationToggle, { body: { user: { id: 1 } } }));
   assert.equal(res.body.message, "Notification turned Off!");
 });

@@ -30,8 +30,8 @@ const getUserById = catchAsync(async (req, res) => {
   return responseWrapper(res, response, "Successfully Get user", httpStatus.OK);
 });
 
-const getBookinsByUserId = catchAsync(async (req, res) => {
-  const response = await userService.getBookinsByUserId(req.body);
+const getBookingsByUserId = catchAsync(async (req, res) => {
+  const response = await userService.getBookingsByUserId(req.body);
   return responseWrapper(res, response, "Successfully Get user", httpStatus.OK);
 });
 
@@ -545,7 +545,7 @@ module.exports = {
   getAllDrivers,
   getUserById,
   getBookingByEmployeeId,
-  getBookinsByUserId,
+  getBookingsByUserId,
   deleteUser,
   adminAddUser,
   resetUserCredentials,

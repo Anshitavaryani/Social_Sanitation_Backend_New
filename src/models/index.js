@@ -7,7 +7,7 @@ const Timezone = require("./timezone.model");
 const Category = require("./category.model");
 
 const Role = require("./role.model");
-const Department = require("./departmenat.model");
+const Department = require("./department.model");
 
 const Admin = require("./admin.model");
 const User = require("./user.model");
@@ -15,9 +15,9 @@ const Profile = require("./profile.model");
 const UserAddress = require("./userAddress.model.js");
 const UserToken = require("./userToken.model");
 const UserAttachment = require("./userAttachment.model");
-const userLoginTiming = require("./user_login_timings.model");
+const userLoginTiming = require("./userLoginTiming.model");
 const UserOAuth = require("./userOAuth.model.js");
-const AdminOAuth = require("./adminOuth.model.js");
+const AdminOAuth = require("./adminOAuth.model.js");
 
 const ContactUs = require("./contactUs.model");
 const Faq = require("./faq.model");
@@ -31,7 +31,7 @@ const TermsAndConditions = require("./termsAndConditions.model");
 
 const Service = require("./service.model.js");
 const ServiceAttachment = require("./serviceAttachment.model.js");
-const ServiceChecklistHeading = require("./servicechecklistHeading.model.js");
+const ServiceChecklistHeading = require("./serviceChecklistHeading.model.js");
 const ServiceChecklist = require("./serviceChecklist.model.js");
 const ServiceChecklistMapping = require("./serviceChecklistMapping.model.js");
 const ServiceReview = require("./serviceReview.model.js");
@@ -44,7 +44,7 @@ const DailyChecklist = require("./dailyChecklist.model.js");
 const DailySupervisorChecklist = require("./dailySupervisorChecklist.model.js");
 const DailyChecklistHeading = require("./dailyChecklistHeading.model.js");
 const ClientChecklist = require("./clientChecklist.model.js");
-const ClientChecklistDetail = require("./clientChecklsitDetails.model.js");
+const ClientChecklistDetail = require("./clientChecklistDetails.model.js");
 const ServiceQuote = require("./ServiceQuote.model");
 const QuoteItem = require("./QuoteItem.model.js");
 
@@ -60,7 +60,7 @@ const FormAttachment = require("./formAttachment.model.js");
 const Report = require("./report.model.js");
 
 const Notification = require("./notification.model.js");
-const GuestBookingAddress = require("./guestBookingAdress.model.js");
+const GuestBookingAddress = require("./guestBookingAddress.model.js");
 
 const TrendingVideoAttachment = require("./trendingVideos.model.js");
 const ReviewLink = require("./reviewLinks.model.js");
@@ -79,7 +79,7 @@ const ServiceEstimate = require("./serviceEstimate.model.js");
 const Invoice = require("./invoice.model.js");
 const InvoiceItem = require("./invoiceItem.model.js");
 
-const ContractAgreement = require("./contactAgreement.model.js");
+const ContractAgreement = require("./contractAgreement.model.js");
 const ServiceRequest = require("./serviceRequest.model.js");
 const ServiceRequestQuoteItem = require("./serviceRequestQuoteItem.model.js");
 
@@ -440,6 +440,7 @@ async function initTableRelation() {
     as: "details_form_submission",
   });
 
+  // "attendence" (sic) in these aliases: they are keys in API responses the apps and the panel read
   User.hasMany(Attendance, { foreignKey: "user_id", as: "user_attendence" });
   Attendance.belongsTo(User, { foreignKey: "user_id", as: "attendence_user" });
 

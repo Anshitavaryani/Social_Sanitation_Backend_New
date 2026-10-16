@@ -269,7 +269,7 @@ const getUserById = async (id) => {
   return userDoc;
 };
 
-const getBookinsByUserId = async (reqBody) => {
+const getBookingsByUserId = async (reqBody) => {
   try {
     const { booking_status, id } = reqBody;
 
@@ -5144,7 +5144,7 @@ module.exports = {
   getAllUsers,
   getAllDrivers,
   getUserById,
-  getBookinsByUserId,
+  getBookingsByUserId,
   getBookingByEmployeeId,
   deleteUser,
   resetUserCredentials,

@@ -23,7 +23,7 @@ const productRoute = require("./product.route");
 const quoteRoute = require("./quote.route");
 const invoiceRoute = require("./invoice.route");
 const calculatorRoute = require("./calculator.route");
-const eqipmentRoute = require("./equipment.route");
+const equipmentRoute = require("./equipment.route");
 const inspectionRoute = require("./inspection.route")
 
 const commonRoutes = [
@@ -120,8 +120,9 @@ const commonRoutes = [
 		route: calculatorRoute,
 	},
 	{
+		// URL spelled as the admin panel and apps call it
 		path: "/eqipment",
-		route: eqipmentRoute,
+		route: equipmentRoute,
 	},
 	{
 		path: "/inspection",

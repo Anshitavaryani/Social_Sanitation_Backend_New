@@ -26,7 +26,7 @@ const { otpTypes, userStatusTypes } = require("../../config/types");
 const otpGuard = require("../../utils/otpGuard");
 const { hashPassword } = require("../../utils/password");
 const { OTP_RULES } = require("../../config/rules");
-const generateRandomString = require("../../utils/randomStringGenrate");
+const generateRandomString = require("../../utils/randomString");
 
 
 const sendOTP = async (body, headers) => {
@@ -53,7 +53,7 @@ const sendOTP = async (body, headers) => {
 		if (!otpDoc) {
 			throw new ApiError(
 				httpStatus.INTERNAL_SERVER_ERROR,
-				"Failed to genrate new OTP."
+				"Failed to generate new OTP."
 			);
 		}
 		if (type === otpTypes.FORGOT_PASSWORD) {
@@ -179,7 +179,7 @@ const register = async (body, files, headers) => {
 		if (!otpDoc) {
 			throw new ApiError(
 				httpStatus.INTERNAL_SERVER_ERROR,
-				"Failed to genrate new OTP."
+				"Failed to generate new OTP."
 			);
 		}
 		await sendEmailVerification(email, generatedOTP);

@@ -43,7 +43,7 @@ test("a destroyed row gets is_active = false; Sequelize itself writes updated_at
   assert.equal(typeof written.updated_at, "object", "updated_at from Sequelize (the old hooks' strings never reached the database)");
 
   // no is_active column, so nothing to deactivate
-  const Details = loadFromRoot("src/models/clientChecklsitDetails.model.js");
+  const Details = loadFromRoot("src/models/clientChecklistDetails.model.js");
   written = null;
   await Details.build({ id: 1, deleted_at: null }, { isNewRecord: false }).destroy();
   assert.equal("is_active" in written, false);

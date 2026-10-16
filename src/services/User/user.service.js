@@ -165,7 +165,7 @@ const deactivateAccount = async (reqBody, headers) => {
 	}
 };
 
-const notificationToogle = async (body) => {
+const notificationToggle = async (body) => {
 	try {
 		const { user } = body;
 		user.notification_status = !user.notification_status;
@@ -449,7 +449,7 @@ module.exports = {
 	getProfile,
 	updateUserProfile,
 	deactivateAccount,
-	notificationToogle,
+	notificationToggle,
 	addNewAddress,
 	editAddress,
 	deleteAddress,

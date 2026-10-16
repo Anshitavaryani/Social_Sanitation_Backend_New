@@ -6,7 +6,7 @@ const { userAuthMiddleware} = require('../../../middlewares');
 const { requireAdmin, requireAuth } = require("../../../middlewares/access.middleware");
 
 
-// attendence apis
+// attendance apis
 router.post('/clockIn',[userAuthMiddleware.verifyAuthJWTToken],attendanceController.clockIn);
 router.post('/clockOut',[userAuthMiddleware.verifyAuthJWTToken],attendanceController.clockOut);
 router.post('/applyBreak',[userAuthMiddleware.verifyAuthJWTToken],attendanceController.applyBreak);

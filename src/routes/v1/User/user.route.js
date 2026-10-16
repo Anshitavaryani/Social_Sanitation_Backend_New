@@ -8,7 +8,7 @@ const { publicRoute, requireAuth } = require("../../../middlewares/access.middle
 router.use(userAuthMiddleware.setRoleIdIfNotPresent);
 
 router.get('/profile', [userAuthMiddleware.verifyAuthJWTToken], userOpController.getProfile);
-router.post('/notifications', [userAuthMiddleware.verifyAuthJWTToken], userOpController.notificationToogle);
+router.post('/notifications', [userAuthMiddleware.verifyAuthJWTToken], userOpController.notificationToggle);
 router.delete('/deactivate', [userAuthMiddleware.verifyAuthJWTToken], userOpController.deactivateAccount);
 router.put('/updateUserProfile', [userAuthMiddleware.verifyAuthJWTToken], userOpController.updateUserProfile);
 

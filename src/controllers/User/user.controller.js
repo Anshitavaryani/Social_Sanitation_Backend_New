@@ -23,9 +23,9 @@ const deactivateAccount = catchAsync(async (req, res) => {
 	return responseWrapper(res, response, "Account Successfully Deactivated.");
 });
 
-const notificationToogle = catchAsync(async (req, res) => {
+const notificationToggle = catchAsync(async (req, res) => {
 	const body = pick(req.body, ["user"]);
-	const response = await userOpService.notificationToogle(body);
+	const response = await userOpService.notificationToggle(body);
 	const message =
 		response.notification_status === true
 			? "Notification turned On!"
@@ -84,7 +84,7 @@ module.exports = {
 	getProfile,
 	updateUserProfile,
 	deactivateAccount,
-	notificationToogle,
+	notificationToggle,
 	addNewAddress,
 	editAddress,
 	deleteAddress,
