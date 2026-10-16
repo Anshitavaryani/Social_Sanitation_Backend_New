@@ -37,6 +37,7 @@ const { Sequelize, Op } = require("sequelize");
 const config = require("../../config/config");
 const { sendEmailToAdmin, sendClockOutDistanceEmail, sendGroupedAttendanceEmail, sendTwoWeekScheduleEmail } = require("../Common/email.service");
 const { generateBookingId } = require("../Common/bookings.service");
+const { firstAttendanceByUser, breaksByAttendance, payrollByAttendance, profileNamesByUserId } = require("../Common/batchLookup");
 const getCoordinatesFromGoogleMapLink = require("../../config/getCoordinatesFromGoogleMapLink");
 const { getDatabase, ServerValue } = require("firebase-admin/database");
 
@@ -1882,52 +1883,37 @@ const sendAttendanceAlerts = async () => {
     });
 
 
+    // Today's first clock-in of every assigned employee, in one query
+    const employeeIds = [...new Set(bookings.flatMap((b) => (b.booking_employee_details || []).map((a) => a.employee_id)))];
+    const clockIns = await firstAttendanceByUser(employeeIds, { clock_in_est: { [Op.between]: [startOfDay, endOfDay] } });
+
+    // Late and absent employees per booking
+    const flaggedByBooking = new Map();
     for (const booking of bookings) {
-
-      const { booking_employee_details } = booking;
-
-      if (!booking_employee_details?.length) {
-        continue;
-      }
-
       const bookingStart = new Date(`${todayEST}T${booking.time}Z`);
-
-      let employeesToNotify = [];
-
-      for (const assignment of booking_employee_details) {
-        const employeeId = assignment.employee_id;
-
-
-        const attendanceEntry = await Attendance.findOne({
-          where: {
-            user_id: employeeId,
-            clock_in_est: {
-              [Op.between]: [startOfDay, endOfDay],
-            },
-          },
-        });
-
-
+      const flagged = [];
+      for (const assignment of booking.booking_employee_details || []) {
         const status = attendanceStatus({
           bookingStart,
-          clockIn: attendanceEntry?.clock_in_est || null,
+          clockIn: clockIns.get(assignment.employee_id)?.clock_in_est || null,
           now: nowEST,
         });
-
-        // only late and absent employees are reported
-        if (status !== attendanceStatusTypes.LATE && status !== attendanceStatusTypes.ABSENT) continue;
-
-
-        const user = await User.findByPk(employeeId, {
-          include: [{ model: Profile, as: "user_profile" }],
-        });
-
-        employeesToNotify.push({
-          name: user?.user_profile?.name || "N/A",
-          roleId: assignment.role_id,
-          status,
-        });
+        if (status === attendanceStatusTypes.LATE || status === attendanceStatusTypes.ABSENT) {
+          flagged.push({ employeeId: assignment.employee_id, roleId: assignment.role_id, status });
+        }
       }
+      flaggedByBooking.set(booking, flagged);
+    }
+
+    // Their names, in one query
+    const names = await profileNamesByUserId([...flaggedByBooking.values()].flat().map((f) => f.employeeId));
+
+    for (const booking of bookings) {
+      const employeesToNotify = flaggedByBooking.get(booking).map((f) => ({
+        name: names.get(f.employeeId) || "N/A",
+        roleId: f.roleId,
+        status: f.status,
+      }));
 
 
       if (!employeesToNotify.length) {
@@ -1997,6 +1983,15 @@ const notifyAdminIfClockoutFar = async () => {
       ],
     });
 
+    // Today's first finished attendance of every employee involved, in one query
+    const clockOuts = await firstAttendanceByUser(
+      [...new Set(bookings.flatMap((b) => b.booking_employee_details.map((a) => a.employee_profile.id)))],
+      {
+        clock_out: { [Op.ne]: null },
+        clock_in: { [Op.between]: [new Date(`${todayUTC}T00:00:00.000Z`), new Date(`${todayUTC}T23:59:59.999Z`)] },
+      },
+    );
+
     for (const booking of bookings) {
       const userLat = parseFloat(booking.booking_address?.address_lat);
       const userLng = parseFloat(booking.booking_address?.address_long);
@@ -2005,18 +2000,7 @@ const notifyAdminIfClockoutFar = async () => {
       for (const assignment of booking.booking_employee_details) {
         const employee = assignment.employee_profile;
 
-        const attendance = await Attendance.findOne({
-          where: {
-            user_id: employee.id,
-            clock_out: { [Op.ne]: null },
-            clock_in: {
-              [Op.between]: [
-                new Date(`${todayUTC}T00:00:00.000Z`),
-                new Date(`${todayUTC}T23:59:59.999Z`),
-              ],
-            },
-          },
-        });
+        const attendance = clockOuts.get(employee.id);
 
         if (
           !attendance ||
@@ -2153,44 +2137,22 @@ const getDayOverview = async (reqBody, res) => {
 
     const formattedData = [];
 
+    // Every assigned employee's attendance that day and its breaks, in two queries
+    const attendanceByEmployee = await firstAttendanceByUser(
+      bookings.flatMap((b) => (b.booking_employee_details || []).map((emp) => emp.employee_profile?.id)),
+      { clock_in_est: { [Op.gte]: startOfDay, [Op.lt]: endOfDay } },
+    );
+    const breaksOf = await breaksByAttendance([...attendanceByEmployee.values()].map((a) => a.id));
+
     for (const booking of bookings) {
       const assignedEmployees = booking.booking_employee_details || [];
 
-      const employeesWithAttendance = await Promise.all(
-        assignedEmployees.map(async (emp) => {
-          const attendance = await Attendance.findOne({
-            where: {
-              user_id: emp.employee_profile?.id,
-              clock_in_est: {
-                [Op.gte]: startOfDay,
-                [Op.lt]: endOfDay,
-              },
-            },
-            attributes: [
-              "id",
-              "clock_in",
-              "clock_out",
-              "clock_in_est",
-              "clock_out_est",
-            ],
-          });
+      const employeesWithAttendance = assignedEmployees.map((emp) => {
+          const attendance = attendanceByEmployee.get(emp.employee_profile?.id);
 
           let breaks = null;
           if (attendance?.id) {
-            const breakRecords = await Break.findAll({
-              where: { attendance_id: attendance.id },
-              attributes: [
-                "break_start_est",
-                "break_end_est",
-                "status",
-                "duration_minutes",
-                "break_start_lat",
-                "break_start_lng",
-                "break_end_lat",
-                "break_end_lng",
-              ],
-              order: [["break_start_est", "ASC"]],
-            });
+            const breakRecords = breaksOf.get(attendance.id) || [];
 
             if (breakRecords.length > 0) {
               breaks = breakRecords.map((b) => ({
@@ -2215,8 +2177,7 @@ const getDayOverview = async (reqBody, res) => {
             clock_out: attendance?.clock_out_est || null,
             breaks,
           };
-        }),
-      );
+        });
 
       formattedData.push({
         booking_id: booking.id,
@@ -2712,31 +2673,22 @@ const getEmployeeDayOverview = async ({ date }) => {
     ],
   });
 
-  // 3️⃣ Build response PER EMPLOYEE (same pattern as working API)
-  const rows = await Promise.all(
-    employees.map(async (emp) => {
+  // 3️⃣ Each employee's attendance that day and its payroll row, in two queries
+  const attendanceByEmployee = await firstAttendanceByUser(
+    employees.map((emp) => emp.id),
+    { clock_in_est: { [Op.gte]: startOfDay, [Op.lt]: endOfDay } },
+  );
+  const payrollOf = await payrollByAttendance([...attendanceByEmployee.values()].map((a) => a.id));
+
+  // 4️⃣ Build response PER EMPLOYEE (same pattern as working API)
+  const rows = employees.map((emp) => {
       // find booking where this employee is assigned
       const booking = bookings.find((b) =>
         b.booking_employee_details.some((a) => a.employee_id === emp.id),
       );
 
-      // find attendance EXACTLY like getBookingOverviewById
-      const attendance = await Attendance.findOne({
-        where: {
-          user_id: emp.id,
-          clock_in_est: {
-            [Op.gte]: startOfDay,
-            [Op.lt]: endOfDay,
-          },
-        },
-        attributes: ["id", "clock_in_est", "clock_out_est", "total_hours"],
-      });
-
-      const payroll = attendance
-        ? await AttendancePayroll.findOne({
-            where: { attendance_id: attendance.id },
-          })
-        : null;
+      const attendance = attendanceByEmployee.get(emp.id);
+      const payroll = attendance ? payrollOf.get(attendance.id) || null : null;
 
       return {
         employee_id: emp.id,
@@ -2763,8 +2715,7 @@ const getEmployeeDayOverview = async ({ date }) => {
 
         is_manual: payroll?.is_manual || false,
       };
-    }),
-  );
+    });
 
   return {
     date,

@@ -15,6 +15,7 @@ const { hashPassword } = require("../../utils/password");
 const { distanceInMiles } = require("../../utils/geo");
 const { attendanceStatus } = require("../../utils/attendanceStatus");
 const { ROLE, EMPLOYEE_ROLE_IDS, BOOKING_ROLE_IDS } = require("../../config/roles");
+const { firstAttendanceByUser, firstAddressByUser, profileNamesByUserId } = require("../Common/batchLookup");
 const { generateTemporaryPassword } = require("../../utils/temporaryPassword");
 const { sendUserCredentials, sendEmailWithPDF, sendReviewEmailWithPDF, sendServiceRequestEmailWithPDF, sendUpdatedUserCredentials } = require("../Common/email.service");
 const {
@@ -648,13 +649,9 @@ const getClosestEmployees = async (clientId) => {
 
     const result = [];
 
+    const addresses = await firstAddressByUser(employees.map((employee) => employee.id));
     for (const employee of employees) {
-      const employeeAddress = await UserAddress.findOne({
-        where: {
-          user_id: employee.id,
-        },
-        order: [["created_at", "ASC"]],
-      });
+      const employeeAddress = addresses.get(employee.id);
 
       if (
         !employeeAddress ||
@@ -752,13 +749,9 @@ const getClosestEmployeesByAddress = async (addressId) => {
 
     const result = [];
 
+    const addresses = await firstAddressByUser(employees.map((employee) => employee.id));
     for (const employee of employees) {
-      const employeeAddress = await UserAddress.findOne({
-        where: {
-          user_id: employee.id,
-        },
-        order: [["created_at", "ASC"]],
-      });
+      const employeeAddress = addresses.get(employee.id);
 
       if (
         !employeeAddress ||
@@ -4777,22 +4770,22 @@ const getLiveWorkingEmployees = async (reqBody) => {
 
     const liveMap = new Map(); // 🔥 prevents duplicates
 
+    // The day's open attendance (clocked in, not out) of every assigned employee, in one query
+    const employeeIds = [
+      ...new Set(bookings.flatMap((b) => (b.booking_employee_details || []).map((e) => e.employee_profile?.id).filter(Boolean))),
+    ];
+    const openAttendance = await firstAttendanceByUser(employeeIds, {
+      clock_in_est: { [Op.gte]: startOfDay, [Op.lt]: endOfDay },
+      clock_out_est: null,
+    });
+
     for (const booking of bookings) {
       for (const emp of booking.booking_employee_details || []) {
         const empId = emp.employee_profile?.id;
 
         if (!empId) continue;
 
-        const attendance = await Attendance.findOne({
-          where: {
-            user_id: empId,
-            clock_in_est: {
-              [Op.gte]: startOfDay,
-              [Op.lt]: endOfDay,
-            },
-            clock_out_est: null,
-          },
-        });
+        const attendance = openAttendance.get(empId);
 
         if (attendance) {
           // ✅ avoid duplicate employee
@@ -4853,54 +4846,42 @@ const getLateAbsentEmployees = async (reqBody) => {
       ],
     });
 
-    const result = [];
+    // Today's first clock-in of every assigned employee, in one query
+    const employeeIds = [...new Set(bookings.flatMap((b) => (b.booking_employee_details || []).map((a) => a.employee_id)))];
+    const clockIns = await firstAttendanceByUser(employeeIds, { clock_in_est: { [Op.between]: [startOfDay, endOfDay] } });
 
+    const flagged = [];
     for (const booking of bookings) {
       const bookingStart = new Date(`${todayEST}T${booking.time}Z`);
 
       for (const assignment of booking.booking_employee_details || []) {
         const employeeId = assignment.employee_id;
-
-        const attendance = await Attendance.findOne({
-          where: {
-            user_id: employeeId,
-            clock_in_est: {
-              [Op.between]: [startOfDay, endOfDay],
-            },
-          },
-        });
-
+        const attendance = clockIns.get(employeeId);
         const clockIn = attendance ? new Date(attendance.clock_in_est) : null;
         // minutes after the booking start: to the clock-in, or to now when there is none
         const delayMinutes = Math.max(Math.floor(((clockIn || nowEST) - bookingStart) / 60000), 0);
         const status = attendanceStatus({ bookingStart, clockIn, now: nowEST });
 
         if (status === attendanceStatusTypes.LATE || status === attendanceStatusTypes.ABSENT) {
-          const user = await User.findByPk(employeeId, {
-            include: [
-              {
-                model: Profile,
-                as: "user_profile",
-                attributes: ["name"],
-              },
-            ],
-          });
-
-          result.push({
-            employee_id: employeeId,
-            employee_name: user?.user_profile?.name,
-            booking_name: booking.booking_name,
-            booking_id: booking.id,
-
-            booking_time: booking.time,
-            clock_in_time: clockIn ? clockIn.toISOString() : null,
-
-            delay_minutes: delayMinutes,
-            status,
-          });
+          flagged.push({ employeeId, booking, clockIn, delayMinutes, status });
         }
       }
     }
+
+    // Their names, in one query
+    const names = await profileNamesByUserId(flagged.map((f) => f.employeeId));
+    const result = flagged.map(({ employeeId, booking, clockIn, delayMinutes, status }) => ({
+      employee_id: employeeId,
+      employee_name: names.get(employeeId),
+      booking_name: booking.booking_name,
+      booking_id: booking.id,
+
+      booking_time: booking.time,
+      clock_in_time: clockIn ? clockIn.toISOString() : null,
+
+      delay_minutes: delayMinutes,
+      status,
+    }));
 
     return {
       total: result.length,

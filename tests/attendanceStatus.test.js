@@ -40,8 +40,10 @@ test("the admin late/absent list marks a clock-in more than 2 hours late as LATE
       booking_employee_details: [1, 2, 3, 4].map((employee_id) => ({ employee_id })),
     },
   ];
-  models.Attendance.findOne = async ({ where }) => (clockIns[where.user_id] ? { clock_in_est: clockIns[where.user_id] } : null);
-  models.User.findByPk = async (id) => ({ id, user_profile: { name: `Employee ${id}` } });
+  // one query for every employee's attendance and one for the names (it was one each per employee)
+  models.Attendance.findAll = async ({ where }) =>
+    where.user_id.filter((id) => clockIns[id]).map((id, index) => ({ id: index + 1, user_id: id, clock_in_est: clockIns[id] }));
+  models.User.findAll = async ({ where }) => where.id.map((id) => ({ id, user_profile: { name: `Employee ${id}` } }));
 
   const userService = loadFromRoot("src/services/Admin/user.service.js");
   const response = await userService.getLateAbsentEmployees({});
