@@ -3,7 +3,7 @@
 const { status: httpStatus } = require("http-status");
 const logger = require("../../config/logger");
 const { UPLOAD_DIRS, docUrl } = require("../../config/storage");
-const { contractStatusTypes, quoteStatusTypes } = require("../../config/types");
+const { contractStatusTypes, docusignEnvelopeStatusTypes, quoteStatusTypes } = require("../../config/types");
 const catchAsync = require("../../utils/catchAsync");
 const { serviceEstimateService } = require("../../services");
 const responseWrapper = require("../../config/responseWrapper");
@@ -12,6 +12,7 @@ const path = require("path");
 const { ServiceEstimate, ContractAgreement, User } = require("../../models");
 const {
   downloadSignedPDF,
+  getEnvelopeStatus,
 } = require("../../services/Common/docusignDownload.service");
 const { sendSignedServiceRequestEmailWithPDF } = require("../../services/Common/email.service");
 const ServiceRequest = require("../../models/serviceRequest.model");
@@ -179,7 +180,21 @@ const handleDocusignWebhook = async (req, res) => {
     // 🔥 HANDLE CLIENT SIGN FIRST
 
     /* ONLY PROCESS COMPLETED */
-    if (event !== "envelope-completed") {
+    if (event !== "envelope-completed" || !envelopeId) {
+      return res.status(200).send("Ignored");
+    }
+
+    // The webhook is not signed, so anyone could send this event: only DocuSign's own record of the
+    // envelope marks a document signed
+    let envelopeStatus;
+    try {
+      envelopeStatus = await getEnvelopeStatus(envelopeId);
+    } catch (error) {
+      logger.error("DocuSign envelope lookup failed:", error);
+      return res.status(200).send("Lookup failed");
+    }
+    if (envelopeStatus !== docusignEnvelopeStatusTypes.COMPLETED) {
+      logger.warn("DocuSign webhook: envelope", envelopeId, "is", envelopeStatus, "at DocuSign, not marked signed");
       return res.status(200).send("Ignored");
     }
 

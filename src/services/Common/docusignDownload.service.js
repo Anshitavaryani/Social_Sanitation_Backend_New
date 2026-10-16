@@ -16,4 +16,12 @@ const downloadSignedPDF = async (envelopeId) => {
   return document;
 };
 
-module.exports = { downloadSignedPDF };
+// The envelope's status as DocuSign records it ("completed" once everyone has signed). The
+// webhook is not signed, so the app asks DocuSign before treating an envelope as signed.
+const getEnvelopeStatus = async (envelopeId) => {
+  const dsApiClient = await getDocusignClient();
+  const envelope = await new docusign.EnvelopesApi(dsApiClient).getEnvelope(config.docusign.accountId, envelopeId, {});
+  return envelope?.status;
+};
+
+module.exports = { downloadSignedPDF, getEnvelopeStatus };

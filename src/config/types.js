@@ -177,6 +177,11 @@ const inspectionReviewStatusTypes = {
   ISSUE: "ISSUE",
 };
 
+// A DocuSign envelope's status, as DocuSign reports it (getEnvelope)
+const docusignEnvelopeStatusTypes = {
+  COMPLETED: "completed",
+};
+
 // employee_equipment_assignments.status
 const equipmentAssignmentStatusTypes = {
   ASSIGNED: "ASSIGNED",
@@ -251,6 +256,7 @@ const quoteQuestionTypes = {
 
 
 module.exports = {
+  docusignEnvelopeStatusTypes,
   userStatusTypes,
   paymentModeTypes,
   otpTypes,
