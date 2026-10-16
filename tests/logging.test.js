@@ -10,7 +10,7 @@ const { ROOT } = require("./helpers/mocks");
 const espree = require(require.resolve("espree", { paths: [ROOT] }));
 
 // npm run auth / migrate / seed and the index script print to the terminal on purpose
-const COMMAND_LINE = [/^src\/scripts\//, /^src\/seeders\//, /^src\/config\/createSuperAdmin\.js$/, /^src\/config\/migrateTable\.js$/];
+const COMMAND_LINE = [/^src\/scripts\//, /^src\/seeders\//, /^src\/config\/createSuperAdmin\.js$/, /^src\/config\/migrate\.js$/];
 
 const consoleUses = (file) => {
   const found = [];
