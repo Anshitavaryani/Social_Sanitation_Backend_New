@@ -1,4 +1,5 @@
-// Boots the real app.js over HTTP with the database and cron scheduler mocked.
+// Boots the real app.js over HTTP with the database mocked. The cron scheduler is mocked too, to
+// show the API schedules no jobs (worker.js runs them; tests/jobs.test.js).
 const { TEST_JWT_SECRET } = require("./helpers/env");
 const { test, before, after } = require("node:test");
 const assert = require("node:assert/strict");
@@ -94,22 +95,6 @@ test("service errors reach the client as JSON with the right status", async () =
   assert.equal(json.status, status);
 });
 
-test("all 10 cron jobs are registered in the business timezone and contain their own errors", async () => {
-  assert.equal(scheduled.length, 10);
-  for (const job of scheduled) {
-    assert.equal(job.options.timezone, "America/New_York");
-  }
-  // Every job swallows its own failure instead of producing an unhandled rejection
-  models.Invoice.findAll = async () => {
-    throw new Error("db down");
-  };
-  const originalError = console.error;
-  console.error = () => {};
-  try {
-    for (const job of scheduled) {
-      await assert.doesNotReject(Promise.resolve(job.task()), job.expression);
-    }
-  } finally {
-    console.error = originalError;
-  }
+test("the API process schedules no jobs", () => {
+  assert.equal(scheduled.length, 0);
 });

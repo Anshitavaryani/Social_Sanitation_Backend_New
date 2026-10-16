@@ -5,7 +5,7 @@ const assert = require("node:assert/strict");
 const fs = require("fs");
 const path = require("path");
 const bcrypt = require("bcryptjs");
-const { ROOT, mockModule, mockDatabase, loadFromRoot } = require("./helpers/mocks");
+const { ROOT, ENTRY_FILES, mockModule, mockDatabase, loadFromRoot } = require("./helpers/mocks");
 
 const { models, sequelize } = mockDatabase();
 
@@ -232,7 +232,7 @@ test("no source file passes request bodies, headers or credentials to console.*"
       else if (entry.name.endsWith(".js")) files.push(full);
     }
   })(path.join(ROOT, "src"));
-  files.push(path.join(ROOT, "app.js"), path.join(ROOT, "index.js"));
+  files.push(...ENTRY_FILES);
 
   const offenders = [];
   for (const file of files) {

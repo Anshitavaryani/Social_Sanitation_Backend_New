@@ -5,7 +5,7 @@ const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("fs");
 const path = require("path");
-const { ROOT } = require("./helpers/mocks");
+const { ROOT, ENTRY_FILES } = require("./helpers/mocks");
 
 const espree = require(require.resolve("espree", { paths: [ROOT] }));
 
@@ -34,7 +34,7 @@ const sourceFiles = () => {
       if (entry.isDirectory()) return ["uploads", "dumps", "assets"].includes(entry.name) ? [] : walk(full);
       return entry.name.endsWith(".js") ? [full] : [];
     });
-  return [...walk(path.join(ROOT, "src")), ...walk(path.join(ROOT, "public")), path.join(ROOT, "app.js"), path.join(ROOT, "index.js")];
+  return [...walk(path.join(ROOT, "src")), ...walk(path.join(ROOT, "public")), ...ENTRY_FILES];
 };
 
 test("only the command-line scripts use console; the app uses the logger", () => {

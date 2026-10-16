@@ -15,6 +15,7 @@
     "start": "pm2 start ecosystem.config.json --no-daemon",
     "staging": "pm2 start ecosystem.staging-config.json --no-daemon",
     "dev": "cross-env NODE_ENV=development node --watch index.js",
+    "dev:worker": "cross-env NODE_ENV=development node --watch worker.js",
     "auth": "cross-env NODE_ENV=development node src/config/createSuperAdmin.js",
     "migrate": "cross-env NODE_ENV=development node src/config/migrate.js",
     "fix-file-uris": "node src/scripts/fixFileUris.js",

@@ -5,7 +5,7 @@ const { test, after } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("fs");
 const path = require("path");
-const { ROOT, mockModule, mockPackage, mockDatabase, loadFromRoot } = require("./helpers/mocks");
+const { ROOT, ENTRY_FILES, mockModule, mockPackage, mockDatabase, loadFromRoot } = require("./helpers/mocks");
 
 const espree = require(require.resolve("espree", { paths: [ROOT] }));
 
@@ -270,7 +270,7 @@ const appFiles = () => {
       if (entry.isDirectory()) return ["node_modules", "uploads"].includes(entry.name) ? [] : walk(full);
       return entry.name.endsWith(".js") ? [full] : [];
     });
-  return [...walk(path.join(ROOT, "src")), ...walk(path.join(ROOT, "public")), path.join(ROOT, "app.js"), path.join(ROOT, "index.js")];
+  return [...walk(path.join(ROOT, "src")), ...walk(path.join(ROOT, "public")), ...ENTRY_FILES];
 };
 
 const dateFormatOffenders = (file) => {

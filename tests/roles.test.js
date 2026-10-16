@@ -5,7 +5,7 @@ const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("fs");
 const path = require("path");
-const { ROOT, loadFromRoot } = require("./helpers/mocks");
+const { ROOT, ENTRY_FILES, loadFromRoot } = require("./helpers/mocks");
 
 const espree = require(require.resolve("espree", { paths: [ROOT] }));
 
@@ -83,7 +83,7 @@ const appFiles = () => {
       if (entry.isDirectory()) return ["node_modules", "uploads", "dumps"].includes(entry.name) ? [] : walk(full);
       return entry.name.endsWith(".js") ? [full] : [];
     });
-  return [...walk(path.join(ROOT, "src")), path.join(ROOT, "app.js"), path.join(ROOT, "index.js")];
+  return [...walk(path.join(ROOT, "src")), ...ENTRY_FILES];
 };
 
 test("only src/config/roles.js writes role ids as numbers", () => {

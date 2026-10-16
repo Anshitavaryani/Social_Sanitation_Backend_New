@@ -4,7 +4,7 @@ const { test, after } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("fs");
 const path = require("path");
-const { ROOT, loadFromRoot } = require("./helpers/mocks");
+const { ROOT, ENTRY_FILES, loadFromRoot } = require("./helpers/mocks");
 
 const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8"));
 
@@ -81,7 +81,7 @@ test("no source file requires a package that is not installed as a dependency", 
       if (entry.isDirectory()) return ["uploads", "node_modules"].includes(entry.name) ? [] : walk(full);
       return entry.name.endsWith(".js") ? [full] : [];
     });
-  for (const file of [...walk(path.join(ROOT, "src")), path.join(ROOT, "app.js"), path.join(ROOT, "index.js")]) {
+  for (const file of [...walk(path.join(ROOT, "src")), ...ENTRY_FILES]) {
     const source = fs.readFileSync(file, "utf8");
     for (const [, spec] of source.matchAll(/require\(\s*["']([^"'.][^"']*)["']\s*\)/g)) {
       const name = spec.startsWith("@") ? spec.split("/").slice(0, 2).join("/") : spec.split("/")[0];

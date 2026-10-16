@@ -4,6 +4,9 @@ const path = require("path");
 
 const ROOT = path.resolve(__dirname, "../..");
 
+// The files at the project root that run as code (the guard tests scan them along with src/)
+const ENTRY_FILES = ["app.js", "index.js", "worker.js"].map((file) => path.join(ROOT, file));
+
 const resolveFromRoot = (relativePath) => require.resolve(path.join(ROOT, relativePath));
 
 // Replace a module in the require cache before anything loads it.
@@ -212,6 +215,7 @@ const runHandler = (handler, req) =>
 
 module.exports = {
   ROOT,
+  ENTRY_FILES,
   mockModule,
   mockPackage,
   loadFromRoot,

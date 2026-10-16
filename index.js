@@ -1,10 +1,10 @@
+require("./src/config/processSettings.js");
+
 const config = require("./src/config/config.js");
+const { initFirebase } = require("./src/config/firebase.js");
 
-// Process-wide settings, before anything else loads: the server clock runs on DEFAULT_TIMEZONE,
-// and TLS certificates are always verified, whatever NODE_TLS_REJECT_UNAUTHORIZED says in .env
-process.env.TZ = config.DEFAULT_TIMEZONE;
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "1";
-
+// The API process. The scheduled jobs run in their own process (worker.js).
+initFirebase();
 const app = require("./app.js");
 const http = require("http");
 const { dayjs, DATETIME_FORMAT } = require("./src/utils/time.js");

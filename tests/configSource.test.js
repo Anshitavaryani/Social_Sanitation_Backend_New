@@ -7,7 +7,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const util = require("util");
-const { ROOT, mockPackage, mockDatabase, loadFromRoot } = require("./helpers/mocks");
+const { ROOT, ENTRY_FILES, mockPackage, mockDatabase, loadFromRoot } = require("./helpers/mocks");
 
 const espree = require(require.resolve("espree", { paths: [ROOT] }));
 
@@ -56,7 +56,7 @@ const appFiles = () => {
       if (entry.isDirectory()) return entry.name === "node_modules" ? [] : walk(full);
       return entry.name.endsWith(".js") ? [full] : [];
     });
-  return [...walk(path.join(ROOT, "src")), path.join(ROOT, "app.js"), path.join(ROOT, "index.js")];
+  return [...walk(path.join(ROOT, "src")), ...ENTRY_FILES];
 };
 
 // Every `process.env` in a file: the variable it touches and whether it is assigned
@@ -94,8 +94,9 @@ test("only src/config/config.js reads the environment", () => {
     const relative = path.relative(ROOT, file);
     if (relative === path.join("src", "config", "config.js")) continue;
     for (const use of envUses(file)) {
-      // index.js sets the two process-wide settings before the app loads
-      const processSetting = relative === "index.js" && use.assigned && ["TZ", "NODE_TLS_REJECT_UNAUTHORIZED"].includes(use.name);
+      // processSettings.js sets the two process-wide settings for both entry points
+      const processSetting =
+        relative === path.join("src", "config", "processSettings.js") && use.assigned && ["TZ", "NODE_TLS_REJECT_UNAUTHORIZED"].includes(use.name);
       if (!processSetting) offenders.push(`${relative}:${use.line} process.env.${use.name}`);
     }
   }

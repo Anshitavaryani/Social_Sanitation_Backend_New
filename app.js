@@ -1,13 +1,11 @@
 /** @format */
 
 const express = require("express");
-const logger = require("./src/config/logger");
 const helmet = require("helmet");
-const { dayjs, BUSINESS_TZ, DATE_FORMAT } = require("./src/utils/time.js");
+const { dayjs, DATE_FORMAT } = require("./src/utils/time.js");
 const cors = require("cors");
 const compression = require("compression");
 const { status: httpStatus } = require("http-status");
-const cron = require("node-cron");
 const fs = require("fs");
 const path = require("path");
 const app = express();
@@ -34,154 +32,6 @@ const responseWrapper = require("./src/config/responseWrapper.js");
 const { adminAuthMiddleware } = require("./src/middlewares");
 require("./src/models");
 const { UPLOADS_DIR, LEGACY_UPLOADS_DIR, UPLOADS_URL_PATH, UPLOAD_FOLDERS, UPLOAD_DIRS, LEGACY_UPLOAD_DIRS, ASSETS_DIR, ensureUploadDirs } = require("./src/config/storage");
-
-const { initializeApp, cert } = require("firebase-admin/app");
-const {
-  autoClockOutEmployees,
-  syncClockInData,
-  syncClockOutData,
-  autoCompleteExpiredBreaks,
-} = require("./src/services/Common/attendance.service.js");
-const {
-  notifyAdminIfClockoutFar,
-  sendAttendanceAlerts,
-} = require("./src/services/Admin/booking.service.js");
-const { expireQuotesJob } = require("./src/services/Admin/user.service.js");
-const { sendInvoiceCron, generateRecurringInvoicesCron, sendDueBalancesCron } = require("./src/services/Common/invoice.service.js");
-
-initializeApp({
-  credential: cert({
-    projectId: config.firebase.projectId,
-    clientEmail: config.firebase.clientEmail,
-    privateKey: config.firebase.privateKey,
-  }),
-  databaseURL: config.firebase.databaseUrl,
-  storageBucket: config.firebase.storageBucket,
-});
-
-cron.schedule(
-  "*/5 * * * *",
-  async () => {
-    try {
-      await syncClockInData();
-    } catch (err) {
-      logger.error("syncClockInData failed:", err);
-    }
-  },
-  { timezone: BUSINESS_TZ },
-);
-
-cron.schedule(
-  "*/5 * * * *",
-  async () => {
-    try {
-      await syncClockOutData();
-    } catch (err) {
-      logger.error("syncClockOutData failed:", err);
-    }
-  },
-  { timezone: BUSINESS_TZ },
-);
-
-cron.schedule(
-  "*/5 * * * *",
-  async () => {
-    try {
-      await sendAttendanceAlerts();
-    } catch (err) {
-      logger.error("sendAttendanceAlerts failed:", err);
-    }
-  },
-  { timezone: BUSINESS_TZ },
-);
-
-cron.schedule(
-  "*/5 * * * *",
-  async () => {
-    try {
-      await notifyAdminIfClockoutFar();
-    } catch (err) {
-      logger.error("notifyAdminIfClockoutFar failed:", err);
-    }
-  },
-  { timezone: BUSINESS_TZ },
-);
-
-cron.schedule(
-  "*/10 * * * *",
-  async () => {
-    try {
-      await autoCompleteExpiredBreaks();
-    } catch (err) {
-      logger.error("autoCompleteExpiredBreaks failed:", err);
-    }
-  },
-  { timezone: BUSINESS_TZ },
-);
-
-// Run every 10 minutes
-cron.schedule(
-  "*/10 * * * *",
-  async () => {
-    try {
-      logger.debug("Running autoClockOut check...");
-      await autoClockOutEmployees();
-    } catch (err) {
-      logger.error("autoClockOutEmployees failed:", err);
-    }
-  },
-  { timezone: BUSINESS_TZ },
-);
-
-cron.schedule(
-  "0 0 * * *",
-  async () => {
-    try {
-      logger.debug("Running invoice expiry job...");
-      await expireQuotesJob();
-    } catch (err) {
-      logger.error("expireQuotesJob failed:", err);
-    }
-  },
-  { timezone: BUSINESS_TZ },
-);
-
-cron.schedule(
-  "0 2 * * *",
-  async () => {
-    try {
-      logger.debug("Generating recurring invoices...");
-      await generateRecurringInvoicesCron();
-    } catch (err) {
-      logger.error("generateRecurringInvoicesCron failed:", err);
-    }
-  },
-  { timezone: BUSINESS_TZ },
-);
-
-cron.schedule(
-  "* * * * *",
-  async () => {
-    try {
-      await sendInvoiceCron();
-    } catch (err) {
-      logger.error("sendInvoiceCron failed:", err);
-    }
-  },
-  { timezone: BUSINESS_TZ },
-);
-
-cron.schedule(
-  "* * * * *",
-  async () => {
-    try {
-      await sendDueBalancesCron();
-    } catch (err) {
-      logger.error("sendDueBalancesCron failed:", err);
-    }
-  },
-  { timezone: BUSINESS_TZ },
-);
 
 app.use(helmet());
 
