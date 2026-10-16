@@ -1,6 +1,7 @@
 /** @format */
 
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { deactivateOnDestroy } = require("./hooks");
 const { contractStatusTypes } = require("../config/types");
 const sequelize = require("../config/central.db");
 
@@ -132,19 +133,6 @@ ContractAgreement.init(
   },
 );
 
-ContractAgreement.beforeUpdate(async (contract) => {
-  contract.updated_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
-});
-
-ContractAgreement.beforeDestroy(async (contract) => {
-  contract.deleted_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
-  contract.is_active = false;
-});
+deactivateOnDestroy(ContractAgreement);
 
 module.exports = ContractAgreement;

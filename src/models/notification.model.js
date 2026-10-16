@@ -1,6 +1,7 @@
 /** @format */
 
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { deactivateOnDestroy } = require("./hooks");
 const sequelize = require("../config/central.db");
 const { notificationTypes } = require("../config/types");
 
@@ -87,18 +88,6 @@ Notification.init(
 	}
 );
 
-Notification.beforeUpdate(async (notification) => {
-	notification.updated_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-});
-Notification.beforeDestroy(async (notification) => {
-	notification.deleted_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-	notification.is_active = false;
-});
+deactivateOnDestroy(Notification);
 
 module.exports = Notification;

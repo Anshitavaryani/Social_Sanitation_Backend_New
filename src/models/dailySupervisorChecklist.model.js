@@ -1,4 +1,5 @@
 const { Sequelize, DataTypes, Model } = require('sequelize');
+const { deactivateOnDestroy } = require("./hooks");
 const sequelize = require('../config/central.db');
 
 class DailySupervisorChecklist extends Model { };
@@ -65,13 +66,6 @@ DailySupervisorChecklist.init({
     deletedAt: 'deleted_at'
 })
 
-DailySupervisorChecklist.beforeUpdate(async (DailySupervisorChecklist) => {
-    DailySupervisorChecklist.updated_at = new Date().toISOString().replace(/T/, ' ').replace(/\..+/g, '');
-});
-
-DailySupervisorChecklist.beforeDestroy(async (DailySupervisorChecklist) => {
-    DailySupervisorChecklist.deleted_at = new Date().toISOString().replace(/T/, ' ').replace(/\..+/g, '');
-    DailySupervisorChecklist.is_active = false;
-});
+deactivateOnDestroy(DailySupervisorChecklist);
 
 module.exports = DailySupervisorChecklist;

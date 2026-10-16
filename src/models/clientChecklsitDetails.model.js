@@ -80,18 +80,4 @@ ClientChecklistDetail.init(
   },
 );
 
-ClientChecklistDetail.beforeUpdate(async (entry) => {
-  entry.updated_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/, "");
-});
-
-ClientChecklistDetail.beforeDestroy(async (entry) => {
-  entry.deleted_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/, "");
-});
-
 module.exports = ClientChecklistDetail;

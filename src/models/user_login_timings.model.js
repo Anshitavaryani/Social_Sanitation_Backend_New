@@ -1,4 +1,5 @@
 const { Sequelize, DataTypes, Model } = require('sequelize');
+const { deactivateOnDestroy } = require("./hooks");
 const sequelize = require('../config/central.db');
 
 class userLoginTiming extends Model { }
@@ -96,14 +97,6 @@ userLoginTiming.init({
 });
 
 
-userLoginTiming.beforeUpdate(async (userLoginTiming) => {
-    userLoginTiming.updated_at = new Date().toISOString().replace(/T/, ' ').replace(/\..+/g, '');
-});
-
-userLoginTiming.beforeDestroy(async (userLoginTiming) => {
-    userLoginTiming.deleted_at = new Date().toISOString().replace(/T/, ' ').replace(/\..+/g, '');
-    userLoginTiming.is_active = false;
-});
-
+deactivateOnDestroy(userLoginTiming);
 
 module.exports = userLoginTiming;

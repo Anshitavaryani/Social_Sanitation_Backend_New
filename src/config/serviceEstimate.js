@@ -1,9 +1,8 @@
 /** @format */
 
-const puppeteer = require("puppeteer-core");
+const { launchPdfBrowser } = require("./puppeteer");
 const { assetDataUri } = require("./storage");
 const { COMPANY, logoDataUri } = require("./company");
-const config = require("./config");
 const { formatDisplayDate } = require("../utils/time");
 
 const renderScopeTables = (sections) => {
@@ -2052,12 +2051,7 @@ const generateEstimatePDF = async (data, pdfPath) => {
 </html>
 `;
 
-  const browser = await puppeteer.launch({
-    headless: true,
-    executablePath:
-      config.PUPPETEER_EXECUTABLE_PATH,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  });
+  const browser = await launchPdfBrowser();
 
   const page = await browser.newPage();
   await page.setContent(htmlContent, { waitUntil: "networkidle0" });
@@ -3150,12 +3144,7 @@ const generateContractPDF = async (data, pdfPath) => {
 </html>
 `;
 
-  const browser = await puppeteer.launch({
-    headless: true,
-    executablePath:
-      config.PUPPETEER_EXECUTABLE_PATH,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  });
+  const browser = await launchPdfBrowser();
 
   const page = await browser.newPage();
   await page.setContent(htmlContent, { waitUntil: "networkidle0" });
@@ -3298,12 +3287,7 @@ const generateScopeOfWorkPdfBuffer = async ({
 </html>
 `;
 
-  const browser = await puppeteer.launch({
-    headless: true,
-    executablePath:
-      config.PUPPETEER_EXECUTABLE_PATH,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  });
+  const browser = await launchPdfBrowser();
 
   const page = await browser.newPage();
   await page.setContent(htmlContent, { waitUntil: "networkidle0" });

@@ -1,6 +1,7 @@
 /** @format */
 
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { deactivateOnDestroy } = require("./hooks");
 const sequelize = require("../config/central.db");
 
 class UserAddress extends Model {}
@@ -92,19 +93,6 @@ UserAddress.init(
 	}
 );
 
-UserAddress.beforeUpdate(async (userAddress) => {
-	userAddress.updated_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-});
-
-UserAddress.beforeDestroy(async (userAddress) => {
-	userAddress.deleted_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-	userAddress.is_active = false;
-});
+deactivateOnDestroy(UserAddress);
 
 module.exports = UserAddress;

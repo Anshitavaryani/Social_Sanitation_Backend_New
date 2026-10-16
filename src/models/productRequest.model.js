@@ -1,5 +1,6 @@
 
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { deactivateOnDestroy } = require("./hooks");
 const { productRequestStatusTypes } = require("../config/types");
 const sequelize = require("../config/central.db");
 
@@ -62,19 +63,6 @@ ProductRequest.init(
 	}
 );
 
-ProductRequest.beforeUpdate(async (ProductRequest) => {
-	ProductRequest.updated_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-});
-
-ProductRequest.beforeDestroy(async (ProductRequest) => {
-	ProductRequest.deleted_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-	ProductRequest.is_active = false;
-});
+deactivateOnDestroy(ProductRequest);
 
 module.exports = ProductRequest;

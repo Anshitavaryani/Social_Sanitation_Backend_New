@@ -1,4 +1,5 @@
 const { Sequelize, DataTypes, Model } = require('sequelize');
+const { deactivateOnDestroy } = require("./hooks");
 const sequelize = require('../config/central.db');
 
 class BookingServiceChecklist extends Model { };
@@ -54,13 +55,6 @@ BookingServiceChecklist.init({
     deletedAt: 'deleted_at'
 })
 
-BookingServiceChecklist.beforeUpdate(async (BookingServiceChecklist) => {
-    BookingServiceChecklist.updated_at = new Date().toISOString().replace(/T/, ' ').replace(/\..+/g, '');
-});
-
-BookingServiceChecklist.beforeDestroy(async (BookingServiceChecklist) => {
-    BookingServiceChecklist.deleted_at = new Date().toISOString().replace(/T/, ' ').replace(/\..+/g, '');
-    BookingServiceChecklist.is_active = false;
-});
+deactivateOnDestroy(BookingServiceChecklist);
 
 module.exports = BookingServiceChecklist;

@@ -3,6 +3,8 @@
 //
 //   publicRoute   no token (sign-in, sign-up, public content, webhooks)
 //   requireAuth   any signed-in admin or app user (x-access-token)
+//   requireAppUser  app-user token only, with a matching role_id header (verifyAuthJWTToken in
+//                 userAuth.middleware.js)
 //   requireAdmin  admin-panel token only; requireAdminRole(...ids) narrows it to some admin roles
 //
 // Admin tokens are signed with the hex-decoded JWT secret; app-user tokens with the secret
@@ -53,20 +55,23 @@ const loadAdmin = async (payload) => {
   return { admin };
 };
 
-// Signed-in app user for a verified user token payload, or an ApiError
-const loadUser = async (token, payload) => {
+// Signed-in app user for a verified user token payload, or an ApiError. With roleId, the session
+// and the user must also have that role.
+const loadUser = async (token, payload, roleId) => {
+  const role = roleId === undefined ? {} : { role_id: roleId };
   const tokenDoc = await UserToken.findOne({
     where: {
       token,
       user_id: payload.sub,
       token_type: tokenTypes.ACCESS,
       is_active: true,
+      ...role,
     },
   });
   if (!tokenDoc) return { error: unauthorized("Your session has ended. Please log in again.") };
 
   const user = await User.findOne({
-    where: { id: tokenDoc.user_id, is_active: 1 },
+    where: { id: tokenDoc.user_id, is_active: 1, ...role },
     include: [
       {
         model: Profile,
@@ -77,6 +82,14 @@ const loadUser = async (token, payload) => {
   });
   if (!user) return { error: unauthorized("This account is not active. Please log in again.") };
   return { user, tokenDoc };
+};
+
+// The request shape app-user routes read: req.body.user is the User row
+const attachUser = (req, { user, tokenDoc }) => {
+  req.body.user = user;
+  req.body.tokenDoc = tokenDoc;
+  req.body.ip_address = req.ip;
+  req.body.user_type = "USER";
 };
 
 // Same request shape as the original validateJWTtoken: req.user and req.body.user are the token payload
@@ -147,10 +160,23 @@ const requireAuth = catchAsync(async (req, res, next) => {
   const loaded = await loadUser(token, asUser.payload);
   if (loaded.error) throw loaded.error;
   await parseUploads(req, res);
-  req.body.user = loaded.user;
-  req.body.tokenDoc = loaded.tokenDoc;
-  req.body.ip_address = req.ip;
-  req.body.user_type = "USER";
+  attachUser(req, loaded);
+  next();
+});
+
+// App-user token only (an admin token gets 401). The role_id header the apps send must match the
+// session's and the user's role.
+const requireAppUser = catchAsync(async (req, res, next) => {
+  const token = req.header(TOKEN_HEADER);
+  if (!token) throw unauthorized(MISSING_TOKEN);
+  const { payload, error } = verifyUserToken(token);
+  if (error) throw tokenError(error);
+  const roleId = req.headers.role_id;
+  if (!roleId) throw unauthorized("Send the role_id header with the access token.");
+  const loaded = await loadUser(token, payload, roleId);
+  if (loaded.error) throw loaded.error;
+  await parseUploads(req, res);
+  attachUser(req, loaded);
   next();
 });
 
@@ -163,6 +189,7 @@ const publicRoute = catchAsync(async (req, res, next) => {
 module.exports = {
   publicRoute,
   requireAuth,
+  requireAppUser,
   requireAdmin,
   requireAdminRole,
 };

@@ -1,6 +1,7 @@
 /** @format */
 
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { deactivateOnDestroy } = require("./hooks");
 const sequelize = require("../config/central.db");
 
 class ProductRequestAttachment extends Model {}
@@ -72,19 +73,6 @@ ProductRequestAttachment.init(
 	}
 );
 
-ProductRequestAttachment.beforeUpdate(async (ProductRequestAttachment) => {
-	ProductRequestAttachment.updated_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-});
-
-ProductRequestAttachment.beforeDestroy(async (ProductRequestAttachment) => {
-	ProductRequestAttachment.deleted_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-	ProductRequestAttachment.is_active = false;
-});
+deactivateOnDestroy(ProductRequestAttachment);
 
 module.exports = ProductRequestAttachment;

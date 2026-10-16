@@ -1,6 +1,7 @@
 /** @format */
 
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { deactivateOnDestroy } = require("./hooks");
 const sequelize = require("../config/central.db");
 
 class BDMUser extends Model {}
@@ -49,18 +50,6 @@ BDMUser.init(
 	}
 );
 
-BDMUser.beforeUpdate(async (bdmUser) => {
-	bdmUser.updated_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-});
-BDMUser.beforeDestroy(async (bdmUser) => {
-	bdmUser.deleted_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-	bdmUser.is_active = false;
-});
+deactivateOnDestroy(BDMUser);
 
 module.exports = BDMUser;

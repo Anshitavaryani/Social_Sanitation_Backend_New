@@ -1,6 +1,7 @@
 /** @format */
 
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { deactivateOnDestroy } = require("./hooks");
 const sequelize = require("../config/central.db");
 
 class FormSection extends Model {}
@@ -60,18 +61,6 @@ FormSection.init(
 	}
 );
 
-FormSection.beforeUpdate(async (FormSection) => {
-	FormSection.updated_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-});
-FormSection.beforeDestroy(async (FormSection) => {
-	FormSection.deleted_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-	FormSection.is_active = false;
-});
+deactivateOnDestroy(FormSection);
 
 module.exports = FormSection;

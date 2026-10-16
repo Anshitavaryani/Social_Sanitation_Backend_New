@@ -1,6 +1,7 @@
 /** @format */
 
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { deactivateOnDestroy } = require("./hooks");
 const sequelize = require("../config/central.db");
 
 class TrendingVideoAttachment extends Model {}
@@ -66,19 +67,6 @@ TrendingVideoAttachment.init(
 	}
 );
 
-TrendingVideoAttachment.beforeUpdate(async (TrendingVideoAttachment) => {
-	TrendingVideoAttachment.updated_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-});
-
-TrendingVideoAttachment.beforeDestroy(async (TrendingVideoAttachment) => {
-	TrendingVideoAttachment.deleted_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-	TrendingVideoAttachment.is_active = false;
-});
+deactivateOnDestroy(TrendingVideoAttachment);
 
 module.exports = TrendingVideoAttachment;

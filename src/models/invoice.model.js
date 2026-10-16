@@ -1,6 +1,7 @@
 /** @format */
 
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { deactivateOnDestroy } = require("./hooks");
 const { invoicePaymentStageTypes, invoicePaymentStatusTypes, invoiceStatusTypes } = require("../config/types");
 const { INVOICE } = require("../config/rules");
 const sequelize = require("../config/central.db");
@@ -198,19 +199,6 @@ Invoice.init(
   },
 );
 
-Invoice.beforeUpdate(async (quote) => {
-  quote.updated_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/, "");
-});
-
-Invoice.beforeDestroy(async (quote) => {
-  quote.deleted_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/, "");
-  quote.is_active = false;
-});
+deactivateOnDestroy(Invoice);
 
 module.exports = Invoice;

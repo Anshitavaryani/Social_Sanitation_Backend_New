@@ -1,6 +1,7 @@
 /** @format */
 
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { deactivateOnDestroy } = require("./hooks");
 const sequelize = require("../config/central.db");
 
 class ServiceChecklistMapping extends Model {}
@@ -65,19 +66,6 @@ ServiceChecklistMapping.init(
 	}
 );
 
-ServiceChecklistMapping.beforeUpdate(async (ServiceChecklistMapping) => {
-	ServiceChecklistMapping.updated_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-});
-
-ServiceChecklistMapping.beforeDestroy(async (ServiceChecklistMapping) => {
-	ServiceChecklistMapping.deleted_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-	ServiceChecklistMapping.is_active = false;
-});
+deactivateOnDestroy(ServiceChecklistMapping);
 
 module.exports = ServiceChecklistMapping;

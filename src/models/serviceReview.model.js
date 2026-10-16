@@ -1,4 +1,5 @@
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { deactivateOnDestroy } = require("./hooks");
 const sequelize = require("../config/central.db");
 
 class ServiceReview extends Model {}
@@ -68,18 +69,6 @@ ServiceReview.init(
   }
 );
 
-ServiceReview.beforeUpdate(async (serviceReview) => {
-  serviceReview.updated_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
-});
-ServiceReview.beforeDestroy(async (serviceReview) => {
-  serviceReview.deleted_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
-  serviceReview.is_active = false;
-});
+deactivateOnDestroy(ServiceReview);
 
 module.exports = ServiceReview;

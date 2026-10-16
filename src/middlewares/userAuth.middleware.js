@@ -1,18 +1,15 @@
 const { status: httpStatus } = require('http-status');
-const jwt = require('jsonwebtoken');
-const { requireAuth } = require('./access.middleware');
-const { parseUploads } = require('./upload.middleware');
+const { requireAuth, requireAppUser } = require('./access.middleware');
 const { ROLE } = require("../config/roles");
 
-const { User, OTP, UserToken, Profile } = require('../models');
+const { User, OTP } = require('../models');
 const validateEmail = require('../helpers/validateEmail');
 const validatePassword = require('../helpers/validatePassword');
 const { PASSWORD_POLICY_MESSAGE } = require('../config/rules');
-const { tokenTypes, otpTypes } = require('../config/types');
+const { otpTypes } = require('../config/types');
 const catchAsync = require('../utils/catchAsync');
 const ApiError = require('../utils/ApiError');
 
-const config = require('../config/config');
 const responseWrapper = require('../config/responseWrapper');
 
 const validateRegisterUserBody = catchAsync(async (req, res, next) => {
@@ -59,58 +56,8 @@ const validateSignInReqBody = catchAsync(async (req, res, next) => {
     next();
 });
 
-const verifyAuthJWTToken = catchAsync(async (req, res, next) => {
-    try {
-        const token = req.headers["x-access-token"];
-        const role_id = req.headers['role_id'];
-        if (!token) {
-            throw new ApiError(httpStatus.UNAUTHORIZED, 'Authentication required. Send the access token in the x-access-token header.');
-        };
-        const payload = jwt.verify(token, config.jwt.secret);
-
-        const tokenDoc = await UserToken.findOne({
-            where: {
-                token: token,
-                role_id: role_id,
-                token_type: tokenTypes.ACCESS,
-                user_id: payload.sub,
-                is_active: true
-            }
-        });
-
-        if (!tokenDoc) {
-            throw new ApiError(httpStatus.UNAUTHORIZED, 'Your session has ended. Please log in again.');
-        };
-
-        const user = await User.findOne({ 
-            where: { id: tokenDoc.user_id, is_active: 1, role_id: role_id },
-            include : [
-                {
-                    model: Profile,
-                    as: 'user_profile',
-                    attributes: ['name', 'dialing_code', 'mobile', 'is_active', 'created_at'],
-                },
-            ]
-        });
-        if (!user) {
-            throw new ApiError(httpStatus.UNAUTHORIZED, 'This account is not active. Please log in again.');
-        };
-        await parseUploads(req, res);
-        req.body.user = user;
-        req.body.tokenDoc = tokenDoc;
-        req.body.ip_address = req.ip;
-        req.body.user_type = "USER";
-        next();
-    } catch (error) {
-        if (error instanceof jwt.TokenExpiredError) {
-            throw new ApiError(httpStatus.UNAUTHORIZED, 'Your session has expired. Please log in again.');
-        }
-        if (error instanceof jwt.JsonWebTokenError) {
-            throw new ApiError(httpStatus.UNAUTHORIZED, 'Invalid access token. Please log in again.');
-        }
-        throw new ApiError(error.statusCode ? error.statusCode : httpStatus.INTERNAL_SERVER_ERROR, error.message);
-    }
-});
+// App-user token with a matching role_id header; same as access.middleware requireAppUser
+const verifyAuthJWTToken = requireAppUser;
 
 const validateResetPassordBody = catchAsync(async (req, res, next) => {
 

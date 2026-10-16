@@ -1,6 +1,7 @@
 /** @format */
 
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { deactivateOnDestroy } = require("./hooks");
 const sequelize = require("../config/central.db");
 
 class FormAttachment extends Model {}
@@ -61,19 +62,6 @@ FormAttachment.init(
 	}
 );
 
-FormAttachment.beforeUpdate(async (FormAttachment) => {
-	FormAttachment.updated_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-});
-
-FormAttachment.beforeDestroy(async (FormAttachment) => {
-	FormAttachment.deleted_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-	FormAttachment.is_active = false;
-});
+deactivateOnDestroy(FormAttachment);
 
 module.exports = FormAttachment;

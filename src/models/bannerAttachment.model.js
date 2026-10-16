@@ -1,4 +1,5 @@
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { deactivateOnDestroy } = require("./hooks");
 const sequelize = require("../config/central.db");
 
 class BannerAttachment extends Model {}
@@ -57,19 +58,6 @@ BannerAttachment.init(
   }
 );
 
-BannerAttachment.beforeUpdate(async (bannerAttachment) => {
-    bannerAttachment.updated_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
-});
-
-BannerAttachment.beforeDestroy(async (bannerAttachment) => {
-    bannerAttachment.deleted_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
-  bannerAttachment.is_active = false;
-});
+deactivateOnDestroy(BannerAttachment);
 
 module.exports = BannerAttachment;

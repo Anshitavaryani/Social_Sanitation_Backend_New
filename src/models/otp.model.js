@@ -1,4 +1,5 @@
 const { Sequelize, DataTypes, Model, ENUM } = require('sequelize');
+const { deactivateOnDestroy } = require("./hooks");
 const sequelize = require('../config/central.db');
 const { otpTypes } = require('../config/types');
 const { OTP_RULES } = require('../config/rules');
@@ -102,12 +103,6 @@ OTP.beforeValidate(async (OTP) => {
     OTP.otp_expiration_time = expirationTime;
 });
 
-OTP.beforeUpdate(async (OTP) => {
-    OTP.updated_at = new Date().toISOString().replace(/T/, ' ').replace(/\..+/g, '');
-});
-OTP.beforeDestroy(async (OTP) => {
-    OTP.deleted_at = new Date().toISOString().replace(/T/, ' ').replace(/\..+/g, '');
-    OTP.is_active = false;
-});
+deactivateOnDestroy(OTP);
 
 module.exports = OTP;

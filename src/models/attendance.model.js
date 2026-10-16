@@ -1,6 +1,7 @@
 /** @format */
 
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { deactivateOnDestroy } = require("./hooks");
 const sequelize = require("../config/central.db");
 const { leaveStatusTypes } = require("../config/types");
 
@@ -150,19 +151,6 @@ Attendance.init(
 	}
 );
 
-Attendance.beforeUpdate(async (attendance) => {
-	attendance.updated_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-});
-
-Attendance.beforeDestroy(async (attendance) => {
-	attendance.deleted_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-	attendance.is_active = false;
-});
+deactivateOnDestroy(Attendance);
 
 module.exports = Attendance;

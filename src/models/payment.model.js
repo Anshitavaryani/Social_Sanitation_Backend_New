@@ -1,6 +1,7 @@
 /** @format */
 
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { deactivateOnDestroy } = require("./hooks");
 const sequelize = require("../config/central.db");
 const { paymentStatusTypes, paymentModeTypes, currancyTypes, paymentPurposeTypes } = require("../config/types");
 const config = require("../config/config");
@@ -140,19 +141,6 @@ Payment.init(
   },
 );
 
-Payment.beforeUpdate((Payment) => {
-  Payment.updated_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
-});
-
-Payment.beforeDestroy((Payment) => {
-  Payment.deleted_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
-  Payment.is_active = false;
-});
+deactivateOnDestroy(Payment);
 
 module.exports = Payment;

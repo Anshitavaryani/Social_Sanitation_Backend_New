@@ -1,6 +1,7 @@
 /** @format */
 
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { deactivateOnDestroy } = require("./hooks");
 const sequelize = require("../config/central.db");
 
 class AttendancePayroll extends Model {}
@@ -86,19 +87,6 @@ AttendancePayroll.init(
 );
 
 /* 🔁 Hooks (same pattern as Attendance) */
-AttendancePayroll.beforeUpdate(async (payroll) => {
-	payroll.updated_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-});
-
-AttendancePayroll.beforeDestroy(async (payroll) => {
-	payroll.deleted_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-	payroll.is_active = false;
-});
+deactivateOnDestroy(AttendancePayroll);
 
 module.exports = AttendancePayroll;

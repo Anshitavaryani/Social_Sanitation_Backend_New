@@ -1,6 +1,7 @@
 /** @format */
 
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { deactivateOnDestroy } = require("./hooks");
 const { invoicePaymentStatusTypes, jobStatusTypes, quoteStatusTypes } = require("../config/types");
 const sequelize = require("../config/central.db");
 
@@ -121,19 +122,6 @@ ServiceRequest.init(
   },
 );
 
-ServiceRequest.beforeUpdate(async (request) => {
-  request.updated_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/, "");
-});
-
-ServiceRequest.beforeDestroy(async (request) => {
-  request.deleted_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/, "");
-  request.is_active = false;
-});
+deactivateOnDestroy(ServiceRequest);
 
 module.exports = ServiceRequest;

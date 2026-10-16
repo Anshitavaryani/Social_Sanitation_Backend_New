@@ -1,6 +1,7 @@
 /** @format */
 
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { deactivateOnDestroy } = require("./hooks");
 const sequelize = require("../config/central.db");
 
 class ServiceChecklist extends Model {}
@@ -50,19 +51,6 @@ ServiceChecklist.init(
 	}
 );
 
-ServiceChecklist.beforeUpdate(async (ServiceChecklist) => {
-	ServiceChecklist.updated_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-});
-
-ServiceChecklist.beforeDestroy(async (ServiceChecklist) => {
-	ServiceChecklist.deleted_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-	ServiceChecklist.is_active = false;
-});
+deactivateOnDestroy(ServiceChecklist);
 
 module.exports = ServiceChecklist;

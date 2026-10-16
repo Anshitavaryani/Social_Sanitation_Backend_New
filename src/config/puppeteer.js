@@ -3,6 +3,15 @@
 const puppeteer = require("puppeteer-core");
 const { UPLOAD_DIRS } = require("./storage");
 const { logoDataUri } = require("./company");
+
+// Chrome for PDF rendering, launched the same way for every document (page size and margins are
+// set per document)
+const launchPdfBrowser = () =>
+  puppeteer.launch({
+    headless: true,
+    executablePath: config.PUPPETEER_EXECUTABLE_PATH,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  });
 const config = require("./config");
 const fs = require("fs");
 const path = require("path");
@@ -609,12 +618,7 @@ const generateQuotePDF = async (data) => {
     });
   }
 
-  const browser = await puppeteer.launch({
-    headless: true,
-    executablePath:
-      config.PUPPETEER_EXECUTABLE_PATH,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  });
+  const browser = await launchPdfBrowser();
 
   const page = await browser.newPage();
 
@@ -1913,12 +1917,7 @@ const generatePDF = async (
     fs.mkdirSync(pdfDir, { recursive: true });
   }
 
-  const browser = await puppeteer.launch({
-    headless: true,
-    executablePath:
-      config.PUPPETEER_EXECUTABLE_PATH,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  });
+  const browser = await launchPdfBrowser();
 
   const page = await browser.newPage();
   await page.setContent(htmlContent, { waitUntil: "networkidle0" });
@@ -3227,12 +3226,7 @@ ${
     fs.mkdirSync(pdfDir, { recursive: true });
   }
 
-  const browser = await puppeteer.launch({
-    headless: true,
-    executablePath:
-      config.PUPPETEER_EXECUTABLE_PATH,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  });
+  const browser = await launchPdfBrowser();
 
   const page = await browser.newPage();
   await page.setContent(htmlContent, { waitUntil: "networkidle0" });
@@ -4067,12 +4061,7 @@ const generateInvoicePDF = async (data) => {
     fs.mkdirSync(pdfDir, { recursive: true });
   }
 
-  const browser = await puppeteer.launch({
-    headless: true,
-    executablePath:
-      config.PUPPETEER_EXECUTABLE_PATH,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  });
+  const browser = await launchPdfBrowser();
 
   const page = await browser.newPage();
 
@@ -4438,12 +4427,7 @@ const generateServiceRequestPDF = async (data) => {
   if (!fs.existsSync(pdfDir)) {
     fs.mkdirSync(pdfDir, { recursive: true });
   }
-  const browser = await puppeteer.launch({
-    headless: true,
-    executablePath:
-      config.PUPPETEER_EXECUTABLE_PATH,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  });
+  const browser = await launchPdfBrowser();
 
   const page = await browser.newPage();
   await page.setContent(htmlContent, { waitUntil: "networkidle0" });
@@ -4475,6 +4459,7 @@ const generateServiceRequestPDF = async (data) => {
 };
 
 module.exports = {
+  launchPdfBrowser,
   generateQuotePDF,
   generatePDF,
   generateSpanishPDF,

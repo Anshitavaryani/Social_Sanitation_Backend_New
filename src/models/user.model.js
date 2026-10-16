@@ -1,6 +1,7 @@
 /** @format */
 
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { deactivateOnDestroy } = require("./hooks");
 const sequelize = require("../config/central.db");
 const { userStatusTypes } = require("../config/types");
 
@@ -187,19 +188,6 @@ User.isUserNameTaken = async function (user_name, role_id) {
   return !!u_n;
 };
 
-User.beforeUpdate(async (user) => {
-  user.updated_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
-});
-
-User.beforeDestroy(async (user) => {
-  user.deleted_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
-  user.is_active = false;
-});
+deactivateOnDestroy(User);
 
 module.exports = User;

@@ -1,4 +1,5 @@
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { deactivateOnDestroy } = require("./hooks");
 const sequelize = require("../config/central.db");
 
 class Profile extends Model {}
@@ -89,19 +90,6 @@ Profile.init(
   }
 );
 
-Profile.beforeUpdate(async (profile) => {
-  profile.updated_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
-});
-
-Profile.beforeDestroy(async (profile) => {
-  profile.deleted_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
-  profile.is_active = false;
-});
+deactivateOnDestroy(Profile);
 
 module.exports = Profile;

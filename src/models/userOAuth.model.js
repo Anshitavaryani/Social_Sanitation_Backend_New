@@ -1,4 +1,5 @@
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { deactivateOnDestroy } = require("./hooks");
 const sequelize = require("../config/central.db");
 
 class UserOAuth extends Model {}
@@ -63,19 +64,6 @@ UserOAuth.init(
 	}
 );
 
-UserOAuth.beforeUpdate(async (userOAuth) => {
-	userOAuth.updated_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-});
-
-UserOAuth.beforeDestroy(async (userOAuth) => {
-	userOAuth.deleted_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-	userOAuth.is_active = false;
-});
+deactivateOnDestroy(UserOAuth);
 
 module.exports = UserOAuth;

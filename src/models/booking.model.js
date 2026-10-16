@@ -1,6 +1,7 @@
 /** @format */
 
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { deactivateOnDestroy } = require("./hooks");
 const sequelize = require("../config/central.db");
 const { bookingTypes, paymentStatusTypes } = require("../config/types");
 
@@ -225,18 +226,6 @@ Booking.init(
   },
 );
 
-Booking.beforeUpdate(async (booking) => {
-  booking.updated_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
-});
-Booking.beforeDestroy(async (booking) => {
-  booking.deleted_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
-  booking.is_active = false;
-});
+deactivateOnDestroy(Booking);
 
 module.exports = Booking;

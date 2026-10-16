@@ -1,4 +1,5 @@
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { deactivateOnDestroy } = require("./hooks");
 const sequelize = require("../config/central.db");
 
 class AdminOAuth extends Model {}
@@ -53,19 +54,6 @@ AdminOAuth.init(
 	}
 );
 
-AdminOAuth.beforeUpdate(async (adminOAuth) => {
-	adminOAuth.updated_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-});
-
-AdminOAuth.beforeDestroy(async (adminOAuth) => {
-	adminOAuth.deleted_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-	adminOAuth.is_active = false;
-});
+deactivateOnDestroy(AdminOAuth);
 
 module.exports = AdminOAuth;

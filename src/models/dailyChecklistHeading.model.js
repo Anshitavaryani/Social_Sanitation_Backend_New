@@ -1,6 +1,7 @@
 /** @format */
 
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { deactivateOnDestroy } = require("./hooks");
 const sequelize = require("../config/central.db");
 
 class DailyChecklistHeading extends Model {}
@@ -53,19 +54,6 @@ DailyChecklistHeading.init(
 	}
 );
 
-DailyChecklistHeading.beforeUpdate(async (DailyChecklistHeading) => {
-	DailyChecklistHeading.updated_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-});
-
-DailyChecklistHeading.beforeDestroy(async (DailyChecklistHeading) => {
-	DailyChecklistHeading.deleted_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-	DailyChecklistHeading.is_active = false;
-});
+deactivateOnDestroy(DailyChecklistHeading);
 
 module.exports = DailyChecklistHeading;

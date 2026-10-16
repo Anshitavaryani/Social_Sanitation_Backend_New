@@ -1,4 +1,5 @@
 const { Sequelize, DataTypes, Model } = require('sequelize');
+const { deactivateOnDestroy } = require("./hooks");
 const sequelize = require('../config/central.db');
 
 
@@ -54,12 +55,6 @@ ReviewLink.init({
 });
 
 
-ReviewLink.beforeUpdate(async (ReviewLink) => {
-    ReviewLink.updated_at = new Date().toISOString().replace(/T/, ' ').replace(/\..+/g, '');
-});
-ReviewLink.beforeDestroy(async (ReviewLink) => {
-    ReviewLink.deleted_at = new Date().toISOString().replace(/T/, ' ').replace(/\..+/g, '');
-    ReviewLink.is_active = false;
-});
+deactivateOnDestroy(ReviewLink);
 
 module.exports = ReviewLink;

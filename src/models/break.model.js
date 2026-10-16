@@ -1,6 +1,7 @@
 /** @format */
 
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { deactivateOnDestroy } = require("./hooks");
 const { breakStatusTypes } = require("../config/types");
 const sequelize = require("../config/central.db");
 
@@ -109,19 +110,6 @@ Break.init(
 	}
 );
 
-Break.beforeUpdate(async (Break) => {
-	Break.updated_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-});
-
-Break.beforeDestroy(async (Break) => {
-	Break.deleted_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-	Break.is_active = false;
-});
+deactivateOnDestroy(Break);
 
 module.exports = Break;

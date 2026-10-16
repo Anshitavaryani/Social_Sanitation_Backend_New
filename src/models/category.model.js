@@ -1,4 +1,5 @@
 const { Sequelize, DataTypes, Model } = require('sequelize');
+const { deactivateOnDestroy } = require("./hooks");
 const sequelize = require('../config/central.db');
 const slugify = require('slugify');
 
@@ -58,13 +59,6 @@ Category.beforeValidate((category) => {
     }
 });
 
-Category.beforeUpdate((category) => {
-    category.updated_at = new Date().toISOString().replace(/T/, ' ').replace(/\..+/g, '');
-});
-
-Category.beforeDestroy((category) => {
-    category.deleted_at = new Date().toISOString().replace(/T/, ' ').replace(/\..+/g, '');
-    category.is_active = false;
-});
+deactivateOnDestroy(Category);
 
 module.exports = Category;

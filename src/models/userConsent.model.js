@@ -1,6 +1,7 @@
 /** @format */
 
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { deactivateOnDestroy } = require("./hooks");
 const sequelize = require("../config/central.db");
 
 class UserConsent extends Model {}
@@ -98,19 +99,6 @@ UserConsent.init(
 );
 
 // hooks (same as your pattern)
-UserConsent.beforeUpdate(async (obj) => {
-	obj.updated_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-});
-
-UserConsent.beforeDestroy(async (obj) => {
-	obj.deleted_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-	obj.is_active = false;
-});
+deactivateOnDestroy(UserConsent);
 
 module.exports = UserConsent;

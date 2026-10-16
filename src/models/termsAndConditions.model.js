@@ -1,4 +1,5 @@
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { deactivateOnDestroy } = require("./hooks");
 const sequelize = require("../config/central.db");
 
 class TermsAndConditions extends Model {}
@@ -47,18 +48,6 @@ TermsAndConditions.init(
   }
 );
 
-TermsAndConditions.beforeUpdate(async (termsAndConditions) => {
-  termsAndConditions.updated_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
-});
-TermsAndConditions.beforeDestroy(async (termsAndConditions) => {
-  termsAndConditions.deleted_at = new Date()
-    .toISOString()
-    .replace(/T/, " ")
-    .replace(/\..+/g, "");
-  termsAndConditions.is_active = false;
-});
+deactivateOnDestroy(TermsAndConditions);
 
 module.exports = TermsAndConditions;

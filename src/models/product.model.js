@@ -1,4 +1,5 @@
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { deactivateOnDestroy } = require("./hooks");
 const sequelize = require("../config/central.db");
 
 class Product extends Model {}
@@ -53,13 +54,6 @@ Product.init(
   }
 );
 
-Product.beforeUpdate((product) => {
-  product.updated_at = new Date();
-});
-
-Product.beforeDestroy((product) => {
-  product.deleted_at = new Date();
-  product.is_active = false;
-});
+deactivateOnDestroy(Product);
 
 module.exports = Product;

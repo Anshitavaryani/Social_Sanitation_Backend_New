@@ -1,6 +1,7 @@
 /** @format */
 
 const { Sequelize, DataTypes, Model } = require("sequelize");
+const { deactivateOnDestroy } = require("./hooks");
 const sequelize = require("../config/central.db");
 
 class GuestBookingAddress extends Model {}
@@ -76,19 +77,6 @@ GuestBookingAddress.init(
 	}
 );
 
-GuestBookingAddress.beforeUpdate(async (GuestBookingAddress) => {
-	GuestBookingAddress.updated_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-});
-
-GuestBookingAddress.beforeDestroy(async (GuestBookingAddress) => {
-	GuestBookingAddress.deleted_at = new Date()
-		.toISOString()
-		.replace(/T/, " ")
-		.replace(/\..+/g, "");
-	GuestBookingAddress.is_active = false;
-});
+deactivateOnDestroy(GuestBookingAddress);
 
 module.exports = GuestBookingAddress;

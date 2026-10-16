@@ -1,4 +1,5 @@
 const { Sequelize, DataTypes, Model } = require('sequelize');
+const { deactivateOnDestroy } = require("./hooks");
 const sequelize = require('../config/central.db');
 
 class Admin extends Model { }
@@ -115,13 +116,6 @@ Admin.isEmailTaken = async function (email) {
     return !!u
 };
 
-Admin.beforeUpdate(async (admin) => {
-    admin.updated_at = new Date().toISOString().replace(/T/, ' ').replace(/\..+/g, '');
-});
-
-Admin.beforeDestroy(async (admin) => {
-    admin.deleted_at = new Date().toISOString().replace(/T/, ' ').replace(/\..+/g, '');
-    admin.is_active = false;
-});
+deactivateOnDestroy(Admin);
 
 module.exports = Admin;
