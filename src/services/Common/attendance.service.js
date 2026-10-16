@@ -77,7 +77,7 @@ const clockIn = async (reqBody, headers, files) => {
 		const bookings = await Booking.findAll({
 			where: {
 				is_active: true,
-				time_zone: "America/New_York",
+				time_zone: BUSINESS_TZ, // only bookings in the business time zone (audit row 12)
 			},
 			include: [
 				{

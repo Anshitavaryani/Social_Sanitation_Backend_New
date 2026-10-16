@@ -308,6 +308,27 @@ const dateFormatOffenders = (file) => {
   return found;
 };
 
+test("only time.js and the config schema name a time zone", () => {
+  const offenders = [];
+  const zoneName = /^(America|Europe|Asia|Africa|Australia|Pacific|Atlantic|Etc)\/[A-Za-z_]+$/;
+  for (const file of appFiles()) {
+    const relative = path.relative(ROOT, file);
+    if ([path.join("src", "utils", "time.js"), path.join("src", "config", "env.schema.js")].includes(relative)) continue;
+    const ast = espree.parse(fs.readFileSync(file, "utf8"), { ecmaVersion: "latest", sourceType: "script", loc: true });
+    const visit = (node) => {
+      if (!node || typeof node.type !== "string") return;
+      if (node.type === "Literal" && typeof node.value === "string" && zoneName.test(node.value)) offenders.push(`${relative}:${node.loc.start.line} ${node.value}`);
+      for (const [key, child] of Object.entries(node)) {
+        if (key === "loc") continue;
+        if (Array.isArray(child)) child.forEach(visit);
+        else if (child && typeof child.type === "string") visit(child);
+      }
+    };
+    visit(ast);
+  }
+  assert.deepEqual(offenders, [], "use BUSINESS_TZ from src/utils/time.js");
+});
+
 test("only src/utils/time.js spells a date format or formats dates by locale", () => {
   const offenders = [];
   for (const file of appFiles()) {
