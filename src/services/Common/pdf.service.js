@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const { UPLOAD_DIRS } = require("../../config/storage");
+const { UPLOAD_DIRS, safeFileName } = require("../../config/storage");
 const { renderPdf } = require("../../config/pdfBrowser");
 const quoteHtml = require("../../templates/pdf/quote");
 const invoiceHtml = require("../../templates/pdf/invoice");
@@ -15,7 +15,7 @@ const hiringFormSpanishHtml = require("../../templates/pdf/hiringFormSpanish");
 const ensureDocsDir = () => fs.mkdirSync(UPLOAD_DIRS.docs, { recursive: true });
 const docsPdfPath = (fileName) => {
   ensureDocsDir();
-  return path.join(UPLOAD_DIRS.docs, fileName);
+  return path.join(UPLOAD_DIRS.docs, safeFileName(fileName));
 };
 
 const A4 = { format: "A4", printBackground: true };

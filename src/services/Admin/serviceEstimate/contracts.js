@@ -2,7 +2,7 @@
 
 const { status: httpStatus } = require("http-status");
 const logger = require("../../../config/logger");
-const { UPLOAD_DIRS, docUrl } = require("../../../config/storage");
+const { UPLOAD_DIRS, docUrl, safeFileName } = require("../../../config/storage");
 const { contractStatusTypes } = require("../../../config/types");
 const path = require("path");
 const fs = require("fs");
@@ -45,7 +45,7 @@ const generateContractAgreementService = async (reqBody) => {
     });
 
 
-    const fileName = `Contract-Agreement-${client_company_name}.pdf`;
+    const fileName = safeFileName(`Contract-Agreement-${client_company_name}.pdf`);
 
     const pdfDir = UPLOAD_DIRS.docs;
 
@@ -209,7 +209,7 @@ const updateContractAgreement = async (reqBody) => {
 
     /* ================= PDF ================= */
 
-    const fileName = `Contract-Agreement-${client_company_name}.pdf`;
+    const fileName = safeFileName(`Contract-Agreement-${client_company_name}.pdf`);
 
     const pdfDir = UPLOAD_DIRS.docs;
 

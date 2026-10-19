@@ -2,7 +2,7 @@
 
 const { status: httpStatus } = require("http-status");
 const logger = require("../../../config/logger");
-const { UPLOAD_DIRS } = require("../../../config/storage");
+const { UPLOAD_DIRS, safeFileName } = require("../../../config/storage");
 const { invoicePaymentStatusTypes, jobStatusTypes, quoteStatusTypes } = require("../../../config/types");
 const { Op } = require("sequelize");
 const path = require("path");
@@ -103,7 +103,7 @@ const submitServiceRequest = async (reqBody) => {
 
     /* ================= PDF GENERATION ================= */
 
-    const fileName = `service-request-${finalRefNo}.pdf`;
+    const fileName = safeFileName(`service-request-${finalRefNo}.pdf`);
 
     const pdfDir = UPLOAD_DIRS.docs;
 
@@ -269,7 +269,7 @@ const editServiceRequest = async (reqBody) => {
 
     /* ================= REGENERATE PDF ================= */
 
-    const fileName = `service-request-${request.ref_no}.pdf`;
+    const fileName = safeFileName(`service-request-${request.ref_no}.pdf`);
 
     const pdfDir = UPLOAD_DIRS.docs;
 

@@ -37,6 +37,10 @@ const IMAGE_FILE_URI = "/images";
 // Public URL of a generated or uploaded document (PDFs): <API_BASE_URL>/docs/<file>
 const docUrl = (fileName) => `${config.apiBaseUrl}/docs/${fileName}`;
 
+// A generated document's file name, safe as a path and in a URL: anything but letters, digits, dot,
+// dash and underscore becomes "-" (client names and typed reference numbers end up in these names)
+const safeFileName = (name) => String(name).replace(/[^A-Za-z0-9._-]/g, "-");
+
 // Public URL of a fixed image, for emails
 const assetUrl = (fileName) => `${config.apiBaseUrl}/assets/${fileName}`;
 
@@ -64,6 +68,7 @@ module.exports = {
   ASSETS_DIR,
   IMAGE_FILE_URI,
   docUrl,
+  safeFileName,
   assetUrl,
   assetDataUri,
 };
