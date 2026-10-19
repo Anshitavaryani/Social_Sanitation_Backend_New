@@ -77,510 +77,195 @@ const getMonthlyAllInvoicesSummary = async ({ month }) => {
   }
 };
 
+const PAID_STATUSES = [invoicePaymentStatusTypes.PAID, invoicePaymentStatusTypes.CHECK_PAID, invoicePaymentStatusTypes.CASH_PAID];
+
+// The month's invoices (by billing date) and quotes (by creation), each with its client's email
+// and name, newest first
+const analyticsRecords = async (startDate, endDate) => {
+  const client = (as) => ({ model: User, as, attributes: ["id", "email"], include: [{ model: Profile, as: "user_profile", attributes: ["name"] }] });
+
+  const invoices = await Invoice.findAll({
+    where: { is_active: true, billing_date: { [Op.gte]: startDate, [Op.lt]: endDate } },
+    include: [client("invoices_user")],
+    order: [["billing_date", "DESC"]],
+  });
+
+  const quotes = await ServiceQuote.findAll({
+    where: { is_active: true, created_at: { [Op.gte]: startDate, [Op.lt]: endDate } },
+    include: [client("payment_user")],
+    order: [["created_at", "DESC"]],
+  });
+
+  return { invoices, quotes };
+};
+
+// Adds an invoice or a quote to the month's figures: its revenue, paid (by method) or unpaid, its
+// day and its client. Unpaid invoices past their due date also count as overdue.
+const countForAnalytics = (figures, { isInvoice, amount, status, day, clientId, clientName, overdue }) => {
+  figures.totalRevenue += amount;
+  if (isInvoice) figures.invoiceRevenue += amount;
+  else figures.quoteRevenue += amount;
+
+  if (!figures.daily[day]) figures.daily[day] = { date: day, revenue: 0, paid: 0, unpaid: 0 };
+  figures.daily[day].revenue += amount;
+
+  if (!figures.clients[clientId]) {
+    figures.clients[clientId] = { user_id: clientId, name: clientName, invoice_count: 0, total_amount: 0, paid_amount: 0, unpaid_amount: 0 };
+  }
+  figures.clients[clientId].invoice_count += 1;
+  figures.clients[clientId].total_amount += amount;
+
+  if (PAID_STATUSES.includes(status)) {
+    figures.paidRevenue += amount;
+    if (isInvoice) figures.paidInvoices += 1;
+    else figures.paidQuotes += 1;
+    figures.daily[day].paid += amount;
+    figures.clients[clientId].paid_amount += amount;
+
+    if (status === invoicePaymentStatusTypes.CHECK_PAID) figures.checkRevenue += amount;
+    else if (status === invoicePaymentStatusTypes.CASH_PAID) figures.cashRevenue += amount;
+    else figures.onlineRevenue += amount;
+  } else {
+    figures.unpaidRevenue += amount;
+    if (isInvoice) figures.unpaidInvoices += 1;
+    else figures.unpaidQuotes += 1;
+    figures.daily[day].unpaid += amount;
+    figures.clients[clientId].unpaid_amount += amount;
+  }
+
+  if (overdue) {
+    figures.overdueRevenue += amount;
+    figures.overdueInvoices += 1;
+  }
+};
+
+// Not paid and due before today (New York)
+const isOverdue = (record) => record.payment_status === invoicePaymentStatusTypes.NOT_PAID && record.due_date && toCalendarDate(record.due_date) < dateInTz();
+
+// One line of the month's activity list
+const activityLine = (record, type, client, billingDate) => ({
+  id: record.id,
+  type,
+  ref_no: record.ref_no,
+  client_name: client?.user_profile?.name || "Unknown",
+  email: client?.email || "",
+  amount: Number(record.total_due || 0),
+  payment_status: record.payment_status,
+  due_date: record.due_date,
+  service_dates: record.service_dates,
+  billing_date: billingDate,
+  created_at: record.created_at,
+  is_overdue: isOverdue(record),
+});
+
+// POST /invoice/getBusinessAnalytics: a month's revenue from invoices and quotes, paid and unpaid
+// (by payment method), overdue invoices, per day and per client, the top 10 clients and the
+// month's activity
 const getBusinessAnalytics = async ({ month }) => {
   try {
-    /* ===================================================== */
-    /* DATE RANGE */
-    /* ===================================================== */
-
     const startDate = new Date(`${month}-01`);
-
     const endDate = new Date(startDate);
-
     endDate.setMonth(endDate.getMonth() + 1);
 
-    /* ===================================================== */
-    /* FETCH INVOICES */
-    /* ===================================================== */
+    const { invoices, quotes } = await analyticsRecords(startDate, endDate);
 
-    const invoices = await Invoice.findAll({
-      where: {
-        is_active: true,
-
-        billing_date: {
-          [Op.gte]: startDate,
-          [Op.lt]: endDate,
-        },
-      },
-
-      include: [
-        {
-          model: User,
-          as: "invoices_user",
-
-          attributes: ["id", "email"],
-
-          include: [
-            {
-              model: Profile,
-              as: "user_profile",
-
-              attributes: ["name"],
-            },
-          ],
-        },
-      ],
-
-      order: [["billing_date", "DESC"]],
-    });
-
-    /* ===================================================== */
-    /* FETCH SERVICE QUOTES */
-    /* ===================================================== */
-
-    const quotes = await ServiceQuote.findAll({
-      where: {
-        is_active: true,
-
-        created_at: {
-          [Op.gte]: startDate,
-          [Op.lt]: endDate,
-        },
-      },
-
-      include: [
-        {
-          model: User,
-          as: "payment_user",
-
-          attributes: ["id", "email"],
-
-          include: [
-            {
-              model: Profile,
-              as: "user_profile",
-
-              attributes: ["name"],
-            },
-          ],
-        },
-      ],
-
-      order: [["created_at", "DESC"]],
-    });
-
-    /* ===================================================== */
-    /* OVERVIEW VARIABLES */
-    /* ===================================================== */
-
-    let totalRevenue = 0;
-
-    let invoiceRevenue = 0;
-
-    let quoteRevenue = 0;
-
-    let paidRevenue = 0;
-
-    let unpaidRevenue = 0;
-
-    let overdueRevenue = 0;
-
-    let cashRevenue = 0;
-
-    let checkRevenue = 0;
-
-    let onlineRevenue = 0;
-
-    let totalInvoices = invoices.length;
-
-    let totalQuotes = quotes.length;
-
-    let paidInvoices = 0;
-
-    let unpaidInvoices = 0;
-
-    let overdueInvoices = 0;
-
-    let paidQuotes = 0;
-
-    let unpaidQuotes = 0;
-
-    /* ===================================================== */
-    /* DAILY BREAKDOWN */
-    /* ===================================================== */
-
-    const dailyMap = {};
-
-    /* ===================================================== */
-    /* EMPLOYEE MAP */
-    /* ===================================================== */
-
-    const employeeMap = {};
-
-    /* ===================================================== */
-    /* PROCESS INVOICES */
-    /* ===================================================== */
+    const figures = {
+      totalRevenue: 0,
+      invoiceRevenue: 0,
+      quoteRevenue: 0,
+      paidRevenue: 0,
+      unpaidRevenue: 0,
+      overdueRevenue: 0,
+      cashRevenue: 0,
+      checkRevenue: 0,
+      onlineRevenue: 0,
+      paidInvoices: 0,
+      unpaidInvoices: 0,
+      overdueInvoices: 0,
+      paidQuotes: 0,
+      unpaidQuotes: 0,
+      daily: {},
+      clients: {},
+    };
 
     invoices.forEach((inv) => {
-      const amount = Number(inv.total_due || 0);
-
-      const status = inv.payment_status;
-
-      const billingDate = dayjs(inv.billing_date).format(DATE_FORMAT);
-
-      const employeeName = inv.invoices_user?.user_profile?.name || "Unknown";
-
-      const employeeId = inv.user_id;
-
-      /* ================= TOTAL ================= */
-
-      totalRevenue += amount;
-
-      invoiceRevenue += amount;
-
-      /* ================= DAILY ================= */
-
-      if (!dailyMap[billingDate]) {
-        dailyMap[billingDate] = {
-          date: billingDate,
-
-          revenue: 0,
-
-          paid: 0,
-
-          unpaid: 0,
-        };
-      }
-
-      dailyMap[billingDate].revenue += amount;
-
-      /* ================= EMPLOYEE ================= */
-
-      if (!employeeMap[employeeId]) {
-        employeeMap[employeeId] = {
-          user_id: employeeId,
-
-          name: employeeName,
-
-          invoice_count: 0,
-
-          total_amount: 0,
-
-          paid_amount: 0,
-
-          unpaid_amount: 0,
-        };
-      }
-
-      employeeMap[employeeId].invoice_count += 1;
-
-      employeeMap[employeeId].total_amount += amount;
-
-      /* ===================================================== */
-      /* PAYMENT STATUS */
-      /* ===================================================== */
-
-      const isPaid =
-        status === invoicePaymentStatusTypes.PAID || status === invoicePaymentStatusTypes.CHECK_PAID || status === invoicePaymentStatusTypes.CASH_PAID;
-
-      const isOverdue =
-        !isPaid &&
-        inv.due_date &&
-        toCalendarDate(inv.due_date) < dateInTz();
-
-      /* ================= PAID ================= */
-
-      if (isPaid) {
-        paidRevenue += amount;
-
-        paidInvoices += 1;
-
-        dailyMap[billingDate].paid += amount;
-
-        employeeMap[employeeId].paid_amount += amount;
-
-        /* ---------- PAYMENT METHOD ---------- */
-
-        if (status === invoicePaymentStatusTypes.CHECK_PAID) {
-          checkRevenue += amount;
-        } else if (status === invoicePaymentStatusTypes.CASH_PAID) {
-          cashRevenue += amount;
-        } else {
-          onlineRevenue += amount;
-        }
-      } else {
-        /* ================= UNPAID ================= */
-        unpaidRevenue += amount;
-
-        unpaidInvoices += 1;
-
-        dailyMap[billingDate].unpaid += amount;
-
-        employeeMap[employeeId].unpaid_amount += amount;
-      }
-
-      /* ================= OVERDUE ================= */
-
-      if (isOverdue) {
-        overdueRevenue += amount;
-
-        overdueInvoices += 1;
-      }
+      const isPaid = PAID_STATUSES.includes(inv.payment_status);
+      countForAnalytics(figures, {
+        isInvoice: true,
+        amount: Number(inv.total_due || 0),
+        status: inv.payment_status,
+        day: dayjs(inv.billing_date).format(DATE_FORMAT),
+        clientId: inv.user_id,
+        clientName: inv.invoices_user?.user_profile?.name || "Unknown",
+        overdue: !isPaid && inv.due_date && toCalendarDate(inv.due_date) < dateInTz(),
+      });
     });
-
-    /* ===================================================== */
-    /* PROCESS QUOTES */
-    /* ===================================================== */
 
     quotes.forEach((quote) => {
-      const amount = Number(quote.total_due || 0);
-
-      const status = quote.payment_status;
-
-      const billingDate = dateInTz(quote.created_at);
-
-      const employeeName = quote.payment_user?.user_profile?.name || "Unknown";
-
-      const employeeId = quote.user_id;
-
-      /* ================= TOTAL ================= */
-
-      totalRevenue += amount;
-
-      quoteRevenue += amount;
-
-      /* ================= DAILY ================= */
-
-      if (!dailyMap[billingDate]) {
-        dailyMap[billingDate] = {
-          date: billingDate,
-
-          revenue: 0,
-
-          paid: 0,
-
-          unpaid: 0,
-        };
-      }
-
-      dailyMap[billingDate].revenue += amount;
-
-      /* ================= EMPLOYEE ================= */
-
-      if (!employeeMap[employeeId]) {
-        employeeMap[employeeId] = {
-          user_id: employeeId,
-
-          name: employeeName,
-
-          invoice_count: 0,
-
-          total_amount: 0,
-
-          paid_amount: 0,
-
-          unpaid_amount: 0,
-        };
-      }
-
-      employeeMap[employeeId].invoice_count += 1;
-
-      employeeMap[employeeId].total_amount += amount;
-
-      /* ================= PAYMENT ================= */
-
-      const isPaid =
-        status === invoicePaymentStatusTypes.PAID || status === invoicePaymentStatusTypes.CHECK_PAID || status === invoicePaymentStatusTypes.CASH_PAID;
-
-      if (isPaid) {
-        paidRevenue += amount;
-
-        paidQuotes += 1;
-
-        dailyMap[billingDate].paid += amount;
-
-        employeeMap[employeeId].paid_amount += amount;
-
-        if (status === invoicePaymentStatusTypes.CHECK_PAID) {
-          checkRevenue += amount;
-        } else if (status === invoicePaymentStatusTypes.CASH_PAID) {
-          cashRevenue += amount;
-        } else {
-          onlineRevenue += amount;
-        }
-      } else {
-        unpaidRevenue += amount;
-
-        unpaidQuotes += 1;
-
-        dailyMap[billingDate].unpaid += amount;
-
-        employeeMap[employeeId].unpaid_amount += amount;
-      }
+      countForAnalytics(figures, {
+        isInvoice: false,
+        amount: Number(quote.total_due || 0),
+        status: quote.payment_status,
+        day: dateInTz(quote.created_at),
+        clientId: quote.user_id,
+        clientName: quote.payment_user?.user_profile?.name || "Unknown",
+        overdue: false,
+      });
     });
 
-    /* ===================================================== */
-    /* TOP CLIENTS */
-    /* ===================================================== */
-
     const topClientsMap = {};
-
     [
-      ...invoices.map((inv) => ({
-        user_id: inv.user_id,
-
-        amount: Number(inv.total_due || 0),
-
-        name: inv.invoices_user?.user_profile?.name || "Unknown",
-      })),
-
-      ...quotes.map((quote) => ({
-        user_id: quote.user_id,
-
-        amount: Number(quote.total_due || 0),
-
-        name: quote.payment_user?.user_profile?.name || "Unknown",
-      })),
-    ].forEach((item) => {
-      const clientId = item.user_id;
-
-      const clientName = item.name;
-
-      const amount = item.amount;
-
-      if (!topClientsMap[clientId]) {
-        topClientsMap[clientId] = {
-          user_id: clientId,
-
-          name: clientName,
-
-          total_spent: 0,
-        };
-      }
-
-      topClientsMap[clientId].total_spent += amount;
+      ...invoices.map((inv) => ({ user_id: inv.user_id, amount: Number(inv.total_due || 0), name: inv.invoices_user?.user_profile?.name || "Unknown" })),
+      ...quotes.map((quote) => ({ user_id: quote.user_id, amount: Number(quote.total_due || 0), name: quote.payment_user?.user_profile?.name || "Unknown" })),
+    ].forEach(({ user_id, amount, name }) => {
+      if (!topClientsMap[user_id]) topClientsMap[user_id] = { user_id, name, total_spent: 0 };
+      topClientsMap[user_id].total_spent += amount;
     });
 
     const topClients = Object.values(topClientsMap)
       .sort((a, b) => b.total_spent - a.total_spent)
       .slice(0, 10);
 
-    /* ===================================================== */
-    /* FINAL RESPONSE */
-    /* ===================================================== */
-
+    const f = figures;
     return {
       success: true,
-
       data: {
         overview: {
-          total_revenue: totalRevenue,
-
-          invoice_revenue: invoiceRevenue,
-
-          quote_revenue: quoteRevenue,
-
-          paid_revenue: paidRevenue,
-
-          unpaid_revenue: unpaidRevenue,
-
-          overdue_revenue: overdueRevenue,
-
-          total_invoices: totalInvoices,
-
-          total_quotes: totalQuotes,
-
-          paid_invoices: paidInvoices,
-
-          unpaid_invoices: unpaidInvoices,
-
-          overdue_invoices: overdueInvoices,
-
-          paid_quotes: paidQuotes,
-
-          unpaid_quotes: unpaidQuotes,
-
-          paid_count: paidInvoices + paidQuotes,
-
-          unpaid_count: unpaidInvoices + unpaidQuotes,
-
-          cash_revenue: cashRevenue,
-
-          check_revenue: checkRevenue,
-
-          online_revenue: onlineRevenue,
+          total_revenue: f.totalRevenue,
+          invoice_revenue: f.invoiceRevenue,
+          quote_revenue: f.quoteRevenue,
+          paid_revenue: f.paidRevenue,
+          unpaid_revenue: f.unpaidRevenue,
+          overdue_revenue: f.overdueRevenue,
+          total_invoices: invoices.length,
+          total_quotes: quotes.length,
+          paid_invoices: f.paidInvoices,
+          unpaid_invoices: f.unpaidInvoices,
+          overdue_invoices: f.overdueInvoices,
+          paid_quotes: f.paidQuotes,
+          unpaid_quotes: f.unpaidQuotes,
+          paid_count: f.paidInvoices + f.paidQuotes,
+          unpaid_count: f.unpaidInvoices + f.unpaidQuotes,
+          cash_revenue: f.cashRevenue,
+          check_revenue: f.checkRevenue,
+          online_revenue: f.onlineRevenue,
         },
-
         payment_breakdown: {
-          online: onlineRevenue,
-
-          cash: cashRevenue,
-
-          check: checkRevenue,
+          online: f.onlineRevenue,
+          cash: f.cashRevenue,
+          check: f.checkRevenue,
         },
-
-        daily_breakdown: Object.values(dailyMap),
-
-        employees: Object.values(employeeMap).sort(
-          (a, b) => b.total_amount - a.total_amount,
-        ),
-
+        daily_breakdown: Object.values(f.daily),
+        employees: Object.values(f.clients).sort((a, b) => b.total_amount - a.total_amount),
         top_clients: topClients,
-
         monthly_activity: [
-          ...invoices.map((inv) => ({
-            id: inv.id,
-
-            type: "INVOICE",
-
-            ref_no: inv.ref_no,
-
-            client_name: inv.invoices_user?.user_profile?.name || "Unknown",
-
-            email: inv.invoices_user?.email || "",
-
-            amount: Number(inv.total_due || 0),
-
-            payment_status: inv.payment_status,
-
-            due_date: inv.due_date,
-
-            service_dates: inv.service_dates,
-
-            billing_date: inv.billing_date,
-
-            created_at: inv.created_at,
-
-            is_overdue:
-              inv.payment_status === invoicePaymentStatusTypes.NOT_PAID &&
-              inv.due_date &&
-              toCalendarDate(inv.due_date) < dateInTz(),
-          })),
-
-          ...quotes.map((quote) => ({
-            id: quote.id,
-
-            type: "QUOTE",
-
-            ref_no: quote.ref_no,
-
-            client_name: quote.payment_user?.user_profile?.name || "Unknown",
-
-            email: quote.payment_user?.email || "",
-
-            amount: Number(quote.total_due || 0),
-
-            payment_status: quote.payment_status,
-
-            due_date: quote.due_date,
-
-            service_dates: quote.service_dates,
-
-            billing_date: quote.created_at,
-
-            created_at: quote.created_at,
-
-            is_overdue:
-              quote.payment_status === invoicePaymentStatusTypes.NOT_PAID &&
-              quote.due_date &&
-              toCalendarDate(quote.due_date) < dateInTz(),
-          })),
+          ...invoices.map((inv) => activityLine(inv, "INVOICE", inv.invoices_user, inv.billing_date)),
+          ...quotes.map((quote) => activityLine(quote, "QUOTE", quote.payment_user, quote.created_at)),
         ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)),
       },
     };
   } catch (error) {
     logger.error("getBusinessAnalytics failed:", error);
-
     throw ApiError.orInternal(error);
   }
 };
