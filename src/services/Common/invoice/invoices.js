@@ -36,15 +36,188 @@ const {
   paymentPurposeTypes,
   recurringInvoiceStatusTypes,
 } = require("../../../config/types");
-const { timezone } = require("./shared");
+const { timezone, nextBillingAfter } = require("./shared");
 
 const MAX_RECURRING_OCCURRENCES = 10;
 
 const MAX_RECURRING_MONTHS = 6;
 
+// The number a line's quantity and unit price are multiplied by: its hours or square feet when it
+// is priced that way ("N/A", empty or not a number count as 1)
+const lineMultiplier = (item) => {
+  if (item.calculation_type === "hour") {
+    return !item.hour || item.hour === "N/A" || isNaN(item.hour) ? 1 : Number(item.hour);
+  }
+  if (item.calculation_type === "sqft") {
+    return !item.sqft || item.sqft === "N/A" || isNaN(item.sqft) ? 1 : Number(item.sqft);
+  }
+  return 1;
+};
+
+// A Square link for an invoice payment of `amount`
+const invoicePaymentLink = (invoice, user, amount, paymentPurpose) =>
+  generateInvoicePaymentLink({
+    amount,
+    clientName: invoice.to_company_name,
+    customerEmail: user?.email,
+    user_id: invoice.user_id,
+    invoice_id: invoice.id,
+    invoiceRefNo: invoice.custom_ref_no || invoice.ref_no,
+    paymentPurpose,
+  });
+
+// The invoice PDF with these items and payment link; resolves with its public URL
+const invoicePdfUrl = async (invoice, items, paymentLink) => {
+  const serviceParts = invoice.service_dates ? invoice.service_dates.split(" - ") : ["", ""];
+  const pdfPath = await generateInvoicePDF({
+    invoice_ref_no: invoice.custom_ref_no || invoice.ref_no,
+    event_name: invoice.event_name,
+    service_start: serviceParts[0],
+    service_end: serviceParts[1],
+    invoice_date: invoice.date,
+    billing_date: invoice.billing_date,
+    due_date: invoice.due_date,
+    to_company_name: invoice.to_company_name,
+    address_1: invoice.address_1,
+    address_2: invoice.address_2,
+    total_due: invoice.total_due,
+    signature: invoice.signature,
+    items,
+    payment_link: paymentLink,
+  });
+  return docUrl(pdfPath.split("/").pop());
+};
+
+// ----- creating an invoice
+
+// An invoice made from a quote: the quote (404 if missing, 400 if it already has an invoice), its
+// items and its total
+const quoteForInvoice = async (quote_id) => {
+  const quote = await ServiceQuote.findByPk(quote_id);
+
+  if (!quote) {
+    throw new ApiError(httpStatus.NOT_FOUND, "Quote not found");
+  }
+
+  // Prevent duplicate invoice for same quote
+  if (quote.invoice_created) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Invoice already exists for this quote.");
+  }
+
+  const quoteItems = await QuoteItem.findAll({
+    where: { quote_id },
+    order: [["id", "ASC"]],
+  });
+
+  const items = quoteItems.map((item) => ({
+    description: item.description,
+    frequency: item.frequency,
+    quantity: item.quantity,
+    calculation_type: item.calculation_type,
+    sqft: item.sqft,
+    hour: item.hour,
+    unit_price: Number(item.unit_price),
+    amount: Number(item.amount),
+  }));
+
+  return { quote, items, total: Number(quote.total_due || 0) };
+};
+
+// Items typed in by hand, with their amounts, and their total
+const manualInvoiceItems = (items) => {
+  let total = 0;
+
+  const lines = items.map((item) => {
+    const unit_price = Number(item.unit_price || 0);
+    const quantity = Number(item.quantity || 1);
+    const multiplier = lineMultiplier(item);
+    const amount = quantity * unit_price * multiplier;
+
+    total += amount;
+
+    return {
+      description: item.description,
+      frequency: item.frequency,
+      quantity,
+      calculation_type: item.calculation_type,
+      sqft: item.calculation_type === "sqft" ? multiplier : null,
+      hour: item.calculation_type === "hour" ? multiplier : null,
+      unit_price,
+      amount,
+    };
+  });
+
+  return { items: lines, total };
+};
+
+// The deposit terms of a new invoice. A deposit needs a balance date after the billing date (400).
+const newInvoiceDepositTerms = ({ deposit_required, deposit_percentage, balance_date, total, billingDate }) => {
+  // The UI should send a real boolean. This also handles string values safely.
+  const required = toBoolean(deposit_required);
+  const percentage = required ? Number(deposit_percentage ?? INVOICE.DEFAULT_DEPOSIT_PERCENT) : 0;
+
+  if (required) assertDepositPercent(percentage);
+
+  const { deposit, balance } = required ? splitDeposit(total, percentage) : { deposit: null, balance: null };
+
+  const balanceDueDate = required ? (balance_date ? inZone(balance_date, timezone).format(DATE_FORMAT) : null) : null;
+
+  if (required && !balanceDueDate) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Please select the date for the remaining balance.");
+  }
+
+  if (required && balanceDueDate <= billingDate) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "The balance date must be after the billing date.");
+  }
+
+  return {
+    required,
+    percentage,
+    deposit,
+    balance,
+    balanceDueDate,
+    stage: required ? invoicePaymentStageTypes.DEPOSIT_PENDING : invoicePaymentStageTypes.FULL,
+    purpose: required ? paymentPurposeTypes.DEPOSIT : paymentPurposeTypes.FULL,
+  };
+};
+
+// The recurring schedule of a new invoice: at most MAX_RECURRING_OCCURRENCES occurrences, ending at
+// most MAX_RECURRING_MONTHS after its billing date
+const createRecurringSchedule = async (invoice, { recurring_frequency, recurring_end_date, recurring_max_occurrences }) => {
+  let finalEndDate = recurring_end_date;
+  let finalMaxOccurrences = recurring_max_occurrences;
+
+  if (finalMaxOccurrences != null) {
+    finalMaxOccurrences = Math.max(1, Math.min(Number(finalMaxOccurrences), MAX_RECURRING_OCCURRENCES));
+  }
+
+  if (finalEndDate) {
+    const maxEndDate = dayjs(invoice.billing_date).add(MAX_RECURRING_MONTHS, "months");
+
+    if (dayjs(finalEndDate).isAfter(maxEndDate, "day")) {
+      finalEndDate = maxEndDate.format(DATE_FORMAT);
+    }
+  }
+
+  const nextBillingDate = nextBillingAfter(inZone(invoice.billing_date, timezone), recurring_frequency);
+
+  await InvoiceRecurring.create({
+    invoice_id: invoice.id,
+    user_id: invoice.user_id,
+    frequency: recurring_frequency,
+    start_date: invoice.billing_date,
+    end_date: finalEndDate ? inZone(finalEndDate, timezone).format(DATE_FORMAT) : null,
+    max_occurrences: finalMaxOccurrences,
+    occurrences_generated: 1,
+    next_billing_date: nextBillingDate.format(DATE_FORMAT),
+    auto_send: true,
+    status: recurringInvoiceStatusTypes.ACTIVE,
+  });
+};
+
 const createInvoice = async (reqBody) => {
   try {
-    let {
+    const {
       quote_id,
       user_id,
       billing_date,
@@ -71,106 +244,17 @@ const createInvoice = async (reqBody) => {
       balance_date,
     } = reqBody;
 
-
-    let quote = null;
-    let total_due = 0;
-    let finalItems = [];
-
-    /* ================= IF QUOTE EXISTS ================= */
-
-    if (quote_id) {
-      quote = await ServiceQuote.findByPk(quote_id);
-
-      if (!quote) {
-        throw new ApiError(httpStatus.NOT_FOUND, "Quote not found");
-      }
-
-      // Prevent duplicate invoice for same quote
-      if (quote.invoice_created) {
-        throw new ApiError(
-          httpStatus.BAD_REQUEST,
-          "Invoice already exists for this quote.",
-        );
-      }
-
-      const quoteItems = await QuoteItem.findAll({
-        where: { quote_id },
-        order: [["id", "ASC"]],
-      });
-
-      finalItems = quoteItems.map((item) => ({
-        description: item.description,
-        frequency: item.frequency,
-        quantity: item.quantity,
-        calculation_type: item.calculation_type,
-        sqft: item.sqft,
-        hour: item.hour,
-        unit_price: Number(item.unit_price),
-        amount: Number(item.amount),
-      }));
-
-      total_due = Number(quote.total_due || 0);
-
-      // Preserve existing quote values
-      user_id = quote.user_id;
-      service_start = quote.service_dates?.split(" - ")[0] || null;
-      service_end = quote.service_dates?.split(" - ")[1] || null;
-      to_company_name = quote.to_company_name;
-      address_1 = quote.address_1;
-      address_2 = quote.address_2;
-      signature = quote.signature;
-    }
-
-    /* ================= MANUAL ITEMS ================= */
-
-    if (!quote_id) {
-      finalItems = items.map((item) => {
-        const unit_price = Number(item.unit_price || 0);
-        const quantity = Number(item.quantity || 1);
-
-        let multiplier = 1;
-
-        if (item.calculation_type === "hour") {
-          multiplier =
-            !item.hour || item.hour === "N/A" || isNaN(item.hour)
-              ? 1
-              : Number(item.hour);
-        } else if (item.calculation_type === "sqft") {
-          multiplier =
-            !item.sqft || item.sqft === "N/A" || isNaN(item.sqft)
-              ? 1
-              : Number(item.sqft);
-        }
-
-        const amount = quantity * unit_price * multiplier;
-
-        total_due += amount;
-
-        return {
-          description: item.description,
-          frequency: item.frequency,
-          quantity,
-          calculation_type: item.calculation_type,
-          sqft: item.calculation_type === "sqft" ? multiplier : null,
-          hour: item.calculation_type === "hour" ? multiplier : null,
-          unit_price,
-          amount,
-        };
-      });
-    }
+    // A quote's items and total, or the items typed in
+    const fromQuote = quote_id ? await quoteForInvoice(quote_id) : null;
+    const quote = fromQuote ? fromQuote.quote : null;
+    const { items: finalItems, total: total_due } = fromQuote || manualInvoiceItems(items);
 
     const finalRefType = quote?.ref_type || ref_type || "RHK";
+    const { ref_no: ref } = await getNextInvoiceRef(finalRefType);
 
-    const refData = await getNextInvoiceRef(finalRefType);
-    const ref = refData.ref_no;
+    const eventName = event_name?.trim() || null;
 
-    event_name = event_name?.trim() || null;
-
-    /* ================= FINAL DATES ================= */
-
-    const finalBillingDate = billing_date
-      ? inZone(billing_date, timezone).format(DATE_FORMAT)
-      : null;
+    const finalBillingDate = billing_date ? inZone(billing_date, timezone).format(DATE_FORMAT) : null;
 
     const finalDueDate = quote
       ? quote.due_date
@@ -181,65 +265,13 @@ const createInvoice = async (reqBody) => {
         : null;
 
     // 9:00 AM New York on the billing date (exact on DST-change days too)
-    const scheduledSendAt = finalBillingDate
-      ? zonedTimeToUtc(finalBillingDate, "09:00:00", timezone).toDate()
-      : null;
+    const scheduledSendAt = finalBillingDate ? zonedTimeToUtc(finalBillingDate, "09:00:00", timezone).toDate() : null;
 
-    if (is_recurring) {
-      if (!recurring_end_date && !recurring_max_occurrences) {
-        throw new ApiError(
-          httpStatus.BAD_REQUEST,
-          "Please provide either recurring_end_date or recurring_max_occurrences.",
-        );
-      }
+    if (is_recurring && !recurring_end_date && !recurring_max_occurrences) {
+      throw new ApiError(httpStatus.BAD_REQUEST, "Please provide either recurring_end_date or recurring_max_occurrences.");
     }
 
-    /* ================= PAYMENT / DEPOSIT ================= */
-
-    // The UI should send a real boolean. This also handles string values safely.
-    const finalDepositRequired =
-      toBoolean(deposit_required);
-
-    const finalDepositPercentage = finalDepositRequired
-      ? Number(deposit_percentage ?? INVOICE.DEFAULT_DEPOSIT_PERCENT)
-      : 0;
-
-    if (finalDepositRequired) assertDepositPercent(finalDepositPercentage);
-
-    const { deposit: depositAmount, balance: balanceAmount } = finalDepositRequired
-      ? splitDeposit(total_due, finalDepositPercentage)
-      : { deposit: null, balance: null };
-
-    const initialPaymentStage = finalDepositRequired
-      ? invoicePaymentStageTypes.DEPOSIT_PENDING
-      : invoicePaymentStageTypes.FULL;
-
-    const paymentPurpose = finalDepositRequired ? paymentPurposeTypes.DEPOSIT : paymentPurposeTypes.FULL;
-
-    const finalBalanceDueDate = finalDepositRequired
-      ? balance_date
-        ? inZone(balance_date, timezone).format(DATE_FORMAT)
-        : null
-      : null;
-
-    if (finalDepositRequired && !finalBalanceDueDate) {
-      throw new ApiError(
-        httpStatus.BAD_REQUEST,
-        "Please select the date for the remaining balance.",
-      );
-    }
-
-    if (
-      finalDepositRequired &&
-      finalBalanceDueDate <= finalBillingDate
-    ) {
-      throw new ApiError(
-        httpStatus.BAD_REQUEST,
-        "The balance date must be after the billing date.",
-      );
-    }
-
-    /* ================= CREATE INVOICE ================= */
+    const deposit = newInvoiceDepositTerms({ deposit_required, deposit_percentage, balance_date, total: total_due, billingDate: finalBillingDate });
 
     const invoice = await Invoice.create({
       user_id: quote ? quote.user_id : user_id,
@@ -248,19 +280,15 @@ const createInvoice = async (reqBody) => {
       ref_type: finalRefType,
       ref_no: ref,
       custom_ref_no: custom_ref_no || null,
-      event_name,
+      event_name: eventName,
 
       scheduled_send_at: scheduledSendAt,
 
-      service_dates: quote
-        ? quote.service_dates
-        : `${service_start} - ${service_end}`,
+      service_dates: quote ? quote.service_dates : `${service_start} - ${service_end}`,
 
       billing_date: finalBillingDate,
 
-      date: invoice_date
-        ? inZone(invoice_date, timezone).format(DATE_FORMAT)
-        : dateInTz(),
+      date: invoice_date ? inZone(invoice_date, timezone).format(DATE_FORMAT) : dateInTz(),
 
       due_date: finalDueDate,
 
@@ -271,12 +299,12 @@ const createInvoice = async (reqBody) => {
       total_due,
 
       // Deposit configuration
-      deposit_required: finalDepositRequired,
-      deposit_percentage: finalDepositRequired ? finalDepositPercentage : INVOICE.DEFAULT_DEPOSIT_PERCENT,
-      deposit_amount: depositAmount,
-      balance_amount: balanceAmount,
-      payment_stage: initialPaymentStage,
-      balance_due_date: finalBalanceDueDate,
+      deposit_required: deposit.required,
+      deposit_percentage: deposit.required ? deposit.percentage : INVOICE.DEFAULT_DEPOSIT_PERCENT,
+      deposit_amount: deposit.deposit,
+      balance_amount: deposit.balance,
+      payment_stage: deposit.stage,
+      balance_due_date: deposit.balanceDueDate,
 
       deposit_paid_at: null,
       balance_sent_at: null,
@@ -294,8 +322,6 @@ const createInvoice = async (reqBody) => {
       });
     }
 
-    /* ================= SAVE ITEMS ================= */
-
     const payload = finalItems.map((item, index) => ({
       invoice_id: invoice.id,
       description: item.description,
@@ -311,113 +337,15 @@ const createInvoice = async (reqBody) => {
 
     await InvoiceItem.bulkCreate(payload);
 
-    /* ================= RECURRING INVOICE ================= */
-
     if (is_recurring) {
-      let finalEndDate = recurring_end_date;
-      let finalMaxOccurrences = recurring_max_occurrences;
-
-      if (finalMaxOccurrences != null) {
-        finalMaxOccurrences = Math.max(
-          1,
-          Math.min(Number(finalMaxOccurrences), MAX_RECURRING_OCCURRENCES),
-        );
-      }
-
-      if (finalEndDate) {
-        const maxEndDate = dayjs(invoice.billing_date).add(
-          MAX_RECURRING_MONTHS,
-          "months",
-        );
-
-        if (dayjs(finalEndDate).isAfter(maxEndDate, "day")) {
-          finalEndDate = maxEndDate.format(DATE_FORMAT);
-        }
-      }
-
-      const billingMoment = inZone(invoice.billing_date, timezone);
-      let nextBillingDate = billingMoment.clone();
-
-      switch (recurring_frequency) {
-        case "WEEKLY":
-          nextBillingDate = nextBillingDate.add(1, "week");
-          break;
-        case "BIWEEKLY":
-          nextBillingDate = nextBillingDate.add(2, "weeks");
-          break;
-        case "MONTHLY":
-          nextBillingDate = nextBillingDate.add(1, "month");
-          break;
-        case "QUARTERLY":
-          nextBillingDate = nextBillingDate.add(3, "months");
-          break;
-        case "YEARLY":
-          nextBillingDate = nextBillingDate.add(1, "year");
-          break;
-        default:
-          nextBillingDate = nextBillingDate.add(1, "month");
-      }
-
-      await InvoiceRecurring.create({
-        invoice_id: invoice.id,
-        user_id: invoice.user_id,
-        frequency: recurring_frequency,
-        start_date: invoice.billing_date,
-        end_date: finalEndDate
-          ? inZone(finalEndDate, timezone).format(DATE_FORMAT)
-          : null,
-        max_occurrences: finalMaxOccurrences,
-        occurrences_generated: 1,
-        next_billing_date: nextBillingDate.format(DATE_FORMAT),
-        auto_send: true,
-        status: recurringInvoiceStatusTypes.ACTIVE,
-      });
+      await createRecurringSchedule(invoice, { recurring_frequency, recurring_end_date, recurring_max_occurrences });
     }
 
-    /* ================= GENERATE PAYMENT LINK ================= */
-
-    const serviceParts = invoice.service_dates
-      ? invoice.service_dates.split(" - ")
-      : ["", ""];
-
+    // The link for the first payment (the deposit, or the whole total), then the PDF with it
     const user = await User.findByPk(invoice.user_id);
-
-    const initialPaymentAmount = finalDepositRequired
-      ? Number(invoice.deposit_amount || 0)
-      : Number(invoice.total_due || 0);
-
-    const { paymentUrl } = await generateInvoicePaymentLink({
-      amount: initialPaymentAmount,
-      clientName: invoice.to_company_name,
-      customerEmail: user?.email,
-      user_id: invoice.user_id,
-      invoice_id: invoice.id,
-      invoiceRefNo: invoice.custom_ref_no || invoice.ref_no,
-      paymentPurpose,
-    });
-
-
-    /* ================= GENERATE PDF ================= */
-
-    const pdfPath = await generateInvoicePDF({
-      invoice_ref_no: invoice.custom_ref_no || invoice.ref_no,
-      event_name: invoice.event_name,
-      service_start: serviceParts[0],
-      service_end: serviceParts[1],
-      invoice_date: invoice.date,
-      billing_date: invoice.billing_date,
-      due_date: invoice.due_date,
-      to_company_name: invoice.to_company_name,
-      address_1: invoice.address_1,
-      address_2: invoice.address_2,
-      total_due: invoice.total_due,
-      signature: invoice.signature,
-      items: payload,
-      payment_link: paymentUrl,
-    });
-
-    const fileName = pdfPath.split("/").pop();
-    const publicUrl = docUrl(fileName);
+    const initialPaymentAmount = deposit.required ? Number(invoice.deposit_amount || 0) : Number(invoice.total_due || 0);
+    const { paymentUrl } = await invoicePaymentLink(invoice, user, initialPaymentAmount, deposit.purpose);
+    const publicUrl = await invoicePdfUrl(invoice, payload, paymentUrl);
 
     await invoice.update({
       pdf_url: publicUrl,
@@ -497,22 +425,382 @@ const getInvoicesByUserId = async (user_id) => {
   }
 };
 
+// ----- updating an invoice
+
+// A stored date as YYYY-MM-DD, so values can be compared; anything else as it is
+const normalizeDate = (value) => {
+  if (!value) return null;
+
+  const parsed = dayjs(value, DATE_FORMAT, true);
+
+  return parsed.isValid() ? parsed.format(DATE_FORMAT) : value;
+};
+
+// The fields of an invoice item that decide whether the client needs the invoice again
+const comparableItem = (item) => ({
+  id: item.id,
+  description: item.description,
+  frequency: item.frequency,
+  quantity: Number(item.quantity || 1),
+  calculation_type: item.calculation_type,
+  sqft: item.sqft,
+  hour: item.hour,
+  unit_price: Number(item.unit_price || 0),
+  amount: Number(item.amount || 0),
+});
+
+// The client, date and reference fields the request sends; the others keep their value
+const invoiceDetailsUpdate = (invoice, body) => {
+  const { billing_date, date, due_date, service_start, service_end, to_company_name, address_1, address_2, custom_ref_no, event_name } = body;
+
+  return {
+    billing_date:
+      billing_date !== undefined
+        ? billing_date
+          ? inZone(billing_date, timezone).format(DATE_FORMAT)
+          : null
+        : invoice.billing_date,
+
+    custom_ref_no: custom_ref_no !== undefined ? custom_ref_no : invoice.custom_ref_no,
+
+    event_name: event_name !== undefined ? event_name?.trim() || null : invoice.event_name,
+
+    date:
+      date !== undefined
+        ? date
+          ? inZone(date, timezone).format(DATE_FORMAT)
+          : null
+        : invoice.date,
+
+    due_date:
+      due_date !== undefined
+        ? due_date
+          ? inZone(due_date, timezone).format(DATE_FORMAT)
+          : null
+        : invoice.due_date,
+
+    service_dates:
+      service_start !== undefined || service_end !== undefined
+        ? service_start && service_end
+          ? `${service_start} - ${service_end}`
+          : invoice.service_dates
+        : invoice.service_dates,
+
+    to_company_name: to_company_name !== undefined ? to_company_name : invoice.to_company_name,
+
+    address_1: address_1 !== undefined ? address_1 : invoice.address_1,
+
+    address_2: address_2 !== undefined ? address_2 : invoice.address_2,
+  };
+};
+
+// Saves the request's items: the ones with a known id are edited, the others added, and (only when
+// the request sends items) the ones left out are removed. Without items the current ones are kept
+// and recalculated. Resolves with the new total.
+const saveInvoiceItems = async (invoice, body, items, t) => {
+  const existingItems = invoice.service_invoice_item || [];
+  const existingMap = new Map();
+
+  existingItems.forEach((item) => {
+    existingMap.set(String(item.id), item);
+  });
+
+  const itemsToProcess = body.items === undefined ? existingItems.map((item) => item.get({ plain: true })) : items;
+
+  if (!Array.isArray(itemsToProcess)) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "items must be an array.");
+  }
+
+  let total_due = 0;
+  const processedIds = [];
+
+  for (const item of itemsToProcess) {
+    const quantity = Number(item.quantity || 1);
+    const unit_price = Number(item.unit_price || 0);
+
+    if (!Number.isFinite(quantity) || quantity < 0 || !Number.isFinite(unit_price) || unit_price < 0) {
+      throw new ApiError(httpStatus.BAD_REQUEST, "Invalid invoice item quantity or unit price.");
+    }
+
+    const multiplier = lineMultiplier(item);
+    const amount = quantity * unit_price * multiplier;
+    total_due += amount;
+
+    const values = {
+      description: item.description,
+      frequency: item.frequency,
+      quantity,
+      calculation_type: item.calculation_type,
+      sqft: item.calculation_type === "sqft" ? multiplier : null,
+      hour: item.calculation_type === "hour" ? multiplier : null,
+      unit_price,
+      amount,
+    };
+
+    if (item.id && existingMap.has(String(item.id))) {
+      await existingMap.get(String(item.id)).update(values, { transaction: t });
+      processedIds.push(String(item.id));
+    } else {
+      const newItem = await InvoiceItem.create({ invoice_id: invoice.id, ...values }, { transaction: t });
+      processedIds.push(String(newItem.id));
+    }
+  }
+
+  if (body.items !== undefined) {
+    for (const dbItem of existingItems) {
+      if (!processedIds.includes(String(dbItem.id))) {
+        await dbItem.destroy({ transaction: t });
+      }
+    }
+  }
+
+  return total_due;
+};
+
+// The total and deposit fields after the update. A deposit needs a balance date (YYYY-MM-DD) after
+// the billing date, and once a payment has been made the total and the deposit terms can't change
+// here (400).
+const updatedPaymentTerms = (invoice, { deposit_required, deposit_percentage, balance_date, billing_date }, finalTotalDue) => {
+  const shouldUseDeposit = deposit_required !== undefined ? toBoolean(deposit_required) : Boolean(invoice.deposit_required);
+
+  const percentage = shouldUseDeposit
+    ? Number(
+        deposit_percentage !== undefined && deposit_percentage !== null && deposit_percentage !== ""
+          ? deposit_percentage
+          : invoice.deposit_percentage || INVOICE.DEFAULT_DEPOSIT_PERCENT,
+      )
+    : 0;
+
+  if (shouldUseDeposit) assertDepositPercent(percentage);
+
+  // The frontend sends "balance_date"; the database field is "balance_due_date".
+  const requestedBalanceDate = balance_date !== undefined ? balance_date : invoice.balance_due_date;
+
+  let finalBalanceDueDate = null;
+
+  if (shouldUseDeposit) {
+    if (!requestedBalanceDate) {
+      throw new ApiError(httpStatus.BAD_REQUEST, "Please select the date for the remaining balance.");
+    }
+
+    const parsedBalanceDate = dayjs(requestedBalanceDate, DATE_FORMAT, true);
+
+    if (!parsedBalanceDate.isValid()) {
+      throw new ApiError(httpStatus.BAD_REQUEST, `Please provide a valid balance due date in ${DATE_FORMAT} format.`);
+    }
+
+    finalBalanceDueDate = parsedBalanceDate.format(DATE_FORMAT);
+
+    const effectiveBillingDate = billing_date !== undefined ? billing_date : invoice.billing_date;
+
+    if (effectiveBillingDate) {
+      const parsedBillingDate = dayjs(effectiveBillingDate, DATE_FORMAT, true);
+
+      if (!parsedBillingDate.isValid()) {
+        throw new ApiError(httpStatus.BAD_REQUEST, `Please provide a valid billing date in ${DATE_FORMAT} format.`);
+      }
+
+      if (parsedBalanceDate.isSameOrBefore(parsedBillingDate, "day")) {
+        throw new ApiError(httpStatus.BAD_REQUEST, "The balance date must be after the billing date.");
+      }
+    }
+  }
+
+  // Do not change financial terms after payment has started.
+  const paymentAlreadyStarted = [
+    invoicePaymentStageTypes.DEPOSIT_PAID,
+    invoicePaymentStageTypes.BALANCE_PENDING,
+    invoicePaymentStageTypes.COMPLETED,
+  ].includes(invoice.payment_stage);
+
+  const financialTermsChanged =
+    finalTotalDue !== Number(invoice.total_due || 0) ||
+    shouldUseDeposit !== Boolean(invoice.deposit_required) ||
+    (shouldUseDeposit && percentage !== Number(invoice.deposit_percentage || INVOICE.DEFAULT_DEPOSIT_PERCENT));
+
+  if (paymentAlreadyStarted && financialTermsChanged) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "This invoice has already received a payment or progressed to a later payment stage. Its total and deposit terms cannot be changed through this update.",
+    );
+  }
+
+  const { deposit, balance } = shouldUseDeposit ? splitDeposit(finalTotalDue, percentage) : { deposit: null, balance: null };
+
+  const terms = {
+    total_due: finalTotalDue,
+    deposit_required: shouldUseDeposit,
+    deposit_percentage: shouldUseDeposit ? percentage : INVOICE.DEFAULT_DEPOSIT_PERCENT,
+    deposit_amount: deposit,
+    balance_amount: balance,
+    balance_due_date: finalBalanceDueDate,
+  };
+
+  // Only invoices awaiting their initial payment can change stages here.
+  const currentStage = invoice.payment_stage || invoicePaymentStageTypes.FULL;
+  if (currentStage === invoicePaymentStageTypes.FULL || currentStage === invoicePaymentStageTypes.DEPOSIT_PENDING) {
+    terms.payment_stage = shouldUseDeposit ? invoicePaymentStageTypes.DEPOSIT_PENDING : invoicePaymentStageTypes.FULL;
+  }
+
+  return terms;
+};
+
+// Creates, updates or cancels the invoice's recurring schedule. Without is_recurring the schedule
+// stays as active as it was. Occurrences and the end date are capped as for a new invoice.
+const saveRecurringSchedule = async (invoice, { is_recurring, recurring_frequency, recurring_end_date, recurring_max_occurrences, billing_date }, t) => {
+  const recurring = await InvoiceRecurring.findOne({
+    where: {
+      invoice_id: invoice.id,
+    },
+    transaction: t,
+  });
+
+  const effectiveIsRecurring =
+    is_recurring !== undefined ? toBoolean(is_recurring) : Boolean(recurring && recurring.status === recurringInvoiceStatusTypes.ACTIVE);
+
+  if (!effectiveIsRecurring) {
+    if (recurring) {
+      await recurring.update({ status: recurringInvoiceStatusTypes.CANCELLED }, { transaction: t });
+    }
+    return;
+  }
+
+  if (!recurring_end_date && !recurring_max_occurrences && !recurring) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Please provide either recurring_end_date or recurring_max_occurrences.");
+  }
+
+  let finalEndDate = recurring_end_date !== undefined ? recurring_end_date : recurring?.end_date || null;
+
+  let finalMaxOccurrences = recurring_max_occurrences !== undefined ? recurring_max_occurrences : recurring?.max_occurrences || null;
+
+  if (finalMaxOccurrences != null) {
+    finalMaxOccurrences = Math.max(1, Math.min(Number(finalMaxOccurrences), MAX_RECURRING_OCCURRENCES));
+  }
+
+  const effectiveBillingDate = billing_date !== undefined ? billing_date : invoice.billing_date;
+
+  if (!effectiveBillingDate) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "A billing date is required for a recurring invoice.");
+  }
+
+  if (finalEndDate) {
+    const maxEndDate = inZone(effectiveBillingDate, timezone).add(MAX_RECURRING_MONTHS, "months");
+
+    if (inZone(finalEndDate, timezone).isAfter(maxEndDate, "day")) {
+      finalEndDate = maxEndDate.format(DATE_FORMAT);
+    } else {
+      finalEndDate = inZone(finalEndDate, timezone).format(DATE_FORMAT);
+    }
+  }
+
+  const billingMoment = inZone(effectiveBillingDate, timezone);
+  const nextBillingDate = nextBillingAfter(billingMoment, recurring_frequency || recurring?.frequency);
+
+  const recurringPayload = {
+    frequency: recurring_frequency || recurring?.frequency || "MONTHLY",
+    start_date: billingMoment.format(DATE_FORMAT),
+    end_date: finalEndDate,
+    max_occurrences: finalMaxOccurrences,
+    next_billing_date: nextBillingDate.format(DATE_FORMAT),
+    status: recurringInvoiceStatusTypes.ACTIVE,
+  };
+
+  if (recurring) {
+    await recurring.update(recurringPayload, { transaction: t });
+  } else {
+    await InvoiceRecurring.create(
+      {
+        invoice_id: invoice.id,
+        user_id: invoice.user_id,
+        ...recurringPayload,
+        occurrences_generated: 1,
+        auto_send: true,
+      },
+      { transaction: t },
+    );
+  }
+};
+
+// A new Square link for the payment the invoice is waiting for: the deposit, or the whole total.
+// BALANCE_PENDING, DEPOSIT_PAID and COMPLETED get none. Resolves with the link to use.
+const currentPaymentLink = async (invoice, user) => {
+  let paymentAmount = null;
+  let paymentPurpose = null;
+
+  if (invoice.payment_stage === invoicePaymentStageTypes.DEPOSIT_PENDING) {
+    paymentAmount = Number(invoice.deposit_amount || 0);
+    paymentPurpose = paymentPurposeTypes.DEPOSIT;
+  } else if (invoice.payment_stage === invoicePaymentStageTypes.FULL || !invoice.payment_stage) {
+    paymentAmount = Number(invoice.total_due || 0);
+    paymentPurpose = paymentPurposeTypes.FULL;
+  }
+
+  if (paymentAmount !== null && paymentAmount > 0 && paymentPurpose) {
+    return (await invoicePaymentLink(invoice, user, paymentAmount, paymentPurpose)).paymentUrl;
+  }
+
+  return invoice.payment_url || null;
+};
+
+// Whether the client should get the invoice again: a client-facing value changed (dates, client,
+// references, items, total or deposit terms). Compares values, not which fields were sent, so an
+// edit form that sends every field does not count as a change.
+const clientFacingChange = (updatedInvoice, originalInvoice, originalItems) => {
+  const currentItems = (updatedInvoice.service_invoice_item || []).map(comparableItem).sort((a, b) => Number(a.id) - Number(b.id));
+  const previousItems = [...originalItems].sort((a, b) => Number(a.id) - Number(b.id));
+  const itemsActuallyChanged = JSON.stringify(currentItems) !== JSON.stringify(previousItems);
+
+  return (
+    normalizeDate(updatedInvoice.billing_date) !== normalizeDate(originalInvoice.billing_date) ||
+    normalizeDate(updatedInvoice.due_date) !== normalizeDate(originalInvoice.due_date) ||
+    normalizeDate(updatedInvoice.date) !== normalizeDate(originalInvoice.date) ||
+    (updatedInvoice.service_dates || null) !== (originalInvoice.service_dates || null) ||
+    (updatedInvoice.to_company_name || null) !== (originalInvoice.to_company_name || null) ||
+    (updatedInvoice.address_1 || null) !== (originalInvoice.address_1 || null) ||
+    (updatedInvoice.address_2 || null) !== (originalInvoice.address_2 || null) ||
+    (updatedInvoice.custom_ref_no || null) !== (originalInvoice.custom_ref_no || null) ||
+    (updatedInvoice.event_name || null) !== (originalInvoice.event_name || null) ||
+    itemsActuallyChanged ||
+    Number(updatedInvoice.total_due || 0) !== Number(originalInvoice.total_due || 0) ||
+    Boolean(updatedInvoice.deposit_required) !== Boolean(originalInvoice.deposit_required) ||
+    Number(updatedInvoice.deposit_percentage || INVOICE.DEFAULT_DEPOSIT_PERCENT) !==
+      Number(originalInvoice.deposit_percentage || INVOICE.DEFAULT_DEPOSIT_PERCENT)
+  );
+};
+
+// When the invoice email goes out again: 9:00 AM New York on a future billing date; for today or
+// earlier, 9:00 AM if that is still ahead, otherwise in 30 minutes; never without a billing date.
+// Clears last_sent_at so the email job sends it.
+const resendSchedule = (billingDate) => {
+  if (!billingDate) {
+    return { scheduled_send_at: null, last_sent_at: null };
+  }
+
+  const now = dayjs().tz(timezone);
+  const billingMoment = parseDateInZone(billingDate, timezone);
+
+  if (!billingMoment.isValid()) {
+    throw new ApiError(httpStatus.BAD_REQUEST, `Please provide a valid billing date in ${DATE_FORMAT} format.`);
+  }
+
+  let scheduledSendAt;
+  if (billingMoment.isSameOrBefore(now, "day")) {
+    const nineAM = zonedTimeToUtc(billingMoment.format(DATE_FORMAT), "09:00:00", timezone);
+
+    scheduledSendAt = billingMoment.isSame(now, "day") && now.isBefore(nineAM) ? nineAM.toDate() : now.clone().add(30, "minutes").toDate();
+  } else {
+    scheduledSendAt = zonedTimeToUtc(billingMoment.format(DATE_FORMAT), "09:00:00", timezone).toDate();
+  }
+
+  return { scheduled_send_at: scheduledSendAt, last_sent_at: null };
+};
+
 const updateInvoice = async (invoice_id, body) => {
   const t = await sequelize.transaction();
 
   try {
     const {
-      billing_date,
-      due_date,
-      date,
       items = [],
-      service_start,
-      service_end,
-      to_company_name,
-      address_1,
-      address_2,
-      custom_ref_no,
-      event_name,
       deposit_required,
       deposit_percentage,
       is_recurring,
@@ -520,9 +808,8 @@ const updateInvoice = async (invoice_id, body) => {
       recurring_end_date = null,
       recurring_max_occurrences = null,
       balance_date,
+      billing_date,
     } = body;
-
-    /* ================= FETCH INVOICE ================= */
 
     const invoice = await Invoice.findByPk(invoice_id, {
       include: [
@@ -538,478 +825,24 @@ const updateInvoice = async (invoice_id, body) => {
       throw new ApiError(httpStatus.NOT_FOUND, "Invoice not found");
     }
 
-    /*
-     * Save the original values before updating anything.
-     * These are used to determine whether the initial email
-     * actually needs to be rescheduled.
-     */
+    // What the invoice was before the update: decides below whether the email goes out again
     const originalInvoice = invoice.get({ plain: true });
+    const originalItems = (invoice.service_invoice_item || []).map(comparableItem);
 
-    const originalItems = (invoice.service_invoice_item || []).map(
-      (item) => ({
-        id: item.id,
-        description: item.description,
-        frequency: item.frequency,
-        quantity: Number(item.quantity || 1),
-        calculation_type: item.calculation_type,
-        sqft: item.sqft,
-        hour: item.hour,
-        unit_price: Number(item.unit_price || 0),
-        amount: Number(item.amount || 0),
-      }),
-    );
-
-    const normalizeDate = (value) => {
-      if (!value) return null;
-
-      const parsed = dayjs(value, DATE_FORMAT, true);
-
-      return parsed.isValid() ? parsed.format(DATE_FORMAT) : value;
-    };
-
-    /* ================= UPDATE BASIC DETAILS ================= */
-
-    await invoice.update(
-      {
-        billing_date:
-          billing_date !== undefined
-            ? billing_date
-              ? inZone(billing_date, timezone).format(DATE_FORMAT)
-              : null
-            : invoice.billing_date,
-
-        custom_ref_no:
-          custom_ref_no !== undefined
-            ? custom_ref_no
-            : invoice.custom_ref_no,
-
-        event_name:
-          event_name !== undefined
-            ? event_name?.trim() || null
-            : invoice.event_name,
-
-        date:
-          date !== undefined
-            ? date
-              ? inZone(date, timezone).format(DATE_FORMAT)
-              : null
-            : invoice.date,
-
-        due_date:
-          due_date !== undefined
-            ? due_date
-              ? inZone(due_date, timezone).format(DATE_FORMAT)
-              : null
-            : invoice.due_date,
-
-        service_dates:
-          service_start !== undefined || service_end !== undefined
-            ? service_start && service_end
-              ? `${service_start} - ${service_end}`
-              : invoice.service_dates
-            : invoice.service_dates,
-
-        to_company_name:
-          to_company_name !== undefined
-            ? to_company_name
-            : invoice.to_company_name,
-
-        address_1:
-          address_1 !== undefined ? address_1 : invoice.address_1,
-
-        address_2:
-          address_2 !== undefined ? address_2 : invoice.address_2,
-      },
-      { transaction: t },
-    );
-
-    /* ================= HANDLE INVOICE ITEMS ================= */
-
-    const existingItems = invoice.service_invoice_item || [];
-    const existingMap = new Map();
-
-    existingItems.forEach((item) => {
-      existingMap.set(String(item.id), item);
-    });
-
-    // Preserve existing items if the request omits "items".
-    const itemsToProcess =
-      body.items === undefined
-        ? existingItems.map((item) => item.get({ plain: true }))
-        : items;
-
-    if (!Array.isArray(itemsToProcess)) {
-      throw new ApiError(
-        httpStatus.BAD_REQUEST,
-        "items must be an array.",
-      );
-    }
-
-    let total_due = 0;
-    const processedIds = [];
-
-    for (const item of itemsToProcess) {
-      const quantity = Number(item.quantity || 1);
-      const unit_price = Number(item.unit_price || 0);
-
-      if (
-        !Number.isFinite(quantity) ||
-        quantity < 0 ||
-        !Number.isFinite(unit_price) ||
-        unit_price < 0
-      ) {
-        throw new ApiError(
-          httpStatus.BAD_REQUEST,
-          "Invalid invoice item quantity or unit price.",
-        );
-      }
-
-      let multiplier = 1;
-
-      if (item.calculation_type === "hour") {
-        multiplier =
-          !item.hour || item.hour === "N/A" || isNaN(item.hour)
-            ? 1
-            : Number(item.hour);
-      } else if (item.calculation_type === "sqft") {
-        multiplier =
-          !item.sqft || item.sqft === "N/A" || isNaN(item.sqft)
-            ? 1
-            : Number(item.sqft);
-      }
-
-      const amount = quantity * unit_price * multiplier;
-      total_due += amount;
-
-      if (item.id && existingMap.has(String(item.id))) {
-        const dbItem = existingMap.get(String(item.id));
-
-        await dbItem.update(
-          {
-            description: item.description,
-            frequency: item.frequency,
-            quantity,
-            calculation_type: item.calculation_type,
-            sqft:
-              item.calculation_type === "sqft" ? multiplier : null,
-            hour:
-              item.calculation_type === "hour" ? multiplier : null,
-            unit_price,
-            amount,
-          },
-          { transaction: t },
-        );
-
-        processedIds.push(String(item.id));
-      } else {
-        const newItem = await InvoiceItem.create(
-          {
-            invoice_id: invoice.id,
-            description: item.description,
-            frequency: item.frequency,
-            quantity,
-            calculation_type: item.calculation_type,
-            sqft:
-              item.calculation_type === "sqft" ? multiplier : null,
-            hour:
-              item.calculation_type === "hour" ? multiplier : null,
-            unit_price,
-            amount,
-          },
-          { transaction: t },
-        );
-
-        processedIds.push(String(newItem.id));
-      }
-    }
-
-    /* ================= DELETE REMOVED ITEMS ================= */
-
-    // Only delete removed items when the request explicitly includes "items".
-    if (body.items !== undefined) {
-      for (const dbItem of existingItems) {
-        if (!processedIds.includes(String(dbItem.id))) {
-          await dbItem.destroy({ transaction: t });
-        }
-      }
-    }
-
-    /* ================= CALCULATE TOTAL + DEPOSIT ================= */
+    await invoice.update(invoiceDetailsUpdate(invoice, body), { transaction: t });
 
     // total_due always represents the complete invoice amount.
-    const finalTotalDue = roundMoney(total_due);
+    const finalTotalDue = roundMoney(await saveInvoiceItems(invoice, body, items, t));
 
-    const shouldUseDeposit =
-      deposit_required !== undefined
-        ? toBoolean(deposit_required)
-        : Boolean(invoice.deposit_required);
-
-    const percentage = shouldUseDeposit
-      ? Number(
-          deposit_percentage !== undefined &&
-            deposit_percentage !== null &&
-            deposit_percentage !== ""
-            ? deposit_percentage
-            : invoice.deposit_percentage || INVOICE.DEFAULT_DEPOSIT_PERCENT,
-        )
-      : 0;
-
-    if (shouldUseDeposit) assertDepositPercent(percentage);
-
-    /* ================= VALIDATE BALANCE DATE ================= */
-
-    // The frontend sends "balance_date"; the database field is
-    // "balance_due_date".
-    const requestedBalanceDate =
-      balance_date !== undefined
-        ? balance_date
-        : invoice.balance_due_date;
-
-    let finalBalanceDueDate = null;
-
-    if (shouldUseDeposit) {
-      if (!requestedBalanceDate) {
-        throw new ApiError(
-          httpStatus.BAD_REQUEST,
-          "Please select the date for the remaining balance.",
-        );
-      }
-
-      const parsedBalanceDate = dayjs(
-        requestedBalanceDate,
-        DATE_FORMAT,
-        true,
-      );
-
-      if (!parsedBalanceDate.isValid()) {
-        throw new ApiError(
-          httpStatus.BAD_REQUEST,
-          `Please provide a valid balance due date in ${DATE_FORMAT} format.`,
-        );
-      }
-
-      finalBalanceDueDate = parsedBalanceDate.format(DATE_FORMAT);
-
-      const effectiveBillingDate =
-        billing_date !== undefined
-          ? billing_date
-          : invoice.billing_date;
-
-      if (effectiveBillingDate) {
-        const parsedBillingDate = dayjs(
-          effectiveBillingDate,
-          DATE_FORMAT,
-          true,
-        );
-
-        if (!parsedBillingDate.isValid()) {
-          throw new ApiError(
-            httpStatus.BAD_REQUEST,
-            `Please provide a valid billing date in ${DATE_FORMAT} format.`,
-          );
-        }
-
-        if (
-          parsedBalanceDate.isSameOrBefore(
-            parsedBillingDate,
-            "day",
-          )
-        ) {
-          throw new ApiError(
-            httpStatus.BAD_REQUEST,
-            "The balance date must be after the billing date.",
-          );
-        }
-      }
-    }
-
-    /* ================= PROTECT PAYMENT TERMS ================= */
-
-    // Do not change financial terms after payment has started.
-    const paymentAlreadyStarted = [
-      invoicePaymentStageTypes.DEPOSIT_PAID,
-      invoicePaymentStageTypes.BALANCE_PENDING,
-      invoicePaymentStageTypes.COMPLETED,
-    ].includes(invoice.payment_stage);
-
-    const financialTermsChanged =
-      finalTotalDue !== Number(invoice.total_due || 0) ||
-      shouldUseDeposit !== Boolean(invoice.deposit_required) ||
-      (shouldUseDeposit &&
-        percentage !== Number(invoice.deposit_percentage || INVOICE.DEFAULT_DEPOSIT_PERCENT));
-
-    if (paymentAlreadyStarted && financialTermsChanged) {
-      throw new ApiError(
-        httpStatus.BAD_REQUEST,
-        "This invoice has already received a payment or progressed to a later payment stage. Its total and deposit terms cannot be changed through this update.",
-      );
-    }
-
-    const { deposit: calculatedDepositAmount, balance: calculatedBalanceAmount } = shouldUseDeposit
-      ? splitDeposit(finalTotalDue, percentage)
-      : { deposit: null, balance: null };
-
-    const currentStage = invoice.payment_stage || invoicePaymentStageTypes.FULL;
-
-    const depositUpdatePayload = {
-      total_due: finalTotalDue,
-      deposit_required: shouldUseDeposit,
-      deposit_percentage: shouldUseDeposit ? percentage : INVOICE.DEFAULT_DEPOSIT_PERCENT,
-      deposit_amount: calculatedDepositAmount,
-      balance_amount: calculatedBalanceAmount,
-      balance_due_date: finalBalanceDueDate,
-    };
-
-    // Only invoices awaiting their initial payment can change stages here.
-    if (currentStage === invoicePaymentStageTypes.FULL || currentStage === invoicePaymentStageTypes.DEPOSIT_PENDING) {
-      depositUpdatePayload.payment_stage = shouldUseDeposit
-        ? invoicePaymentStageTypes.DEPOSIT_PENDING
-        : invoicePaymentStageTypes.FULL;
-    }
-
-    await invoice.update(depositUpdatePayload, {
+    await invoice.update(updatedPaymentTerms(invoice, { deposit_required, deposit_percentage, balance_date, billing_date }, finalTotalDue), {
       transaction: t,
     });
 
-    /* ================= RECURRING INVOICE ================= */
-
-    const recurring = await InvoiceRecurring.findOne({
-      where: {
-        invoice_id: invoice.id,
-      },
-      transaction: t,
-    });
-
-    // Preserve existing recurring settings if the request does not
-    // include is_recurring.
-    const effectiveIsRecurring =
-      is_recurring !== undefined
-        ? toBoolean(is_recurring)
-        : Boolean(recurring && recurring.status === recurringInvoiceStatusTypes.ACTIVE);
-
-    if (effectiveIsRecurring) {
-      if (!recurring_end_date && !recurring_max_occurrences) {
-        if (!recurring) {
-          throw new ApiError(
-            httpStatus.BAD_REQUEST,
-            "Please provide either recurring_end_date or recurring_max_occurrences.",
-          );
-        }
-      }
-    }
-
-    if (effectiveIsRecurring) {
-      let finalEndDate =
-        recurring_end_date !== undefined
-          ? recurring_end_date
-          : recurring?.end_date || null;
-
-      let finalMaxOccurrences =
-        recurring_max_occurrences !== undefined
-          ? recurring_max_occurrences
-          : recurring?.max_occurrences || null;
-
-      if (finalMaxOccurrences != null) {
-        finalMaxOccurrences = Math.max(
-          1,
-          Math.min(
-            Number(finalMaxOccurrences),
-            MAX_RECURRING_OCCURRENCES,
-          ),
-        );
-      }
-
-      const effectiveBillingDate =
-        billing_date !== undefined
-          ? billing_date
-          : invoice.billing_date;
-
-      if (!effectiveBillingDate) {
-        throw new ApiError(
-          httpStatus.BAD_REQUEST,
-          "A billing date is required for a recurring invoice.",
-        );
-      }
-
-      if (finalEndDate) {
-        const maxEndDate = inZone(effectiveBillingDate, timezone)
-          .add(MAX_RECURRING_MONTHS, "months");
-
-        if (inZone(finalEndDate, timezone).isAfter(maxEndDate, "day")) {
-          finalEndDate = maxEndDate.format(DATE_FORMAT);
-        } else {
-          finalEndDate = inZone(finalEndDate, timezone)
-            .format(DATE_FORMAT);
-        }
-      }
-
-      const billingMoment = inZone(
-        effectiveBillingDate,
-        timezone,
-      );
-
-      let nextBillingDate = billingMoment.clone();
-
-      switch (recurring_frequency || recurring?.frequency) {
-        case "WEEKLY":
-          nextBillingDate = nextBillingDate.add(1, "week");
-          break;
-        case "BIWEEKLY":
-          nextBillingDate = nextBillingDate.add(2, "weeks");
-          break;
-        case "MONTHLY":
-          nextBillingDate = nextBillingDate.add(1, "month");
-          break;
-        case "QUARTERLY":
-          nextBillingDate = nextBillingDate.add(3, "months");
-          break;
-        case "YEARLY":
-          nextBillingDate = nextBillingDate.add(1, "year");
-          break;
-        default:
-          nextBillingDate = nextBillingDate.add(1, "month");
-      }
-
-      const recurringPayload = {
-        frequency: recurring_frequency || recurring?.frequency || "MONTHLY",
-        start_date: billingMoment.format(DATE_FORMAT),
-        end_date: finalEndDate,
-        max_occurrences: finalMaxOccurrences,
-        next_billing_date: nextBillingDate.format(DATE_FORMAT),
-        status: recurringInvoiceStatusTypes.ACTIVE,
-      };
-
-      if (recurring) {
-        await recurring.update(recurringPayload, {
-          transaction: t,
-        });
-      } else {
-        await InvoiceRecurring.create(
-          {
-            invoice_id: invoice.id,
-            user_id: invoice.user_id,
-            ...recurringPayload,
-            occurrences_generated: 1,
-            auto_send: true,
-          },
-          { transaction: t },
-        );
-      }
-    } else if (recurring) {
-      await recurring.update(
-        {
-          status: recurringInvoiceStatusTypes.CANCELLED,
-        },
-        { transaction: t },
-      );
-    }
-
-    /* ================= COMMIT TRANSACTION ================= */
+    await saveRecurringSchedule(invoice, { is_recurring, recurring_frequency, recurring_end_date, recurring_max_occurrences, billing_date }, t);
 
     await t.commit();
 
-    /* ================= RELOAD UPDATED INVOICE ================= */
-
+    // The saved invoice, with its items in order, for the new link and PDF
     const updatedInvoice = await Invoice.findByPk(invoice.id, {
       include: [
         {
@@ -1022,83 +855,14 @@ const updateInvoice = async (invoice_id, body) => {
     });
 
     if (!updatedInvoice) {
-      throw new ApiError(
-        httpStatus.NOT_FOUND,
-        "Updated invoice could not be retrieved.",
-      );
+      throw new ApiError(httpStatus.NOT_FOUND, "Updated invoice could not be retrieved.");
     }
 
     const user = await User.findByPk(updatedInvoice.user_id);
-
-    /* ================= PAYMENT LINK FOR CURRENT STAGE ================= */
-
-    let paymentUrl = updatedInvoice.payment_url || null;
-    let paymentAmount = null;
-    let paymentPurpose = null;
-
-    if (updatedInvoice.payment_stage === invoicePaymentStageTypes.DEPOSIT_PENDING) {
-      paymentAmount = Number(updatedInvoice.deposit_amount || 0);
-      paymentPurpose = paymentPurposeTypes.DEPOSIT;
-    } else if (
-      updatedInvoice.payment_stage === invoicePaymentStageTypes.FULL ||
-      !updatedInvoice.payment_stage
-    ) {
-      paymentAmount = Number(updatedInvoice.total_due || 0);
-      paymentPurpose = paymentPurposeTypes.FULL;
-    }
-
-    // BALANCE_PENDING, DEPOSIT_PAID and COMPLETED are intentionally excluded.
-    if (
-      paymentAmount !== null &&
-      paymentAmount > 0 &&
-      paymentPurpose
-    ) {
-      const paymentLinkResult = await generateInvoicePaymentLink({
-        amount: paymentAmount,
-        clientName: updatedInvoice.to_company_name,
-        customerEmail: user?.email,
-        user_id: updatedInvoice.user_id,
-        invoice_id: updatedInvoice.id,
-        invoiceRefNo:
-          updatedInvoice.custom_ref_no || updatedInvoice.ref_no,
-        paymentPurpose,
-      });
-
-      paymentUrl = paymentLinkResult.paymentUrl;
-    }
-
-    /* ================= GENERATE PDF ================= */
-
-    const serviceParts = updatedInvoice.service_dates
-      ? updatedInvoice.service_dates.split(" - ")
-      : ["", ""];
-
-    const pdfPath = await generateInvoicePDF({
-      invoice_ref_no:
-        updatedInvoice.custom_ref_no || updatedInvoice.ref_no,
-      event_name: updatedInvoice.event_name,
-      service_start: serviceParts[0],
-      service_end: serviceParts[1],
-      invoice_date: updatedInvoice.date,
-      billing_date: updatedInvoice.billing_date,
-      due_date: updatedInvoice.due_date,
-      to_company_name: updatedInvoice.to_company_name,
-      address_1: updatedInvoice.address_1,
-      address_2: updatedInvoice.address_2,
-      total_due: updatedInvoice.total_due,
-      signature: updatedInvoice.signature,
-      items: updatedInvoice.service_invoice_item,
-      payment_link: paymentUrl,
-    });
-
-    const fileName = pdfPath.split("/").pop();
-
-    const publicUrl = docUrl(fileName);
-
-    /* ================= UPDATE PDF + PAYMENT LINK ================= */
+    const paymentUrl = await currentPaymentLink(updatedInvoice, user);
 
     const updatePayload = {
-      pdf_url: publicUrl,
+      pdf_url: await invoicePdfUrl(updatedInvoice, updatedInvoice.service_invoice_item, paymentUrl),
     };
 
     // Do not erase a previously stored link if no new link was generated.
@@ -1106,118 +870,14 @@ const updateInvoice = async (invoice_id, body) => {
       updatePayload.payment_url = paymentUrl;
     }
 
-    /* ================= EMAIL SEND SCHEDULE ================= */
-
-    /*
-     * Compare actual invoice values rather than checking only whether
-     * a field was included in the request. This handles edit forms that
-     * submit every field even when only balance_date was changed.
-     */
-
-    const currentItems = (updatedInvoice.service_invoice_item || [])
-      .map((item) => ({
-        id: item.id,
-        description: item.description,
-        frequency: item.frequency,
-        quantity: Number(item.quantity || 1),
-        calculation_type: item.calculation_type,
-        sqft: item.sqft,
-        hour: item.hour,
-        unit_price: Number(item.unit_price || 0),
-        amount: Number(item.amount || 0),
-      }))
-      .sort((a, b) => Number(a.id) - Number(b.id));
-
-    const previousItems = [...originalItems].sort(
-      (a, b) => Number(a.id) - Number(b.id),
+    // The email goes out again only when something the client sees changed and the invoice still
+    // waits for its first payment (changing balance_due_date alone does not resend it)
+    const isInitialPaymentStage = [invoicePaymentStageTypes.FULL, invoicePaymentStageTypes.DEPOSIT_PENDING].includes(
+      updatedInvoice.payment_stage || invoicePaymentStageTypes.FULL,
     );
 
-    const itemsActuallyChanged =
-      JSON.stringify(currentItems) !== JSON.stringify(previousItems);
-
-    const clientFacingFieldsChanged =
-      normalizeDate(updatedInvoice.billing_date) !==
-        normalizeDate(originalInvoice.billing_date) ||
-      normalizeDate(updatedInvoice.due_date) !==
-        normalizeDate(originalInvoice.due_date) ||
-      normalizeDate(updatedInvoice.date) !==
-        normalizeDate(originalInvoice.date) ||
-      (updatedInvoice.service_dates || null) !==
-        (originalInvoice.service_dates || null) ||
-      (updatedInvoice.to_company_name || null) !==
-        (originalInvoice.to_company_name || null) ||
-      (updatedInvoice.address_1 || null) !==
-        (originalInvoice.address_1 || null) ||
-      (updatedInvoice.address_2 || null) !==
-        (originalInvoice.address_2 || null) ||
-      (updatedInvoice.custom_ref_no || null) !==
-        (originalInvoice.custom_ref_no || null) ||
-      (updatedInvoice.event_name || null) !==
-        (originalInvoice.event_name || null) ||
-      itemsActuallyChanged ||
-      Number(updatedInvoice.total_due || 0) !==
-        Number(originalInvoice.total_due || 0) ||
-      Boolean(updatedInvoice.deposit_required) !==
-        Boolean(originalInvoice.deposit_required) ||
-      Number(updatedInvoice.deposit_percentage || INVOICE.DEFAULT_DEPOSIT_PERCENT) !==
-        Number(originalInvoice.deposit_percentage || INVOICE.DEFAULT_DEPOSIT_PERCENT);
-
-    const isInitialPaymentStage = [
-      invoicePaymentStageTypes.FULL,
-      invoicePaymentStageTypes.DEPOSIT_PENDING,
-    ].includes(updatedInvoice.payment_stage || invoicePaymentStageTypes.FULL);
-
-    /*
-     * Only recalculate the initial email schedule if client-facing
-     * invoice details actually changed AND the invoice is still waiting
-     * for its initial payment.
-     *
-     * Changing balance_due_date alone will not enter this block.
-     */
-    if (clientFacingFieldsChanged && isInitialPaymentStage) {
-      const effectiveBillingDate = updatedInvoice.billing_date;
-
-      if (!effectiveBillingDate) {
-        updatePayload.scheduled_send_at = null;
-        updatePayload.last_sent_at = null;
-      } else {
-        const now = dayjs().tz(timezone);
-
-        const billingMoment = parseDateInZone(effectiveBillingDate, timezone);
-
-        if (!billingMoment.isValid()) {
-          throw new ApiError(
-            httpStatus.BAD_REQUEST,
-            `Please provide a valid billing date in ${DATE_FORMAT} format.`,
-          );
-        }
-
-        if (billingMoment.isSameOrBefore(now, "day")) {
-          const nineAM = zonedTimeToUtc(
-            billingMoment.format(DATE_FORMAT),
-            "09:00:00",
-            timezone,
-          );
-
-          if (billingMoment.isSame(now, "day") && now.isBefore(nineAM)) {
-            updatePayload.scheduled_send_at = nineAM.toDate();
-          } else {
-            updatePayload.scheduled_send_at = now
-              .clone()
-              .add(30, "minutes")
-              .toDate();
-          }
-        } else {
-          updatePayload.scheduled_send_at = zonedTimeToUtc(
-            billingMoment.format(DATE_FORMAT),
-            "09:00:00",
-            timezone,
-          ).toDate();
-        }
-
-        // Reset only when a relevant invoice change requires resending.
-        updatePayload.last_sent_at = null;
-      }
+    if (clientFacingChange(updatedInvoice, originalInvoice, originalItems) && isInitialPaymentStage) {
+      Object.assign(updatePayload, resendSchedule(updatedInvoice.billing_date));
     }
 
     await updatedInvoice.update(updatePayload);
