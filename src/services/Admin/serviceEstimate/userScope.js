@@ -552,10 +552,7 @@ const getUserScopeView = async (userId) => {
       throw error;
     }
 
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      error.message || "Internal Server Error",
-    );
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -579,10 +576,7 @@ const checkUserScopeExists = async (userId) => {
       throw error;
     }
 
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      error.message || "Internal Server Error",
-    );
+    throw ApiError.orInternal(error);
   }
 };
 

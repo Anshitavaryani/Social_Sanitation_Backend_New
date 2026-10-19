@@ -63,7 +63,7 @@ const createOrUpdateChecklistMainTitle = async (reqBody) => {
 		return {
 			success: true,
 			message: "Main title processed successfully",
-			updated_count: updatedRows[0] || updatedRows,
+			updated_count: updatedRows ? updatedRows[0] : 0,
 		};
 	} catch (error) {
 		throw ApiError.from(error);

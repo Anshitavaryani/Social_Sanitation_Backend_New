@@ -305,10 +305,7 @@ Ref #: ${finalRefNo}`;
       throw error;
     }
 
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      error.message || "Something went wrong",
-    );
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -521,10 +518,7 @@ const saveDraftQuote = async (reqBody) => {
       throw err;
     }
 
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      err.message || "Something went wrong",
-    );
+    throw ApiError.orInternal(err);
   }
 };
 

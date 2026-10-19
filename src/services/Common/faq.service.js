@@ -62,7 +62,7 @@ const updateFaq = async (reqBody, id) => {
 const deleteFaq = async (id) => {
     try {
         const faqDoc = await Faq.findOne({ where: { id: id, is_active: true } });
-        if (!faqDoc) throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Invalid Id');
+        if (!faqDoc) throw new ApiError(httpStatus.NOT_FOUND, 'Invalid Id');
         await faqDoc.destroy();
         return '';
 

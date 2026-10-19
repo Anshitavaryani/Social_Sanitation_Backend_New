@@ -249,7 +249,7 @@ const getUserById = async (id) => {
 
   if (!userDoc)
     throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
+      httpStatus.NOT_FOUND,
       "Failed to Get This User",
     );
   return userDoc;
@@ -330,13 +330,6 @@ const getAllUserNameByAdmin = async (id) => {
       ],
     });
 
-    if (!userDocs || userDocs.length === 0) {
-      throw new ApiError(
-        httpStatus.INTERNAL_SERVER_ERROR,
-        "|=> Failed to get all Drivers <=|",
-      );
-    }
-
     return userDocs;
   } catch (error) {
     throw ApiError.orInternal(error);
@@ -366,13 +359,6 @@ const getAllSupervisorByAdmin = async (id) => {
         },
       ],
     });
-
-    if (!userDocs || userDocs.length === 0) {
-      throw new ApiError(
-        httpStatus.INTERNAL_SERVER_ERROR,
-        "|=> Failed to get all Drivers <=|",
-      );
-    }
 
     // Map through users to determine `is_service_provider` and `is_team_leader`
     const result = userDocs.map((user) => {
@@ -415,13 +401,6 @@ const getAllQualityInspectorByAdmin = async (id) => {
       ],
     });
 
-    if (!userDocs || userDocs.length === 0) {
-      throw new ApiError(
-        httpStatus.INTERNAL_SERVER_ERROR,
-        "|=> Failed to get all Drivers <=|",
-      );
-    }
-
     // Map through users to determine `is_service_provider` and `is_team_leader`
     const result = userDocs.map((user) => {
       // Determine if the user is a service provider
@@ -462,13 +441,6 @@ const getAllCleanerByAdmin = async (id) => {
         },
       ],
     });
-
-    if (!userDocs || userDocs.length === 0) {
-      throw new ApiError(
-        httpStatus.INTERNAL_SERVER_ERROR,
-        "|=> Failed to get all Drivers <=|",
-      );
-    }
 
     // Map through users to determine `is_service_provider` and `is_team_leader`
     const result = userDocs.map((user) => {

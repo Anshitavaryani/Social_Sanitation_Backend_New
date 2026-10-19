@@ -1,5 +1,7 @@
 // Admin booking service: emailing an employee their two-week schedule
 
+const { status: httpStatus } = require("http-status");
+const ApiError = require("../../../utils/ApiError");
 const { bookingTypes } = require("../../../config/types");
 const {
   dateInTz,
@@ -51,7 +53,7 @@ const getGoogleMapsLink = (lat, lng) => {
 const sendEmployeeTwoWeekSchedule = async (employee_id) => {
   try {
     if (!employee_id) {
-      throw new Error("employee_id is required");
+      throw new ApiError(httpStatus.BAD_REQUEST, "employee_id is required");
     }
 
     const { start, end } = getESTRange(14);

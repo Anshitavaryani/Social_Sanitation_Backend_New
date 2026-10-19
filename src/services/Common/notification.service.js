@@ -7,7 +7,7 @@ const { Op } = require("sequelize");
 
 const sendPushNotification = async (notificationObj, registrationTokens, sound = "default") => {
   if (!registrationTokens || registrationTokens.length === 0) {
-    throw new Error("Registration tokens must be a non-empty array");
+    throw new ApiError(httpStatus.BAD_REQUEST, "Registration tokens must be a non-empty array");
   }
   const message = {
     notification: {

@@ -223,7 +223,8 @@ const uploadGroupAttachments = async (files = {}) => {
 };
 
 const sendGroupMessage = async (reqBody, files = {}) => {
-  const { groupId, message } = reqBody;
+  const { groupId } = reqBody;
+  const message = typeof reqBody.message === "string" ? reqBody.message : undefined;
   const user = getAuthenticatedUser(reqBody);
 
   if (
@@ -492,7 +493,8 @@ const getGroupMessages = async (groupId, reqBody) => {
 };
 
 const updateGroupName = async (reqBody) => {
-  const { groupId, newName } = reqBody;
+  const { groupId } = reqBody;
+  const newName = typeof reqBody.newName === "string" ? reqBody.newName : undefined;
   const user = getAuthenticatedUser(reqBody);
 
   if (
@@ -663,7 +665,7 @@ const createTeam = async (reqBody) => {
   const user = getAuthenticatedUser(reqBody);
   assertTeamCreator(user);
 
-  const name = reqBody.name?.trim();
+  const name = typeof reqBody.name === "string" ? reqBody.name.trim() : "";
   const participantIds = reqBody.participantIds || [];
 
   if (!name) {

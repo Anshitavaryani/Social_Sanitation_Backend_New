@@ -70,12 +70,12 @@ const findAdminById = catchAsync(async (req, res) => {
 });
 
 const updateAdmin = catchAsync(async (req, res) => {
-  const response = await adminAuthService.updateAdmin(req.body);
+  const response = await adminAuthService.updateAdmin(req.body, req.admin);
   return responseWrapper(res, response, "Admin Updated Successfully");
 });
 
 const deleteAdmin = catchAsync(async (req, res) => {
-  await adminAuthService.deleteAdmin(req.body);
+  await adminAuthService.deleteAdmin(req.body, req.admin);
   res.status(httpStatus.OK).send({
     code: httpStatus.NO_CONTENT,
     message: "Deleted Successfull.",

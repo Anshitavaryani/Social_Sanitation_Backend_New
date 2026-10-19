@@ -395,7 +395,7 @@ const getBookingById = async (id) => {
     });
 
     if (!bookingDoc || bookingDoc.length === 0) {
-      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, "No bookings found");
+      throw new ApiError(httpStatus.NOT_FOUND, "No bookings found");
     }
 
     return bookingDoc;

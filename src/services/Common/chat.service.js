@@ -113,6 +113,9 @@ const getUserMessages = async (body) => {
 	try {
 		const { user, userId } = body;
 		const receiverUser = await User.findOne({ where: { id: userId } });
+		if (!receiverUser) {
+			throw new ApiError(httpStatus.NOT_FOUND, "User not found");
+		}
 		const chatType =
 			receiverUser.role_id === ROLE.CLIENT ? "USER_ADMIN_CHAT" : "EMPLOYEE_ADMIN_CHAT";
 

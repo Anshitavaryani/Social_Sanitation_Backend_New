@@ -1,6 +1,5 @@
 // Admin user service: dashboard counts, transactions and invoice summaries
 
-const { status: httpStatus } = require("http-status");
 const logger = require("../../../config/logger");
 const { bookingTypes, invoicePaymentStatusTypes, paymentStatusTypes } = require("../../../config/types");
 const { Sequelize, Op } = require("sequelize");
@@ -195,13 +194,6 @@ const getAllTransactions = async () => {
         },
       ],
     });
-
-    if (!userDocs || userDocs.length === 0) {
-      throw new ApiError(
-        httpStatus.INTERNAL_SERVER_ERROR,
-        "|=> Failed to get all Drivers <=|",
-      );
-    }
 
     return userDocs;
   } catch (error) {

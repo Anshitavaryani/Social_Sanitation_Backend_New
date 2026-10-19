@@ -105,6 +105,9 @@ const addNewUserAddress = async (reqBody) => {
     const { user_id } = reqBody;
 
     const user = await User.findByPk(user_id);
+    if (!user) {
+      throw new ApiError(httpStatus.NOT_FOUND, "User not found");
+    }
 
     // Create user address object
     const userAddressObj = {
@@ -345,10 +348,7 @@ const resetUserCredentials = async (reqBody) => {
     };
   } catch (error) {
     logger.error("Error in resetUserCredentials:", error);
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      error.message || "Internal Server Error",
-    );
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -816,10 +816,7 @@ const adminAddUser = async (reqBody) => {
       throw error;
     }
 
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      error.message || "Internal Server Error",
-    );
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -1589,10 +1586,7 @@ const adminEditUser = async (reqBody, id) => {
       throw error;
     }
 
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      error.message || "Internal Server Error",
-    );
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -1681,10 +1675,7 @@ const changeEmployeeRole = async (id, role_id) => {
       throw error;
     }
 
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      error.message || "Internal Server Error",
-    );
+    throw ApiError.orInternal(error);
   }
 };
 
@@ -1751,10 +1742,7 @@ const getClientChecklistByUserId = async (id) => {
   } catch (error) {
     logger.error("Error in getClientChecklistByUserId:", error);
 
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      error.message || "Internal Server Error",
-    );
+    throw ApiError.orInternal(error);
   }
 };
 

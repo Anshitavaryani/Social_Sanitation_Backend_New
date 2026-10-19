@@ -3,6 +3,8 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
 const { Admin, Role, UserOAuth } = require("../../models");
+const { Op } = require("sequelize");
+const { ROLE } = require("../../config/roles");
 const ApiError = require("../../utils/ApiError");
 const config = require("../../config/config");
 const { emailService } = require("../Common");
@@ -301,12 +303,34 @@ const findAdminById = async (id) => {
   return adminDoc ? adminDoc : {};
 };
 
-const updateAdmin = async (reqBody) => {
+// Who may change or remove an admin account, the same rule as creating one (POST
+// /admin/auth/register): another admin's account needs a super admin or an admin, and a super
+// admin account, or the super admin role, needs a super admin. Admins edit their own name,
+// mobile and email freely.
+const assertMayManageAdmin = (caller, target, newRoleId) => {
+  const callerRole = Number(caller.role_id);
+  const roleChanges = newRoleId !== undefined && Number(newRoleId) !== Number(target.role_id);
+  if ((Number(target.id) !== Number(caller.id) || roleChanges) && ![ROLE.SUPER_ADMIN, ROLE.ADMIN].includes(callerRole)) {
+    throw new ApiError(httpStatus.FORBIDDEN, "Your admin role is not allowed to do this.");
+  }
+  if (roleChanges && Number(newRoleId) === ROLE.SUPER_ADMIN && callerRole !== ROLE.SUPER_ADMIN) {
+    throw new ApiError(httpStatus.FORBIDDEN, "Only a super admin can create another super admin.");
+  }
+  if (Number(target.role_id) === ROLE.SUPER_ADMIN && Number(target.id) !== Number(caller.id) && callerRole !== ROLE.SUPER_ADMIN) {
+    throw new ApiError(httpStatus.FORBIDDEN, "Only a super admin can change or remove a super admin.");
+  }
+};
+
+const updateAdmin = async (reqBody, caller) => {
   const adminDoc = await Admin.findOne({
     where: {
       id: reqBody.admin_id,
     },
   });
+  if (!adminDoc) {
+    throw new ApiError(httpStatus.NOT_FOUND, "Admin not found");
+  }
+  assertMayManageAdmin(caller, adminDoc, reqBody.role_id || undefined);
 
   if (
     reqBody.name &&
@@ -329,6 +353,10 @@ const updateAdmin = async (reqBody) => {
     reqBody.email !== "" &&
     typeof reqBody.email !== "undefined"
   ) {
+    const taken = await Admin.findOne({ where: { email: reqBody.email, is_active: true, id: { [Op.ne]: adminDoc.id } } });
+    if (taken) {
+      throw new ApiError(httpStatus.BAD_REQUEST, "Email already in use");
+    }
     adminDoc["email"] = reqBody.email;
   }
   if (
@@ -343,7 +371,7 @@ const updateAdmin = async (reqBody) => {
   return adminDoc ? adminDoc : {};
 };
 
-const deleteAdmin = async (reqBody) => {
+const deleteAdmin = async (reqBody, caller) => {
   const admin = await Admin.findOne({
     where: {
       id: reqBody.admin_id,
@@ -352,6 +380,7 @@ const deleteAdmin = async (reqBody) => {
   if (!admin) {
     throw new ApiError(httpStatus.NOT_FOUND, "Admin not found");
   }
+  assertMayManageAdmin(caller, admin);
   await admin.destroy({
     where: {
       id: reqBody.admin_id,

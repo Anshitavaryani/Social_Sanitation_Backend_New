@@ -154,7 +154,7 @@ const getFormById = async (id) => {
       ],
     });
     if (!formDoc) {
-      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, "Data Not Found.");
+      throw new ApiError(httpStatus.NOT_FOUND, "Data Not Found.");
     }
     return formDoc;
   } catch (error) {
@@ -421,10 +421,7 @@ const getHiringFormsByEmail = async (email, name) => {
       throw error;
     }
 
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      error.message || "Internal Server Error",
-    );
+    throw ApiError.orInternal(error);
   }
 };
 

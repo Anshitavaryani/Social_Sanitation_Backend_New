@@ -204,17 +204,28 @@ test("catch blocks that may see other services' errors keep their own 404s and 4
   models.ContractAgreement.findOne = async () => null;
   await assert.rejects(service.deleteContractAgreement(9), (err) => err.statusCode === 404 && err.message === "Contract Agreement not found");
 
-  // no catch block rebuilds a 500 by hand any more
+  // no catch block rebuilds a 500 by hand from error.message (or error.message || "fallback"), and
+  // none does it after its own try block threw a 400 or 404
   const is500 = (n) => (n.type === "MemberExpression" && n.property.name === "INTERNAL_SERVER_ERROR") || (n.type === "Literal" && n.value === 500);
+  const isOwn4xx = (n) => n?.type === "NewExpression" && n.callee.name === "ApiError" && ((n.arguments[0]?.type === "MemberExpression" && /^(BAD_REQUEST|NOT_FOUND|CONFLICT|FORBIDDEN|UNAUTHORIZED)$/.test(n.arguments[0].property.name)) || (n.arguments[0]?.type === "Literal" && n.arguments[0].value >= 400 && n.arguments[0].value < 500));
+  const contains = (node, test) => {
+    if (!node || typeof node.type !== "string") return false;
+    if (test(node)) return true;
+    return Object.entries(node).some(([key, child]) => key !== "loc" && (Array.isArray(child) ? child.some((item) => contains(item, test)) : child && typeof child.type === "string" && contains(child, test)));
+  };
   const left = [];
   const visit = (node, file) => {
     if (!node || typeof node.type !== "string") return;
-    if (node.type === "CatchClause" && node.param?.type === "Identifier") {
-      for (const statement of node.body.body) {
+    if (node.type === "TryStatement" && node.handler?.param?.type === "Identifier") {
+      const name = node.handler.param.name;
+      const isMessage = (arg) => arg?.type === "MemberExpression" && arg.object?.name === name && arg.property?.name === "message";
+      for (const statement of node.handler.body.body) {
         const created = statement.type === "ThrowStatement" ? statement.argument : null;
-        if (created?.type === "NewExpression" && created.callee.name === "ApiError" && is500(created.arguments[0]) && created.arguments[1]?.object?.name === node.param.name && created.arguments[1]?.property?.name === "message") {
-          left.push(`${path.relative(ROOT, file)}:${statement.loc.start.line}`);
-        }
+        if (created?.type !== "NewExpression" || created.callee.name !== "ApiError" || !is500(created.arguments[0])) continue;
+        const arg = created.arguments[1];
+        const plain = isMessage(arg);
+        const withFallback = arg?.type === "LogicalExpression" && isMessage(arg.left);
+        if (plain || (withFallback && contains(node.block, isOwn4xx))) left.push(`${path.relative(ROOT, file)}:${statement.loc.start.line}`);
       }
     }
     for (const [key, child] of Object.entries(node)) {
