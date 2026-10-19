@@ -929,30 +929,259 @@ const syncEmployeeRoleData = async (
   }
 };
 
+// ----- editing a user (admin)
+
+// The user fields an edit changes: email (trimmed and lowercased; 400 when another user has it),
+// cc_email, client_type, employee_type (W2_BI_WEEKLY or 1099) and a move between employee roles
+const userEditChanges = async (user, { email, cc_email, client_type, employee_type, role_id }, id, transaction) => {
+  const roleId = Number(user.role_id);
+  const isEmployee = EMPLOYEE_ROLE_IDS.includes(roleId);
+
+  const normalizedEmail =
+    email !== undefined && email !== null && String(email).trim() !== "" ? String(email).trim().toLowerCase() : user.email?.trim().toLowerCase();
+
+  if (normalizedEmail && normalizedEmail !== user.email?.trim().toLowerCase()) {
+    const existingEmailUser = await User.findOne({
+      where: {
+        email: normalizedEmail,
+        id: {
+          [Op.ne]: id,
+        },
+      },
+      transaction,
+    });
+
+    if (existingEmailUser) {
+      throw new ApiError(httpStatus.BAD_REQUEST, "Email already exists");
+    }
+  }
+
+  const payload = {};
+
+  if (normalizedEmail) {
+    payload.email = normalizedEmail;
+  }
+
+  if (cc_email !== undefined) {
+    payload.cc_email = cc_email !== null && String(cc_email).trim() !== "" ? String(cc_email).trim().toLowerCase() : null;
+  }
+
+  if (client_type) {
+    payload.client_type = client_type;
+  }
+
+  if (employee_type !== undefined) {
+    if (!["W2_BI_WEEKLY", "1099"].includes(employee_type)) {
+      throw new ApiError(httpStatus.BAD_REQUEST, "Invalid employee type");
+    }
+
+    payload.employee_type = employee_type;
+  }
+
+  // Employees only; their bookings and records follow via syncEmployeeRoleData
+  let newRoleId = null;
+
+  if (role_id !== undefined && role_id !== null && role_id !== "" && Number(role_id) !== roleId) {
+    newRoleId = Number(role_id);
+
+    if (!isEmployee || !EMPLOYEE_ROLE_IDS.includes(newRoleId)) {
+      throw new ApiError(httpStatus.BAD_REQUEST, "Role can only be changed between employee roles");
+    }
+
+    payload.role_id = newRoleId;
+  }
+
+  return { payload, normalizedEmail, newRoleId, roleId, isEmployee };
+};
+
+// An employee's hiring form: required, found, sent from this employee's email, not assigned to
+// another employee, and a location (latitude, longitude, country, state, city) for their address.
+// 400/404 otherwise.
+const employeeHiringForm = async ({ hiring_form_submission_id, address_lat, address_long, country_id, state_id, city_id }, normalizedEmail, id, transaction) => {
+  if (hiring_form_submission_id === undefined || hiring_form_submission_id === null || hiring_form_submission_id === "") {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Hiring form submission is required for employees");
+  }
+
+  const hiringFormId = Number(hiring_form_submission_id);
+
+  if (!Number.isInteger(hiringFormId) || hiringFormId <= 0) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Invalid hiring form submission ID");
+  }
+
+  const hiringForm = await FormSubmission.findOne({
+    where: {
+      id: hiringFormId,
+      is_active: true,
+    },
+    include: [
+      {
+        model: FormSection,
+        as: "details_form_submission",
+        where: {
+          section_name: "personalInfo",
+        },
+        required: false,
+      },
+    ],
+    transaction,
+  });
+
+  if (!hiringForm) {
+    throw new ApiError(httpStatus.NOT_FOUND, "Selected hiring form not found");
+  }
+
+  const hiringFormEmail = String(hiringForm.applicant_email || "")
+    .trim()
+    .toLowerCase();
+
+  if (!hiringFormEmail || hiringFormEmail !== normalizedEmail) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Selected hiring form does not belong to this employee email");
+  }
+
+  const alreadyAssigned = await User.findOne({
+    where: {
+      hiring_form_submission_id: hiringFormId,
+      id: {
+        [Op.ne]: id,
+      },
+    },
+    transaction,
+  });
+
+  if (alreadyAssigned) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "This hiring form has already been assigned to another employee");
+  }
+
+  const filled = (value) => value !== undefined && value !== null && value !== "";
+
+  if (!filled(address_lat) || !Number.isFinite(Number(address_lat))) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Valid address latitude is required");
+  }
+
+  if (!filled(address_long) || !Number.isFinite(Number(address_long))) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Valid address longitude is required");
+  }
+
+  const positiveId = (value) => Number.isInteger(Number(value)) && Number(value) > 0;
+
+  if (!positiveId(country_id)) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Valid country ID is required");
+  }
+
+  if (!positiveId(state_id)) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Valid state ID is required");
+  }
+
+  if (!positiveId(city_id)) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Valid city ID is required");
+  }
+
+  return { hiringForm, hiringFormId };
+};
+
+// The street address (and apartment) in a hiring form's personal info; 400 when it has none
+const hiringFormAddress = (hiringForm) => {
+  const personalInfoSection = hiringForm.details_form_submission?.find((section) => section.section_name === "personalInfo");
+
+  if (!personalInfoSection) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Personal information not found in selected hiring form");
+  }
+
+  let personalInfo = {};
+
+  if (personalInfoSection.data) {
+    try {
+      personalInfo = typeof personalInfoSection.data === "string" ? JSON.parse(personalInfoSection.data) : personalInfoSection.data;
+    } catch (error) {
+      logger.error("Personal info JSON parse error:", error);
+
+      throw new ApiError(httpStatus.BAD_REQUEST, "Invalid personal information in selected hiring form");
+    }
+  }
+
+  const streetAddress = String(personalInfo.streetAddress || "").trim();
+  const aptSuite = String(personalInfo.aptSuite || "").trim();
+  const fullAddress = [streetAddress, aptSuite].filter((value) => value !== "").join(", ");
+
+  if (!fullAddress) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Address not found in selected hiring form");
+  }
+
+  return fullAddress;
+};
+
+// Saves an employee's address from their hiring form and checks it was saved as sent (500 if not)
+const saveEmployeeAddress = async (user, id, hiringForm, { country_id, state_id, city_id, address_lat, address_long }, transaction) => {
+  const fullAddress = hiringFormAddress(hiringForm);
+
+  const finalCountryId = Number(country_id);
+  const finalStateId = Number(state_id);
+  const finalCityId = Number(city_id);
+  const finalLatitude = Number(address_lat);
+  const finalLongitude = Number(address_long);
+  const finalRoleId = Number(user.role_id);
+
+  const userAddress = await UserAddress.create(
+    {
+      user_id: Number(id),
+      role_id: finalRoleId,
+      address: fullAddress,
+      country_id: finalCountryId,
+      state_id: finalStateId,
+      city_id: finalCityId,
+      address_lat: finalLatitude,
+      address_long: finalLongitude,
+      google_map_link: null,
+      is_active: true,
+    },
+    {
+      transaction,
+    },
+  );
+
+  if (!userAddress) {
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, "Employee address could not be saved");
+  }
+
+  const verifiedAddress = await UserAddress.findOne({
+    where: {
+      id: userAddress.id,
+      user_id: Number(id),
+    },
+    transaction,
+  });
+
+  if (!verifiedAddress) {
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, "Employee address was not found after saving");
+  }
+
+  const savedAddress = verifiedAddress.toJSON();
+
+  for (const [field, expected, label] of [
+    ["user_id", Number(id), "user ID"],
+    ["role_id", finalRoleId, "role ID"],
+    ["state_id", finalStateId, "state ID"],
+    ["country_id", finalCountryId, "country ID"],
+    ["city_id", finalCityId, "city ID"],
+    ["address_lat", finalLatitude, "latitude"],
+    ["address_long", finalLongitude, "longitude"],
+  ]) {
+    if (Number(savedAddress[field]) !== expected) {
+      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Saved address has incorrect ${label}`);
+    }
+  }
+
+  return verifiedAddress;
+};
+
+// POST /admin/user/adminEditUser/:id, in one transaction: the user's fields, an employee's role,
+// hiring form and address (a new address only when the hiring form changes), the profile's name and
+// email, and a client's checklist
 const adminEditUser = async (reqBody, id) => {
   const transaction = await sequelize.transaction();
 
   try {
-    const {
-      name,
-      email,
-      cc_email,
-      checklist,
-      client_type,
-      employee_type,
-      role_id,
-
-      hiring_form_submission_id,
-      address_lat,
-      address_long,
-      city_id,
-      state_id,
-      country_id,
-    } = reqBody;
-
-    // =========================================================
-    // FIND USER
-    // =========================================================
+    const { name, checklist, client_type, hiring_form_submission_id } = reqBody;
 
     const user = await User.findByPk(id, {
       transaction,
@@ -963,282 +1192,18 @@ const adminEditUser = async (reqBody, id) => {
       throw new ApiError(httpStatus.NOT_FOUND, "User not found");
     }
 
-    const roleId = Number(user.role_id);
-    const isEmployee = EMPLOYEE_ROLE_IDS.includes(roleId);
-
-    // =========================================================
-    // CAPTURE THE HIRING FORM THAT WAS ON FILE *BEFORE* THIS
-    // UPDATE TOUCHES ANYTHING — used later to decide whether the
-    // employee address needs to be recreated or left alone.
-    // =========================================================
-
+    // The hiring form on file before this update: re-saving the same form keeps the address
     const previousHiringFormSubmissionId = user.hiring_form_submission_id;
 
-    // =========================================================
-    // NORMALIZE EMAIL
-    // =========================================================
-
-    const normalizedEmail =
-      email !== undefined && email !== null && String(email).trim() !== ""
-        ? String(email).trim().toLowerCase()
-        : user.email?.trim().toLowerCase();
-
-    // =========================================================
-    // CHECK EMAIL DUPLICATE
-    // =========================================================
-
-    if (
-      normalizedEmail &&
-      normalizedEmail !== user.email?.trim().toLowerCase()
-    ) {
-      const existingEmailUser = await User.findOne({
-        where: {
-          email: normalizedEmail,
-          id: {
-            [Op.ne]: id,
-          },
-        },
-        transaction,
-      });
-
-      if (existingEmailUser) {
-        throw new ApiError(httpStatus.BAD_REQUEST, "Email already exists");
-      }
-    }
-
-    // =========================================================
-    // UPDATE USER PAYLOAD
-    // =========================================================
-
-    const updateUserPayload = {};
-
-    // ---------------------------------------------------------
-    // EMAIL
-    // ---------------------------------------------------------
-
-    if (normalizedEmail) {
-      updateUserPayload.email = normalizedEmail;
-    }
-
-    // ---------------------------------------------------------
-    // CC EMAIL
-    // ---------------------------------------------------------
-
-    if (cc_email !== undefined) {
-      const normalizedCcEmail =
-        cc_email !== null && String(cc_email).trim() !== ""
-          ? String(cc_email).trim().toLowerCase()
-          : null;
-
-      updateUserPayload.cc_email = normalizedCcEmail;
-    }
-
-    // ---------------------------------------------------------
-    // CLIENT TYPE
-    // ---------------------------------------------------------
-
-    if (client_type) {
-      updateUserPayload.client_type = client_type;
-    }
-
-    // ---------------------------------------------------------
-    // EMPLOYEE TYPE
-    // ---------------------------------------------------------
-
-    if (employee_type !== undefined) {
-      if (!["W2_BI_WEEKLY", "1099"].includes(employee_type)) {
-        throw new ApiError(httpStatus.BAD_REQUEST, "Invalid employee type");
-      }
-
-      updateUserPayload.employee_type = employee_type;
-    }
-
-    // ---------------------------------------------------------
-    // ROLE (employees only, synced below via syncEmployeeRoleData)
-    // ---------------------------------------------------------
-
-    let newRoleId = null;
-
-    if (
-      role_id !== undefined &&
-      role_id !== null &&
-      role_id !== "" &&
-      Number(role_id) !== roleId
-    ) {
-      newRoleId = Number(role_id);
-
-      if (!isEmployee || !EMPLOYEE_ROLE_IDS.includes(newRoleId)) {
-        throw new ApiError(
-          httpStatus.BAD_REQUEST,
-          "Role can only be changed between employee roles",
-        );
-      }
-
-      updateUserPayload.role_id = newRoleId;
-    }
-
-    // =========================================================
-    // EMPLOYEE HIRING FORM
-    // =========================================================
+    const { payload: updateUserPayload, normalizedEmail, newRoleId, roleId, isEmployee } = await userEditChanges(user, reqBody, id, transaction);
 
     let hiringForm = null;
 
     if (isEmployee) {
-      // =======================================================
-      // HIRING FORM IS REQUIRED FOR EMPLOYEE UPDATE
-      // =======================================================
-
-      if (
-        hiring_form_submission_id === undefined ||
-        hiring_form_submission_id === null ||
-        hiring_form_submission_id === ""
-      ) {
-        throw new ApiError(
-          httpStatus.BAD_REQUEST,
-          "Hiring form submission is required for employees",
-        );
-      }
-
-      const hiringFormId = Number(hiring_form_submission_id);
-
-      if (!Number.isInteger(hiringFormId) || hiringFormId <= 0) {
-        throw new ApiError(
-          httpStatus.BAD_REQUEST,
-          "Invalid hiring form submission ID",
-        );
-      }
-
-      // =======================================================
-      // FIND SELECTED HIRING FORM
-      // =======================================================
-
-      hiringForm = await FormSubmission.findOne({
-        where: {
-          id: hiringFormId,
-          is_active: true,
-        },
-        include: [
-          {
-            model: FormSection,
-            as: "details_form_submission",
-            where: {
-              section_name: "personalInfo",
-            },
-            required: false,
-          },
-        ],
-        transaction,
-      });
-
-      if (!hiringForm) {
-        throw new ApiError(
-          httpStatus.NOT_FOUND,
-          "Selected hiring form not found",
-        );
-      }
-
-      // =======================================================
-      // VALIDATE HIRING FORM EMAIL
-      // =======================================================
-
-      const hiringFormEmail = String(hiringForm.applicant_email || "")
-        .trim()
-        .toLowerCase();
-
-      if (!hiringFormEmail || hiringFormEmail !== normalizedEmail) {
-        throw new ApiError(
-          httpStatus.BAD_REQUEST,
-          "Selected hiring form does not belong to this employee email",
-        );
-      }
-
-      // =======================================================
-      // CHECK IF FORM IS ALREADY ASSIGNED
-      // =======================================================
-
-      const alreadyAssigned = await User.findOne({
-        where: {
-          hiring_form_submission_id: hiringFormId,
-          id: {
-            [Op.ne]: id,
-          },
-        },
-        transaction,
-      });
-
-      if (alreadyAssigned) {
-        throw new ApiError(
-          httpStatus.BAD_REQUEST,
-          "This hiring form has already been assigned to another employee",
-        );
-      }
-
-      // =======================================================
-      // VALIDATE LOCATION
-      // =======================================================
-
-      const latitude = Number(address_lat);
-
-      const longitude = Number(address_long);
-
-      const stateId = Number(state_id);
-
-      const cityId = Number(city_id);
-
-      const countryId = Number(country_id);
-
-      if (
-        address_lat === undefined ||
-        address_lat === null ||
-        address_lat === "" ||
-        !Number.isFinite(latitude)
-      ) {
-        throw new ApiError(
-          httpStatus.BAD_REQUEST,
-          "Valid address latitude is required",
-        );
-      }
-
-      if (
-        address_long === undefined ||
-        address_long === null ||
-        address_long === "" ||
-        !Number.isFinite(longitude)
-      ) {
-        throw new ApiError(
-          httpStatus.BAD_REQUEST,
-          "Valid address longitude is required",
-        );
-      }
-
-      if (!Number.isInteger(countryId) || countryId <= 0) {
-        throw new ApiError(
-          httpStatus.BAD_REQUEST,
-          "Valid country ID is required",
-        );
-      }
-
-      if (!Number.isInteger(stateId) || stateId <= 0) {
-        throw new ApiError(
-          httpStatus.BAD_REQUEST,
-          "Valid state ID is required",
-        );
-      }
-
-      if (!Number.isInteger(cityId) || cityId <= 0) {
-        throw new ApiError(httpStatus.BAD_REQUEST, "Valid city ID is required");
-      }
-
-      // =======================================================
-      // SAVE HIRING FORM ID TO USER
-      // =======================================================
-
-      updateUserPayload.hiring_form_submission_id = hiringFormId;
+      const employee = await employeeHiringForm(reqBody, normalizedEmail, id, transaction);
+      hiringForm = employee.hiringForm;
+      updateUserPayload.hiring_form_submission_id = employee.hiringFormId;
     }
-
-    // =========================================================
-    // UPDATE USER
-    // =========================================================
 
     if (Object.keys(updateUserPayload).length > 0) {
       await user.update(updateUserPayload, {
@@ -1249,10 +1214,6 @@ const adminEditUser = async (reqBody, id) => {
     if (newRoleId !== null) {
       await syncEmployeeRoleData(Number(id), roleId, newRoleId, transaction);
     }
-
-    // =========================================================
-    // UPDATE PROFILE
-    // =========================================================
 
     const profile = await Profile.findOne({
       where: {
@@ -1279,252 +1240,26 @@ const adminEditUser = async (reqBody, id) => {
       }
     }
 
-    // =========================================================
-    // EMPLOYEE ADDRESS FROM HIRING FORM
-    // =========================================================
-
     let userAddress = null;
 
     if (isEmployee && hiringForm) {
-      const incomingHiringFormId = Number(hiring_form_submission_id);
-
-      // =======================================================
-      // SAME HIRING FORM AS BEFORE?
-      //
-      // If the employee already had this exact hiring form
-      // assigned (previousHiringFormSubmissionId, captured
-      // BEFORE this request's user.update() ran), re-saving with
-      // the same form should not create a duplicate address row.
-      // Only a genuinely different hiring form — or the very
-      // first assignment — creates a new address.
-      // =======================================================
-
       const isSameHiringFormAsBefore =
         previousHiringFormSubmissionId !== null &&
         previousHiringFormSubmissionId !== undefined &&
-        Number(previousHiringFormSubmissionId) === incomingHiringFormId;
+        Number(previousHiringFormSubmissionId) === Number(hiring_form_submission_id);
 
-      if (isSameHiringFormAsBefore) {
-
-        // =====================================================
-        // RETURN THE EXISTING ADDRESS UNCHANGED
-        // =====================================================
-
-        userAddress = await UserAddress.findOne({
-          where: {
-            user_id: Number(id),
-          },
-          order: [["id", "DESC"]],
-          transaction,
-        });
-      } else {
-        // =======================================================
-        // GET PERSONAL INFO SECTION
-        // =======================================================
-
-        const personalInfoSection = hiringForm.details_form_submission?.find(
-          (section) => section.section_name === "personalInfo",
-        );
-
-        if (!personalInfoSection) {
-          throw new ApiError(
-            httpStatus.BAD_REQUEST,
-            "Personal information not found in selected hiring form",
-          );
-        }
-
-        // =======================================================
-        // PARSE PERSONAL INFO
-        // =======================================================
-
-        let personalInfo = {};
-
-        if (personalInfoSection.data) {
-          try {
-            personalInfo =
-              typeof personalInfoSection.data === "string"
-                ? JSON.parse(personalInfoSection.data)
-                : personalInfoSection.data;
-          } catch (error) {
-            logger.error("Personal info JSON parse error:", error);
-
-            throw new ApiError(
-              httpStatus.BAD_REQUEST,
-              "Invalid personal information in selected hiring form",
-            );
-          }
-        }
-
-        // =======================================================
-        // GET ADDRESS FROM HIRING FORM
-        // =======================================================
-
-        const streetAddress = String(personalInfo.streetAddress || "").trim();
-
-        const aptSuite = String(personalInfo.aptSuite || "").trim();
-
-        const fullAddress = [streetAddress, aptSuite]
-          .filter((value) => value !== "")
-          .join(", ");
-
-        if (!fullAddress) {
-          throw new ApiError(
-            httpStatus.BAD_REQUEST,
-            "Address not found in selected hiring form",
-          );
-        }
-
-        // =======================================================
-        // FINAL ADDRESS VALUES
-        // =======================================================
-
-        const finalCountryId = Number(country_id);
-
-        const finalStateId = Number(state_id);
-
-        const finalCityId = Number(city_id);
-
-        const finalLatitude = Number(address_lat);
-
-        const finalLongitude = Number(address_long);
-
-        const finalRoleId = Number(user.role_id);
-
-        // =======================================================
-        // COMPLETE USER ADDRESS PAYLOAD
-        // =======================================================
-
-        const addressPayload = {
-          user_id: Number(id),
-
-          role_id: finalRoleId,
-
-          address: fullAddress,
-
-          country_id: finalCountryId,
-
-          state_id: finalStateId,
-
-          city_id: finalCityId,
-
-          address_lat: finalLatitude,
-
-          address_long: finalLongitude,
-
-          google_map_link: null,
-
-          is_active: true,
-        };
-
-        // =======================================================
-        // LOG EVERYTHING BEFORE SAVE
-        // =======================================================
-
-        // =======================================================
-        // CREATE NEW EMPLOYEE ADDRESS
-        //
-        // Only reached when the hiring form actually changed (or
-        // this is the first assignment) — see
-        // isSameHiringFormAsBefore above.
-        // =======================================================
-
-
-        userAddress = await UserAddress.create(addressPayload, {
-          transaction,
-        });
-
-
-        // =======================================================
-        // VERIFY ADDRESS
-        // =======================================================
-
-        if (!userAddress) {
-          throw new ApiError(
-            httpStatus.INTERNAL_SERVER_ERROR,
-            "Employee address could not be saved",
-          );
-        }
-
-        const verifiedAddress = await UserAddress.findOne({
-          where: {
-            id: userAddress.id,
-            user_id: Number(id),
-          },
-          transaction,
-        });
-
-        if (!verifiedAddress) {
-          throw new ApiError(
-            httpStatus.INTERNAL_SERVER_ERROR,
-            "Employee address was not found after saving",
-          );
-        }
-
-        // =======================================================
-        // VERIFY IMPORTANT VALUES
-        // =======================================================
-
-        const savedAddress = verifiedAddress.toJSON();
-
-        if (Number(savedAddress.user_id) !== Number(id)) {
-          throw new ApiError(
-            httpStatus.INTERNAL_SERVER_ERROR,
-            "Saved address has incorrect user ID",
-          );
-        }
-
-        if (Number(savedAddress.role_id) !== finalRoleId) {
-          throw new ApiError(
-            httpStatus.INTERNAL_SERVER_ERROR,
-            "Saved address has incorrect role ID",
-          );
-        }
-
-        if (Number(savedAddress.state_id) !== finalStateId) {
-          throw new ApiError(
-            httpStatus.INTERNAL_SERVER_ERROR,
-            "Saved address has incorrect state ID",
-          );
-        }
-
-        if (Number(savedAddress.country_id) !== finalCountryId) {
-          throw new ApiError(
-            httpStatus.INTERNAL_SERVER_ERROR,
-            "Saved address has incorrect country ID",
-          );
-        }
-
-        if (Number(savedAddress.city_id) !== finalCityId) {
-          throw new ApiError(
-            httpStatus.INTERNAL_SERVER_ERROR,
-            "Saved address has incorrect city ID",
-          );
-        }
-
-        if (Number(savedAddress.address_lat) !== finalLatitude) {
-          throw new ApiError(
-            httpStatus.INTERNAL_SERVER_ERROR,
-            "Saved address has incorrect latitude",
-          );
-        }
-
-        if (Number(savedAddress.address_long) !== finalLongitude) {
-          throw new ApiError(
-            httpStatus.INTERNAL_SERVER_ERROR,
-            "Saved address has incorrect longitude",
-          );
-        }
-
-        userAddress = verifiedAddress;
-      }
+      userAddress = isSameHiringFormAsBefore
+        ? await UserAddress.findOne({
+            where: {
+              user_id: Number(id),
+            },
+            order: [["id", "DESC"]],
+            transaction,
+          })
+        : await saveEmployeeAddress(user, id, hiringForm, reqBody, transaction);
     }
 
-    // =========================================================
-    // CLIENT CHECKLIST
-    // IMPORTANT:
-    // DO NOT RUN FOR EMPLOYEES
-    // =========================================================
-
+    // Never for employees
     let checklistEntry;
 
     if (checklist && !isEmployee) {
@@ -1536,10 +1271,6 @@ const adminEditUser = async (reqBody, id) => {
       });
     }
 
-    // =========================================================
-    // RELOAD USER
-    // =========================================================
-
     await user.reload({
       transaction,
     });
@@ -1550,15 +1281,7 @@ const adminEditUser = async (reqBody, id) => {
       });
     }
 
-    // =========================================================
-    // COMMIT EVERYTHING
-    // =========================================================
-
     await transaction.commit();
-
-    // =========================================================
-    // RETURN
-    // =========================================================
 
     return {
       user,
@@ -1567,20 +1290,13 @@ const adminEditUser = async (reqBody, id) => {
       user_address: userAddress || null,
     };
   } catch (error) {
-    // =========================================================
-    // ROLLBACK EVERYTHING
-    // =========================================================
-
     try {
       await transaction.rollback();
     } catch (rollbackError) {
       logger.error("Transaction rollback error:", rollbackError);
     }
 
-
-
     logger.error("adminEditUser failed:", error);
-
 
     if (error instanceof ApiError) {
       throw error;
