@@ -4,8 +4,10 @@ const router = express.Router();
 const { serviceChecklistController,dailyChecklistController } = require('../../../controllers');
 const { userAuthMiddleware } = require('../../../middlewares');
 const { requireAdmin, requireAuth } = require("../../../middlewares/access.middleware");
+const { validate } = require("../../../middlewares/validate.middleware");
+const adminValidation = require("../../../validations/admin.validation");
 
-router.post('/createServiceChecklist', requireAdmin, serviceChecklistController.createServiceChecklist);
+router.post('/createServiceChecklist', requireAdmin, validate(adminValidation.createChecklist), serviceChecklistController.createServiceChecklist);
 router.get('/getAllServiceChecklist', requireAuth, serviceChecklistController.getAllServiceChecklist);
 router.get('/findServiceChecklistById/:id', requireAuth, serviceChecklistController.findServiceChecklistById);
 router.put('/updateServiceChecklist/:id', requireAdmin, serviceChecklistController.updateServiceChecklist);
@@ -15,7 +17,7 @@ router.post('/deleteServiceChecklist', requireAdmin, serviceChecklistController.
 
 // dailychecklist
 
-router.post('/createDailyChecklist', requireAdmin, dailyChecklistController.createDailyChecklist);
+router.post('/createDailyChecklist', requireAdmin, validate(adminValidation.createChecklist), dailyChecklistController.createDailyChecklist);
 router.post('/createOrUpdateChecklistMainTitle', requireAdmin, dailyChecklistController.createOrUpdateChecklistMainTitle);
 router.get('/getChecklistMainTitle', requireAuth, dailyChecklistController.getChecklistMainTitle);
 router.get('/getDailyChecklist', requireAuth, dailyChecklistController.getDailyChecklist);

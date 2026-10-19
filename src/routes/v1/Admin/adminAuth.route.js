@@ -5,6 +5,8 @@ const {adminAuthController, serviceEstimateController} = require('../../../contr
 const { adminAuthMiddleware } = require('../../../middlewares');
 const { publicRoute, requireAdmin, requireAdminRole, requireAuth } = require("../../../middlewares/access.middleware");
 const { ROLE } = require("../../../config/roles");
+const { validate } = require("../../../middlewares/validate.middleware");
+const adminValidation = require("../../../validations/admin.validation");
 
 router.post('/register', ...requireAdminRole(ROLE.SUPER_ADMIN, ROLE.ADMIN), adminAuthMiddleware.restrictSuperAdminCreation,  adminAuthController.createAdminUser);
 router.post('/login', publicRoute, [adminAuthMiddleware.validateLoginAdminBody], adminAuthController.loginAdminUser);
@@ -12,20 +14,20 @@ router.post('/change-password',  [ adminAuthMiddleware.validateResetPassordBody,
 router.post('/otp', publicRoute,  adminAuthController.sendOTP);
 router.post('/verify-otp', publicRoute,  adminAuthController.verifyOTP);
 router.post('/forgot-password', publicRoute,  adminAuthController.forgotAdminPassword);
-router.put('/updateAdmin',[adminAuthMiddleware.validateJWTtoken],adminAuthController.updateAdmin);
-router.delete('/deleteAdmin',[adminAuthMiddleware.validateJWTtoken],adminAuthController.deleteAdmin);
+router.put('/updateAdmin',[adminAuthMiddleware.validateJWTtoken, validate(adminValidation.updateAdmin)],adminAuthController.updateAdmin);
+router.delete('/deleteAdmin',[adminAuthMiddleware.validateJWTtoken, validate(adminValidation.deleteAdmin)],adminAuthController.deleteAdmin);
 router.get('/getAllAdmins',[adminAuthMiddleware.validateJWTtoken],adminAuthController.getAllAdmins);
 router.get('/getProfile',[adminAuthMiddleware.validateJWTtoken],adminAuthController.getProfile);
 router.get('/findAdminById', requireAuth,adminAuthController.findAdminById);
 
 
 // pdf route
-router.post('/generate-estimate-pdf', requireAdmin, serviceEstimateController.generateEstimatePDFController);
+router.post('/generate-estimate-pdf', requireAdmin, validate(adminValidation.generateEstimatePdf), serviceEstimateController.generateEstimatePDFController);
 router.get('/scope-of-work-pdf/:userId', requireAdmin, serviceEstimateController.downloadScopeOfWorkPDFController);
 router.get('/service-estimate/:id', requireAdmin, serviceEstimateController.getServiceEstimateById);
 router.get('/getAllServiceEstimates', requireAdmin, serviceEstimateController.getAllServiceEstimate);
 router.get('/service-estimate/user/:user_id', requireAdmin, serviceEstimateController.getServiceEstimateByUserId);
-router.put('/update-service-estimate', requireAdmin,  serviceEstimateController.updateServiceEstimate);
+router.put('/update-service-estimate', requireAdmin, validate(adminValidation.updateServiceEstimate), serviceEstimateController.updateServiceEstimate);
 router.get('/resume-signing/:id', requireAdmin,  serviceEstimateController.resumeSigningService);
 router.delete('/deleteServiceEstimate/:id', requireAdmin, serviceEstimateController.deleteServiceEstimate);
 

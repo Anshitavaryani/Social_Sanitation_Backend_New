@@ -4,6 +4,8 @@ const router = express.Router();
 const { invoiceController } = require("../../../controllers");
 const multer = require("multer");
 const { requireAdmin, requireAuth } = require("../../../middlewares/access.middleware");
+const { validate } = require("../../../middlewares/validate.middleware");
+const adminValidation = require("../../../validations/admin.validation");
 
 const csvUpload = multer({
   storage: multer.memoryStorage(),
@@ -39,7 +41,7 @@ router.post(
   invoiceController.importHistoricalInvoicesCSV,
 );
 
-router.post("/createInvoice", requireAdmin, invoiceController.createInvoice);
+router.post("/createInvoice", requireAdmin, validate(adminValidation.createInvoice), invoiceController.createInvoice);
 
 router.get("/getAllInvoices", requireAdmin, invoiceController.getAllInvoices);
 router.get("/user/:user_id", requireAuth, invoiceController.getInvoicesByUserId);
@@ -54,7 +56,7 @@ router.get("/upcoming", requireAdmin, invoiceController.getUpcomingInvoices);
 
 router.get("/:id", requireAuth, invoiceController.getInvoiceById);
 
-router.put("/:id", requireAdmin, invoiceController.updateInvoice);
+router.put("/:id", requireAdmin, validate(adminValidation.updateInvoice), invoiceController.updateInvoice);
 
 router.patch(
   "/mark-paid-check/:invoice_id", requireAdmin,

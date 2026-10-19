@@ -4,6 +4,8 @@ const router = express.Router();
 const {attendanceController} = require('../../../controllers');
 const { userAuthMiddleware} = require('../../../middlewares');
 const { requireAdmin, requireAuth } = require("../../../middlewares/access.middleware");
+const { validate } = require("../../../middlewares/validate.middleware");
+const adminValidation = require("../../../validations/admin.validation");
 
 
 // attendance apis
@@ -28,5 +30,5 @@ router.post('/getTodayAttendanceStats', requireAdmin,attendanceController.getTod
 router.post('/getDailyPresenceForMonth', requireAdmin,attendanceController.getDailyPresenceForMonth);
 
 router.post('/getAllBreaks', requireAdmin,attendanceController.getAllBreaks);
-router.post('/manualClockInOut', requireAdmin,attendanceController.manualClockInOut);
+router.post('/manualClockInOut', requireAdmin, validate(adminValidation.manualClockInOut),attendanceController.manualClockInOut);
 module.exports = router;

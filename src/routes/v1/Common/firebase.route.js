@@ -12,6 +12,8 @@ const {
 const {
   verifyAnyAuthJWTToken,
 } = require("../../../middlewares/userAuth.middleware");
+const { validate } = require("../../../middlewares/validate.middleware");
+const adminValidation = require("../../../validations/admin.validation");
 
 //chat apis
 router.post(
@@ -69,7 +71,7 @@ router.post(
 
 //push notification apis
 router.post(
-  "/sendPushNotification", requireAdmin,
+  "/sendPushNotification", requireAdmin, validate(adminValidation.sendPushNotification),
   notificationController.sendPushNotification,
 );
 router.get(

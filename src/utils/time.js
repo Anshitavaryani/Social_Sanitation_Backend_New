@@ -225,6 +225,7 @@ module.exports = {
   toCalendarDate,
   parseDateInZone,
   bookingUtcParts,
+  TIME_OF_DAY,
   addDays,
   isoWeekStart,
 };
