@@ -4,6 +4,7 @@ const router = express.Router();
 const { userOpController } = require('../../../controllers');
 const { userAuthMiddleware } = require('../../../middlewares');
 const { publicRoute, requireAuth } = require("../../../middlewares/access.middleware");
+const ownership = require("../../../middlewares/ownership.middleware");
 
 router.use(userAuthMiddleware.setRoleIdIfNotPresent);
 
@@ -13,12 +14,12 @@ router.delete('/deactivate', [userAuthMiddleware.verifyAuthJWTToken], userOpCont
 router.put('/updateUserProfile', [userAuthMiddleware.verifyAuthJWTToken], userOpController.updateUserProfile);
 
 router.post('/addNewAddress',[userAuthMiddleware.verifyAuthJWTToken], userOpController.addNewAddress);
-router.put('/editAddress', requireAuth, userOpController.editAddress);
+router.put('/editAddress', requireAuth, ownership.editAddress(ownership.bodyField("user_address_id")), userOpController.editAddress);
 router.post('/deleteAddress/:id',[userAuthMiddleware.verifyAuthJWTToken], userOpController.deleteAddress);
 router.get('/getAllUserAddress',[userAuthMiddleware.verifyAuthJWTToken], userOpController.getAllUserAddress);
-router.get('/getUserAddressById/:id', requireAuth, userOpController.getUserAddressById);
+router.get('/getUserAddressById/:id', requireAuth, ownership.readAddress(ownership.param("id")), userOpController.getUserAddressById);
 
-router.get('/getUserAddressByUserId/:id', requireAuth, userOpController.getUserAddressByUserId);
+router.get('/getUserAddressByUserId/:id', requireAuth, ownership.readUserAddresses(ownership.param("id")), userOpController.getUserAddressByUserId);
 
 router.post('/createUserConsent', publicRoute, userOpController.createUserConsent);
 

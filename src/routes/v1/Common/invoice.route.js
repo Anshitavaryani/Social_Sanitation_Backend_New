@@ -6,6 +6,7 @@ const multer = require("multer");
 const { requireAdmin, requireAuth } = require("../../../middlewares/access.middleware");
 const { validate } = require("../../../middlewares/validate.middleware");
 const adminValidation = require("../../../validations/admin.validation");
+const ownership = require("../../../middlewares/ownership.middleware");
 
 const csvUpload = multer({
   storage: multer.memoryStorage(),
@@ -44,7 +45,7 @@ router.post(
 router.post("/createInvoice", requireAdmin, validate(adminValidation.createInvoice), invoiceController.createInvoice);
 
 router.get("/getAllInvoices", requireAdmin, invoiceController.getAllInvoices);
-router.get("/user/:user_id", requireAuth, invoiceController.getInvoicesByUserId);
+router.get("/user/:user_id", requireAuth, ownership.selfOnly(ownership.param("user_id")), invoiceController.getInvoicesByUserId);
 router.get("/getNextInvoiceRef", requireAdmin, invoiceController.getNextInvoiceRef);
 router.post(
   "/getMonthlyAllInvoicesSummary", requireAdmin,
@@ -54,7 +55,7 @@ router.delete("/deleteInvoice/:id", requireAdmin, invoiceController.deleteInvoic
 
 router.get("/upcoming", requireAdmin, invoiceController.getUpcomingInvoices);
 
-router.get("/:id", requireAuth, invoiceController.getInvoiceById);
+router.get("/:id", requireAuth, ownership.readInvoice(ownership.param("id")), invoiceController.getInvoiceById);
 
 router.put("/:id", requireAdmin, validate(adminValidation.updateInvoice), invoiceController.updateInvoice);
 

@@ -31,6 +31,7 @@ module.exports = {
     adminBaseUrl: envVars.ADMIN_BASE_URL.replace(/\/+$/, ''),
     // Uploaded and generated files live in <storageDir>/uploads (default: public/uploads)
     storageDir: envVars.STORAGE_DIR,
+    ownershipChecks: envVars.OWNERSHIP_CHECKS,
     DEFAULT_AMOUNT: envVars.DEFAULT_AMOUNT,
     PUPPETEER_EXECUTABLE_PATH: envVars.PUPPETEER_EXECUTABLE_PATH,
     GOOGLE_API_KEY: envVars.GOOGLE_API_KEY,

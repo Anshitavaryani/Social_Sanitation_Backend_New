@@ -76,7 +76,7 @@ test("team chat uploads every attachment type and deletes the local temp file af
   let result;
   try {
     result = await groupChatService.sendGroupMessage(
-      { groupId: 42, message: "see attached", user: { id: 3, role_id: 1, user_profile: { name: "Admin" } } },
+      { groupId: 42, message: "see attached", user_type: "ADMIN", user: { id: 3, role_id: 1, user_profile: { name: "Admin" } } },
       {
         images: [{ path: image, filename: "images-2.png", originalname: "site.png", mimetype: "image/png" }],
         docs: [{ path: pdf, filename: "docs-1.pdf", originalname: "report.pdf", mimetype: "application/pdf" }],

@@ -64,9 +64,17 @@ const getAllAdmins = catchAsync(async (req, res) => {
   });
 });
 
+// App users get an admin's display fields only (name, contact, role); admins get the whole row
+const ADMIN_FIELDS_FOR_APP_USERS = ["id", "role_id", "name", "email", "mobile"];
+
 const findAdminById = catchAsync(async (req, res) => {
   const adminDoc = await adminAuthService.findAdminById(req.query.id);
-  return responseWrapper(res, adminDoc, "", httpStatus.OK);
+  if (req.body.user_type === "ADMIN" || !adminDoc?.id) {
+    return responseWrapper(res, adminDoc, "", httpStatus.OK);
+  }
+  const shown = Object.fromEntries(ADMIN_FIELDS_FOR_APP_USERS.map((field) => [field, adminDoc[field] ?? null]));
+  shown.admin_role = adminDoc.admin_role ? { id: adminDoc.admin_role.id, name: adminDoc.admin_role.name } : null;
+  return responseWrapper(res, shown, "", httpStatus.OK);
 });
 
 const updateAdmin = catchAsync(async (req, res) => {

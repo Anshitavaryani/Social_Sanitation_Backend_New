@@ -6,6 +6,7 @@ const { userAuthMiddleware } = require('../../../middlewares');
 const { requireAdmin, requireAuth } = require("../../../middlewares/access.middleware");
 const { validate } = require("../../../middlewares/validate.middleware");
 const adminValidation = require("../../../validations/admin.validation");
+const ownership = require("../../../middlewares/ownership.middleware");
 
 router.post('/createServiceChecklist', requireAdmin, validate(adminValidation.createChecklist), serviceChecklistController.createServiceChecklist);
 router.get('/getAllServiceChecklist', requireAuth, serviceChecklistController.getAllServiceChecklist);
@@ -27,7 +28,7 @@ router.post('/deleteDailyChecklist', requireAdmin, dailyChecklistController.dele
 router.post('/markDailyChecklistItemAsCompleted/:id',[userAuthMiddleware.verifyAuthJWTToken], dailyChecklistController.markDailyChecklistItemAsCompleted);
 router.get('/getDailyChecklistWithTodayStatus',[userAuthMiddleware.verifyAuthJWTToken], dailyChecklistController.getDailyChecklistWithTodayStatus);
 
-router.post('/getWeeklyChecklistWithStatus', requireAuth, dailyChecklistController.getWeeklyChecklistWithStatus);
+router.post('/getWeeklyChecklistWithStatus', requireAuth, ownership.employeeRecords(ownership.bodyField("user_id")), dailyChecklistController.getWeeklyChecklistWithStatus);
 router.get('/getJanitors', requireAuth, dailyChecklistController.getJanitors);
 
 module.exports = router;

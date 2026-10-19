@@ -23,6 +23,9 @@ const envSchema = Joi.object({
   LOG_LEVEL: optional(Joi.string().valid("error", "warn", "info", "debug", "silent")).description(
     "Least important log level written (default: debug in development, silent in tests, info otherwise)",
   ),
+  OWNERSHIP_CHECKS: optional(Joi.string().valid("enforce", "report"))
+    .default("enforce")
+    .description("App users reach only their own records (enforce), or refusals are only logged (report)"),
   DEFAULT_TIMEZONE: optional(timeZone).default("UTC").description("Time zone of the server process (keep UTC)"),
   BUSINESS_TIMEZONE: optional(timeZone)
     .default("America/New_York")

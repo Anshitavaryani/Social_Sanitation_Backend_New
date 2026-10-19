@@ -2,6 +2,7 @@ const express = require("express");
 const { equipmentController } = require("../../../controllers");
 const { userAuthMiddleware } = require("../../../middlewares");
 const { requireAdmin, requireAuth } = require("../../../middlewares/access.middleware");
+const ownership = require("../../../middlewares/ownership.middleware");
 const router = express.Router();
 
 
@@ -27,6 +28,6 @@ router.get("/my-equipment",[userAuthMiddleware.verifyAuthJWTToken],equipmentCont
 router.post("/my-equipment/sign/:assignmentId",[userAuthMiddleware.verifyAuthJWTToken],equipmentController.signEquipment);
 router.get("/my-equipment/:assignmentId/signatures",[userAuthMiddleware.verifyAuthJWTToken],equipmentController.getEquipmentSignatureHistory);
 
-router.get("/employee/:employeeId/equipment", requireAuth,equipmentController.getEquipmentByEmployeeId);
+router.get("/employee/:employeeId/equipment", requireAuth, ownership.employeeRecords(ownership.param("employeeId")),equipmentController.getEquipmentByEmployeeId);
 
 module.exports = router;

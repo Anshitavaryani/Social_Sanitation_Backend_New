@@ -100,6 +100,16 @@ const assertTeamMember = async (groupRef, user) => {
   return participantKey;
 };
 
+// App users reach only the group chats they are members of (booking groups as well as teams);
+// admins reach every group, as before
+const assertAppUserMember = (group, reqBody) => {
+  if (reqBody?.user_type === "ADMIN") return;
+  const user = getAuthenticatedUser(reqBody);
+  if (!group?.members?.[getParticipantKey(user.id, user.role_id)]) {
+    throw new ApiError(httpStatus.FORBIDDEN, "You are not a member of this group.");
+  }
+};
+
 const validateParticipant = async (participant) => {
   const id = Number(participant?.id);
   const roleId = Number(participant?.role_id);
@@ -254,6 +264,8 @@ const sendGroupMessage = async (reqBody, files = {}) => {
   // Preserve the previous behavior for legacy groups.
   if (groupData.isTeam === true) {
     await assertTeamMember(groupRef, user);
+  } else {
+    assertAppUserMember(groupData, reqBody);
   }
 
   let attachments = [];
@@ -401,6 +413,8 @@ const getGroupMessages = async (groupId, reqBody) => {
   // Preserve existing legacy group behavior.
   if (group.isTeam === true) {
     await assertTeamMember(groupRef, user);
+  } else {
+    assertAppUserMember(group, reqBody);
   }
 
   try {
@@ -514,6 +528,8 @@ const updateGroupName = async (reqBody) => {
   // Preserve the existing behavior for legacy groups.
   if (group.isTeam === true) {
     assertTeamManager(group, user);
+  } else {
+    assertAppUserMember(group, reqBody);
   }
 
   await groupRef.update({
@@ -550,13 +566,12 @@ const deleteTeam = async (reqBody) => {
   };
 };
 
-const getGroupParticipants = async (groupId) => {
+const getGroupParticipants = async (groupId, reqBody) => {
   try {
     const groupRef = getGroupRef(String(groupId));
     const group = await assertGroupExists(groupRef);
 
-    // Require membership verification for Teams only.
-    // Preserve existing participant lookup behavior for legacy groups.
+    assertAppUserMember(group, reqBody);
 
     const members = group.members || {};
     const participants = [];
@@ -645,7 +660,7 @@ const deleteGroup = async (groupId, reqBody) => {
       );
     }
 
-    // Preserve existing legacy group deletion behavior.
+    assertAppUserMember(group, reqBody);
     await groupRef.remove();
   } catch (error) {
     if (error instanceof ApiError) {

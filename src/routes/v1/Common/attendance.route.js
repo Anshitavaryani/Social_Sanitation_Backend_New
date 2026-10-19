@@ -6,6 +6,7 @@ const { userAuthMiddleware} = require('../../../middlewares');
 const { requireAdmin, requireAuth } = require("../../../middlewares/access.middleware");
 const { validate } = require("../../../middlewares/validate.middleware");
 const adminValidation = require("../../../validations/admin.validation");
+const ownership = require("../../../middlewares/ownership.middleware");
 
 
 // attendance apis
@@ -23,7 +24,7 @@ router.get('/getAllUserLeaves',[userAuthMiddleware.verifyAuthJWTToken],attendanc
 // admin apis
 router.post('/updateLeaveStatus/:id', requireAdmin,attendanceController.updateLeaveStatus);
 router.get('/getAllLeaveRequest', requireAdmin,attendanceController.getAllLeaveRequest);
-router.post('/getAttendanceByUserId/:id', requireAuth,attendanceController.getAttendanceByUserId);
+router.post('/getAttendanceByUserId/:id', requireAuth, ownership.employeeRecords(ownership.param("id")),attendanceController.getAttendanceByUserId);
 router.post('/getAllAttendance', requireAdmin,attendanceController.getAllAttendance);
 router.post('/getTodayAttendanceStats', requireAdmin,attendanceController.getTodayAttendanceStats);
 

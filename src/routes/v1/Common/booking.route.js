@@ -4,24 +4,25 @@ const router = express.Router();
 const { bookingController } = require('../../../controllers');
 const { userAuthMiddleware } = require('../../../middlewares');
 const { requireAuth } = require("../../../middlewares/access.middleware");
+const ownership = require("../../../middlewares/ownership.middleware");
 
 
 //user apis
 router.post('/createBooking',[userAuthMiddleware.verifyAuthJWTToken], bookingController.createBooking);
 router.post('/getAllUserBooking',[userAuthMiddleware.verifyAuthJWTToken], bookingController.getAllUserBooking);
-router.get('/getBookingById/:id', requireAuth,bookingController.getBookingById);
+router.get('/getBookingById/:id', requireAuth, ownership.readBooking(ownership.param("id")), bookingController.getBookingById);
 router.post('/cancelBookingbyUser',[userAuthMiddleware.verifyAuthJWTToken], bookingController.cancelBookingbyUser);
 
 
 
 //sp apis
 router.post('/getAllEmployeeBooking',[userAuthMiddleware.verifyAuthJWTToken], bookingController.getAllEmployeeBooking);
-router.post('/updateBookingStatusByEmployee',[userAuthMiddleware.verifyAuthJWTToken], bookingController.updateBookingStatusByEmployee);
-router.post('/uploadImages',[userAuthMiddleware.verifyAuthJWTToken], bookingController.uploadImages);
-router.get('/getAllServiceCheckList/:id',[userAuthMiddleware.verifyAuthJWTToken], bookingController.getAllServiceCheckList);
-router.get('/getAllServiceCheckListByUserForBookingId/:id', requireAuth, bookingController.getAllServiceCheckListByUserForBookingId);
-router.get('/getAllServiceCheckListByBookingId/:id', requireAuth, bookingController.getAllServiceCheckListByBookingId);
-router.post('/markChecklistItemAsCompleted/:id',[userAuthMiddleware.verifyAuthJWTToken], bookingController.markChecklistItemAsCompleted);
+router.post('/updateBookingStatusByEmployee',[userAuthMiddleware.verifyAuthJWTToken], ownership.workOnBooking(ownership.bodyField("booking_id")), bookingController.updateBookingStatusByEmployee);
+router.post('/uploadImages',[userAuthMiddleware.verifyAuthJWTToken], ownership.workOnBooking(ownership.bodyField("booking_id")), bookingController.uploadImages);
+router.get('/getAllServiceCheckList/:id',[userAuthMiddleware.verifyAuthJWTToken], ownership.readBooking(ownership.param("id")), bookingController.getAllServiceCheckList);
+router.get('/getAllServiceCheckListByUserForBookingId/:id', requireAuth, ownership.readBooking(ownership.param("id")), bookingController.getAllServiceCheckListByUserForBookingId);
+router.get('/getAllServiceCheckListByBookingId/:id', requireAuth, ownership.readBooking(ownership.param("id")), bookingController.getAllServiceCheckListByBookingId);
+router.post('/markChecklistItemAsCompleted/:id',[userAuthMiddleware.verifyAuthJWTToken], ownership.workOnBooking(ownership.bodyField("booking_id")), bookingController.markChecklistItemAsCompleted);
 router.get('/getTodaysBooking',[userAuthMiddleware.verifyAuthJWTToken], bookingController.getTodaysBooking);
 router.get('/getCompletedBooking',[userAuthMiddleware.verifyAuthJWTToken], bookingController.getCompletedBooking);
 

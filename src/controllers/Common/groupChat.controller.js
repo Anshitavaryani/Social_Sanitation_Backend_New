@@ -41,7 +41,7 @@ const updateGroupName = catchAsync(async (req, res) => {
 });
 
 const getGroupParticipants = catchAsync(async (req, res) => {
-  const response = await groupChatService.getGroupParticipants(req.params.id);
+  const response = await groupChatService.getGroupParticipants(req.params.id, req.body);
 
   return responseWrapper(res, response, "Success", httpStatus.OK);
 });

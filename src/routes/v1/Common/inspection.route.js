@@ -7,6 +7,7 @@ const {
   adminAuthMiddleware,
   userAuthMiddleware,
 } = require("../../../middlewares");
+const ownership = require("../../../middlewares/ownership.middleware");
 
 // bdm api routes
 router.post(
@@ -34,7 +35,7 @@ router.post(
 );
 
 router.get(
-  "/getInspectionById/:inspectionId", requireAuth,
+  "/getInspectionById/:inspectionId", requireAuth, ownership.readInspection(ownership.param("inspectionId")),
   inspectionController.getInspectionById,
 );
 
@@ -93,7 +94,7 @@ router.delete(
 );
 
 router.get(
-  "/employee/:employeeId", requireAuth,
+  "/employee/:employeeId", requireAuth, ownership.employeeRecords(ownership.param("employeeId")),
   inspectionController.getInspectionsByEmployeeId,
 );
 
