@@ -53,3 +53,18 @@ test("nothing calls sync({ alter: true }) any more", () => {
   walk(path.join(ROOT, "src"));
   assert.deepEqual(offenders, []);
 });
+
+test("the unused Stripe and Google Calendar columns and tables are dropped where they exist", async () => {
+  const calls = [];
+  const queryInterface = {
+    showAllTables: async () => ["users", "bookings", "user_oauths"],
+    describeTable: async (table) => (table === "users" ? { id: {}, stripe_customer_id: {} } : { id: {} }),
+    removeColumn: async (...args) => calls.push(["removeColumn", ...args]),
+    dropTable: async (table) => calls.push(["dropTable", table]),
+  };
+  await loadFromRoot("src/migrations/20261019-001-remove-unused-columns.js").up({ sequelize, queryInterface });
+  assert.deepEqual(calls, [
+    ["removeColumn", "users", "stripe_customer_id"],
+    ["dropTable", "user_oauths"],
+  ], "bookings has no calendar_event_id here, booking_details and admin_oauths don't exist: skipped");
+});

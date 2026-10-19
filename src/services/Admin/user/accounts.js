@@ -18,7 +18,6 @@ const {
   Attendance,
   Break,
   UserToken,
-  UserOAuth,
   FormSubmission,
   FormSection,
 } = require("../../../models");
@@ -831,12 +830,11 @@ const syncEmployeeRoleData = async (
 ) => {
   // Keep role_id in sync on every table that looks rows up by
   // (user_id + role_id). Without this, attendance history, active
-  // clock-ins, FCM tokens, calendar OAuth, etc. are "lost" after promotion.
+  // clock-ins, FCM tokens, etc. are "lost" after promotion.
   const roleSyncModels = [
     UserAddress,
     UserAttachment,
     UserToken,
-    UserOAuth,
     Attendance,
     Break,
   ];

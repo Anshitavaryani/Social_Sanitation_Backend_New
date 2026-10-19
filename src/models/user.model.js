@@ -43,10 +43,6 @@ User.init(
       type: DataTypes.STRING,
       allowNull: true,
     },
-    stripe_customer_id: {
-      type: DataTypes.STRING(200),
-      allowNull: true,
-    },
     socket_id: {
       type: DataTypes.STRING(150),
       allowNull: true,

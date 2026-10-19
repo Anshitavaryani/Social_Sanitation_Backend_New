@@ -316,7 +316,6 @@ test("login stores the local time in 24-hour form and survives an unknown timezo
   freeze(EVENING_ET);
   const password = await bcrypt.hash("Secret#1", 4);
   models.User.findOne = async () => ({ id: 9, role_id: 6, email: "a@b.c", password, user_profile: { name: "Ana" } });
-  models.UserOAuth.findOne = async () => null;
   sequelize.query = async () => [1, 1];
   const timings = [];
   models.userLoginTiming.create = async (row) => timings.push(row);

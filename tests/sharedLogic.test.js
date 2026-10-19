@@ -67,7 +67,7 @@ test("models share the destroy hook instead of writing their own timestamp hooks
     }
   }
   assert.deepEqual(ownTimestampHooks, [], "use deactivateOnDestroy from src/models/hooks.js");
-  assert.equal(shared, 61, "the 61 models that had the hook and have an is_active column");
+  assert.equal(shared, 59, "the 59 models that had the hook and have an is_active column (61 before the OAuth tables went)");
 });
 
 test("Chrome for PDFs is launched in one place, with the configured binary", async () => {

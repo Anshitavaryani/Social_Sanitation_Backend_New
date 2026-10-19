@@ -38,7 +38,6 @@ before(async () => {
   models.Admin.findOne = async ({ where }) =>
     (where.email === adminRow.email || Number(where.id) === adminRow.id) && adminRow.is_active ? adminRow : null;
   models.User.findOne = async ({ where }) => (where.email === userRow.email || Number(where.id) === userRow.id ? userRow : null);
-  models.UserOAuth.findOne = async () => null;
   models.Timezone.findOne = async () => ({ id: 4 });
   // login stores the access token in user_tokens through a raw insert
   sequelize.query = async (sql, { replacements }) => {
@@ -86,6 +85,7 @@ test("admin: the token from the real login works on admin endpoints", async () =
   const token = login.json.data.token;
   assert.ok(token);
   assert.equal(login.json.data.password, undefined, "the login response carries no password hash");
+  assert.equal(login.json.data.authorize, false, "Google Calendar is gone; the flag stays for the panel");
   const { iat, exp } = jwt.decode(token);
   assert.equal(exp - iat, 5 * 24 * 60 * 60, "admin tokens last JWT_ADMIN_ACCESS_EXPIRATION_DAYS (default 5)");
 
@@ -120,6 +120,7 @@ test("app user: the token from the real login works on shared endpoints, not on 
     }),
   );
   assert.equal(login.status, 200, JSON.stringify(login.json));
+  assert.equal(login.json.data.authorization, false, "Google Calendar is gone; the flag stays for the apps");
   const token = login.json.data.tokens.access.token;
   const { iat, exp } = jwt.decode(token);
   assert.ok(Math.abs(exp - iat - 30 * 24 * 60 * 60) <= 1, "app tokens last JWT_ACCESS_EXPIRATION_DAYS (30 in tests)");

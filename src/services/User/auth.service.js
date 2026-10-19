@@ -13,7 +13,6 @@ const {
 	Profile,
 	userLoginTiming,
 	Timezone,
-	UserOAuth,
 } = require("../../models");
 const validateEmail = require("../../helpers/validateEmail");
 const ApiError = require("../../utils/ApiError");
@@ -250,13 +249,6 @@ const login = async (reqBody, headers) => {
 			await saveLoginTiming(user, token, reqBody, timezone);
 		}
 
-		// Check if the user has an entry in the UserOAuth table
-		const userOAuthEntry = await UserOAuth.findOne({
-			where: { user_id: user.id },
-		});
-
-		const isAuthorized = !!userOAuthEntry; // Authorization is true if userOAuthEntry exists
-
 		delete token.access.id;
 		delete token.refresh.id;
 
@@ -268,7 +260,8 @@ const login = async (reqBody, headers) => {
 			role_id: headers.role_id,
 			sub_role_id: user.sub_role_id,
 			fcm_token: reqBody.fcm_token,
-			authorization: isAuthorized,
+			// Google Calendar is gone; the flag stays for the app builds that read it
+			authorization: false,
 		};
 
 		return userObj;

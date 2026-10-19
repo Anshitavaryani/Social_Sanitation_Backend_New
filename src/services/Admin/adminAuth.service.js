@@ -2,7 +2,7 @@ const { status: httpStatus } = require("http-status");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
-const { Admin, Role, UserOAuth } = require("../../models");
+const { Admin, Role } = require("../../models");
 const { Op } = require("sequelize");
 const { ROLE } = require("../../config/roles");
 const ApiError = require("../../utils/ApiError");
@@ -72,18 +72,14 @@ const loginAdminUser = async (reqBody) => {
       { algorithm: "HS256", expiresIn: `${config.jwt.adminAccessExpirationDays}d` }
     );
 
-    // Check if id and role_id are present in UserAuth table
-    const userAuth = await UserOAuth.findOne({
-      where: { user_id: user.id, role_id: user.role_id },
-    });
-
     const response = {
       id: user.id,
       name: user.name,
       email: user.email,
       token: token,
       role_id: user.role_id,
-      authorize: userAuth ? true : false,
+      // Google Calendar is gone; the flag stays for the panel builds that read it
+      authorize: false,
     };
 
     return response;

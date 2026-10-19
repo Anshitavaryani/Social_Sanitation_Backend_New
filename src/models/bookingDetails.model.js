@@ -105,11 +105,6 @@ BookingDetails.init(
 			type: DataTypes.BOOLEAN,
 			defaultValue: true,
 		},
-		calendar_event_id: {
-			type: DataTypes.STRING,
-			allowNull: true,
-			defaultValue: null,
-		},
 
 		time_zone: {
 			type: DataTypes.STRING(255),

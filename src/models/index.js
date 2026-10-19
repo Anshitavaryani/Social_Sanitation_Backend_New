@@ -16,8 +16,6 @@ const UserAddress = require("./userAddress.model.js");
 const UserToken = require("./userToken.model");
 const UserAttachment = require("./userAttachment.model");
 const userLoginTiming = require("./userLoginTiming.model");
-const UserOAuth = require("./userOAuth.model.js");
-const AdminOAuth = require("./adminOAuth.model.js");
 
 const ContactUs = require("./contactUs.model");
 const Faq = require("./faq.model");
@@ -119,8 +117,6 @@ module.exports = {
   UserToken,
   UserAttachment,
   userLoginTiming,
-  UserOAuth,
-  AdminOAuth,
 
   ContactUs,
   Faq,

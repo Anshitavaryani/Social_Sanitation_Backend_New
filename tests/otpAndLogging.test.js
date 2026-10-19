@@ -200,7 +200,6 @@ test("logging in never writes the password or the session token to the logs", as
     password: await bcrypt.hash(password, 4),
     user_profile: { name: "Ana" },
   });
-  models.UserOAuth.findOne = async () => null;
   models.Timezone.findOne = async () => ({ id: 4 });
   sequelize.query = async () => [1, 1];
 

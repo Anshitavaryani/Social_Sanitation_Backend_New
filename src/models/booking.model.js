@@ -114,10 +114,6 @@ Booking.init(
       ],
       defaultValue: bookingTypes.PENDING,
     },
-    calendar_event_id: {
-      type: DataTypes.STRING,
-      defaultValue: true,
-    },
     payment_status: {
       type: DataTypes.ENUM,
       values: [
