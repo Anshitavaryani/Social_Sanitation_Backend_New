@@ -195,6 +195,15 @@ test("recurring settings are created, updated or cancelled", async () => {
   await invoices.updateInvoice(50, { recurring_end_date: "2027-12-01" });
   assert.deepEqual(db.log.find(([n]) => n === "InvoiceRecurring#update")[2].end_date, "2027-04-25", "capped at 6 months after billing");
 
+  // an edit that does not send the recurring fields keeps them (it reset the series to monthly,
+  // with no end date and no maximum)
+  db.reset();
+  withInvoice();
+  db.respond("InvoiceRecurring.findOne", () => ({ id: 3, status: "ACTIVE", frequency: "WEEKLY", max_occurrences: 6, end_date: "2027-01-01" }));
+  await invoices.updateInvoice(50, { to_company_name: "Renamed Co" });
+  const kept = db.log.find(([n]) => n === "InvoiceRecurring#update")[2];
+  assert.deepEqual([kept.frequency, kept.max_occurrences, kept.end_date, kept.next_billing_date], ["WEEKLY", 6, "2027-01-01", "2026-11-01"]);
+
   db.reset();
   withInvoice();
   db.respond("InvoiceRecurring.findOne", () => ({ id: 3, status: "ACTIVE" }));

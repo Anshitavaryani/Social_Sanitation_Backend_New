@@ -804,9 +804,10 @@ const updateInvoice = async (invoice_id, body) => {
       deposit_required,
       deposit_percentage,
       is_recurring,
-      recurring_frequency = "MONTHLY",
-      recurring_end_date = null,
-      recurring_max_occurrences = null,
+      // not sent: the schedule keeps its frequency, end date and maximum
+      recurring_frequency,
+      recurring_end_date,
+      recurring_max_occurrences,
       balance_date,
       billing_date,
     } = body;
