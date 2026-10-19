@@ -515,34 +515,275 @@ async function updateRecurringBookingWithEditMode(
   }
 }
 
-const updateBookingStatus = async (reqBody) => {
-  let {
-    booking_id,
-    date,
+// ----- updating a booking (status, details, employees, recurrence)
+
+// The status, time and name fields of a status update, with the booking's UTC date and time
+// recomputed when it has a time zone and a date and time to work from
+const statusAndTimesUpdate = (bookingDoc, { date, time, end_time_by_admin, booking_name, booking_status, google_map_link }, effectiveDate) => {
+  let updateData = {
+    booking_status,
+    google_map_link,
     time,
+    booking_name,
     end_time_by_admin,
+  };
+
+  const effectiveTime = time || bookingDoc.time;
+
+  if (effectiveDate && effectiveTime && bookingDoc.time_zone) {
+    const { date_in_utc, time_in_utc } = bookingUtcParts(effectiveDate, effectiveTime, bookingDoc.time_zone);
+
+    updateData = {
+      ...updateData,
+      date,
+      time,
+      date_in_utc,
+      time_in_utc,
+    };
+
+    // ensure we still include end_time_by_admin if it was provided earlier
+    if (typeof end_time_by_admin !== "undefined") {
+      updateData.end_time_by_admin = end_time_by_admin;
+    }
+  }
+
+  if (booking_name) {
+    updateData.booking_name = booking_name;
+  }
+
+  return updateData;
+};
+
+// The booking fields an edit sends, and the recurrence fields it includes (repeat_on_days may come
+// as JSON text; unreadable text counts as no days)
+const bookingEditPayload = ({ booking_name, client_name, date, time, booking_status, google_map_link, end_time_by_admin, repeat_on_days, recurring_type, recurring_every, recurrence_end_type, recurrence_end_value }) => {
+  const updatePayload = {
     booking_name,
     client_name,
-    google_map_link,
+    date,
+    time,
     booking_status,
-    cleaners,
-    supervisors,
-    quality_inspectors,
-    remove_employees,
+    google_map_link,
+    end_time_by_admin,
+  };
+
+  if (typeof repeat_on_days !== "undefined") {
+    let parsedRepeatDays = repeat_on_days;
+
+    if (typeof repeat_on_days === "string") {
+      try {
+        parsedRepeatDays = JSON.parse(repeat_on_days);
+      } catch {
+        logger.warn("Failed to parse repeat_on_days, defaulting to empty array");
+        parsedRepeatDays = [];
+      }
+    }
+
+    if (Array.isArray(parsedRepeatDays)) {
+      updatePayload.repeat_on_days = parsedRepeatDays;
+    }
+  }
+
+  if (typeof recurring_type !== "undefined") {
+    updatePayload.recurring_type = recurring_type;
+  }
+
+  if (typeof recurring_every !== "undefined") {
+    updatePayload.recurring_every = recurring_every;
+  }
+
+  if (typeof recurrence_end_type !== "undefined") {
+    updatePayload.recurrence_end_type = recurrence_end_type;
+  }
+
+  if (typeof recurrence_end_value !== "undefined") {
+    updatePayload.recurrence_end_value = recurrence_end_value;
+  }
+
+  return updatePayload;
+};
+
+// Saves a Google Maps link's coordinates on the booking's address
+const saveMapLocation = async (bookingDoc, google_map_link) => {
+  const coordinates = await getCoordinatesFromGoogleMapLink(google_map_link, config.GOOGLE_API_KEY);
+  if (coordinates) {
+    await UserAddress.update(
+      {
+        address_lat: coordinates.latitude,
+        address_long: coordinates.longitude,
+        google_map_link: google_map_link,
+      },
+      { where: { id: bookingDoc.address_id } },
+    );
+  }
+};
+
+// Adds the cleaners, supervisors and quality inspectors the request names, skipping repeats and
+// assignments the booking already has
+const assignEmployees = async (booking_id, { cleaners, supervisors, quality_inspectors }) => {
+  const assignments = [];
+
+  if (Array.isArray(cleaners) && cleaners.length > 0) {
+    cleaners.forEach((id) => assignments.push({ booking_id, employee_id: id, role_id: ROLE.CLEANER }));
+  }
+  if (Array.isArray(supervisors) && supervisors.length > 0) {
+    supervisors.forEach((id) => assignments.push({ booking_id, employee_id: id, role_id: ROLE.SUPERVISOR }));
+  }
+  if (Array.isArray(quality_inspectors) && quality_inspectors.length > 0) {
+    quality_inspectors.forEach((id) => assignments.push({ booking_id, employee_id: id, role_id: ROLE.QUALITY_INSPECTOR }));
+  }
+
+  if (assignments.length === 0) return;
+
+  // Remove duplicates inside the same request
+  const uniqueAssignments = assignments.filter(
+    (obj, index, self) =>
+      index === self.findIndex((t) => t.booking_id === obj.booking_id && t.employee_id === obj.employee_id && t.role_id === obj.role_id),
+  );
+
+  const existingAssignments = await BookingAssignment.findAll({
+    where: { booking_id },
+    attributes: ["employee_id", "role_id"],
+    raw: true,
+  });
+
+  const existingSet = new Set(existingAssignments.map((a) => `${a.employee_id}-${a.role_id}`));
+
+  const newAssignments = uniqueAssignments.filter((a) => !existingSet.has(`${a.employee_id}-${a.role_id}`));
+
+  if (newAssignments.length > 0) {
+    await BookingAssignment.bulkCreate(newAssignments);
+    logger.debug("Saved new assignments:", newAssignments.length);
+  }
+};
+
+// The booking's Firebase group chat: the assigned employees, every super admin and the booking's BDM.
+// An existing group gains the new members and loses the removed employees; a new one gets a welcome
+// message.
+const syncBookingGroupChat = async (bookingDoc, booking_id, { cleaners, supervisors, quality_inspectors, remove_employees }, effectiveDate) => {
+  const allMembers = new Set([
+    ...(cleaners || []).map((id) => `employee_${id}`),
+    ...(supervisors || []).map((id) => `employee_${id}`),
+    ...(quality_inspectors || []).map((id) => `employee_${id}`),
+  ]);
+
+  const admins = await Admin.findAll({
+    where: { role_id: [1], is_active: true },
+  });
+  admins.forEach((admin) => allMembers.add(`admin_${admin.id}`));
+  if (bookingDoc.bdm_id) {
+    allMembers.add(`bdm_${bookingDoc.bdm_id}`);
+  }
+
+  const groupName = `${bookingDoc.booking_name || "Booking"} - ${effectiveDate || toCalendarDate(bookingDoc.date)}`;
+
+  const groupRef = getDatabase().ref(`GroupChats/booking_${booking_id}`);
+  const snapshot = await groupRef.once("value");
+
+  if (snapshot.exists()) {
+    const existingMembers = snapshot.val().members || {};
+
+    [...allMembers].forEach((id) => {
+      if (!existingMembers[id]) existingMembers[id] = true;
+    });
+
+    if (Array.isArray(remove_employees) && remove_employees.length > 0) {
+      remove_employees.forEach((empId) => {
+        const empKey = `employee_${empId}`;
+        if (existingMembers[empKey]) delete existingMembers[empKey];
+      });
+    }
+
+    await groupRef.update({ members: existingMembers });
+  } else {
+    await groupRef.set({
+      name: groupName,
+      created_at: ServerValue.TIMESTAMP,
+      members: Object.fromEntries([...allMembers].map((id) => [id, true])),
+      messages: {},
+    });
+    await groupRef.child("messages").push({
+      sender: "System",
+      message: "Welcome to the group for this booking!",
+      timestamp: ServerValue.TIMESTAMP,
+    });
+  }
+};
+
+// After an accepted update: a recurring booking that sends recurrence settings gets a new series
+// (user or guest); a booking no longer recurring has its recurrence cleared
+const applyRecurrence = async (bookingDoc, booking_id, { is_recurring, recurring_every, recurring_type, repeat_on_days, recurrence_end_type, recurrence_end_value, client_name }) => {
+  const isRecurringBooking = is_recurring === true && bookingDoc.type === "Recurring Booking";
+
+  if (!isRecurringBooking) {
+    await Booking.update(
+      {
+        is_recurring: false,
+        recurring_every: null,
+        recurring_type: null,
+        repeat_on_days: null,
+        recurrence_end_type: null,
+        recurrence_end_value: null,
+        recurrence_id: null,
+      },
+      { where: { id: booking_id } },
+    );
+    return;
+  }
+
+  const isRecurrenceInputMissing =
+    recurring_every === undefined &&
+    recurring_type === undefined &&
+    (repeat_on_days === undefined || repeat_on_days.length === 0) &&
+    recurrence_end_type === undefined &&
+    recurrence_end_value === undefined;
+
+  if (isRecurrenceInputMissing) return;
+
+  const recurrence_id = uuidv4();
+
+  await Booking.update(
+    {
+      is_recurring: true,
+      recurring_every,
+      recurring_type,
+      repeat_on_days: Array.isArray(repeat_on_days) ? repeat_on_days : null,
+      recurrence_end_type,
+      recurrence_end_value,
+      recurrence_id,
+      client_name,
+    },
+    { where: { id: booking_id } },
+  );
+
+  const series = {
+    baseBooking: bookingDoc,
     recurring_every,
     recurring_type,
-    repeat_on_days,
+    repeat_on_days: repeat_on_days || [],
     recurrence_end_type,
     recurrence_end_value,
-  } = reqBody;
+    recurrence_id,
+  };
 
+  if (bookingDoc.user_id === null) {
+    await createRecurringGuestBookings(series);
+  } else {
+    await createRecurringBookings({ ...series, user_id: bookingDoc.user_id });
+  }
+};
+
+// POST /admin/booking/updateBookingStatus. A booking in a series edited as "following" or "all" is
+// handled by updateRecurringBookingWithEditMode; otherwise the booking is updated, a rejected one is
+// deactivated, and an accepted one gets its employees, group chat and recurrence.
+const updateBookingStatus = async (reqBody) => {
+  const { booking_id, date, booking_status, google_map_link, cleaners, supervisors, quality_inspectors, remove_employees, client_name } = reqBody;
 
   let is_recurring = reqBody.is_recurring;
 
   if (typeof is_recurring === "string") {
     is_recurring = toBoolean(is_recurring);
   }
-
 
   try {
     const bookingDoc = await Booking.findByPk(booking_id);
@@ -551,132 +792,21 @@ const updateBookingStatus = async (reqBody) => {
       throw new ApiError(httpStatus.NOT_FOUND, "Booking not found");
     }
 
-    // If date & time are being updated, compute UTC versions
-    let updateData = {
-      booking_status,
-      google_map_link,
-      time,
-      booking_name,
-      end_time_by_admin,
-    };
-
-
-    const formatDate = (inputDate) => toCalendarDate(inputDate);
-
-    let effectiveDate =
-      date || (bookingDoc.date ? formatDate(bookingDoc.date) : null);
-    let effectiveTime = time || bookingDoc.time;
-
-
-    if (effectiveDate && effectiveTime && bookingDoc.time_zone) {
-      const { date_in_utc, time_in_utc } = bookingUtcParts(
-        effectiveDate,
-        effectiveTime,
-        bookingDoc.time_zone,
-      );
-
-
-      updateData = {
-        ...updateData,
-        date,
-        time,
-        date_in_utc,
-        time_in_utc,
-      };
-
-      // ensure we still include end_time_by_admin if it was provided earlier
-      if (typeof end_time_by_admin !== "undefined") {
-        updateData.end_time_by_admin = end_time_by_admin;
-      }
-    }
-
-    // ✅ Add booking_name if it's provided
-    if (booking_name) {
-      updateData.booking_name = booking_name;
-    }
-
-
-    // 🧹 Prepare update payload
-    let updatePayload = {
-      booking_name,
-      client_name,
-      date,
-      time,
-      booking_status,
-      google_map_link,
-      end_time_by_admin,
-    };
-
-    // 🔁 Handle recurrence fields only if provided
-    if (typeof repeat_on_days !== "undefined") {
-      let parsedRepeatDays = repeat_on_days;
-
-      if (typeof repeat_on_days === "string") {
-        try {
-          parsedRepeatDays = JSON.parse(repeat_on_days);
-        } catch (e) {
-          logger.warn(
-            "Failed to parse repeat_on_days, defaulting to empty array",
-          );
-          parsedRepeatDays = [];
-        }
-      }
-
-      if (Array.isArray(parsedRepeatDays)) {
-        updatePayload.repeat_on_days = parsedRepeatDays;
-      }
-    }
-
-    if (typeof recurring_type !== "undefined") {
-      updatePayload.recurring_type = recurring_type;
-    }
-
-    if (typeof recurring_every !== "undefined") {
-      updatePayload.recurring_every = recurring_every;
-    }
-
-    if (typeof recurrence_end_type !== "undefined") {
-      updatePayload.recurrence_end_type = recurrence_end_type;
-    }
-
-    if (typeof recurrence_end_value !== "undefined") {
-      updatePayload.recurrence_end_value = recurrence_end_value;
-    }
+    const effectiveDate = date || (bookingDoc.date ? toCalendarDate(bookingDoc.date) : null);
+    const updateData = statusAndTimesUpdate(bookingDoc, reqBody, effectiveDate);
+    const updatePayload = bookingEditPayload(reqBody);
 
     const editMode = reqBody.edit_mode || "this";
 
-
-    if (!bookingDoc.recurrence_id || editMode === "this") {
-      await Booking.update(updatePayload, { where: { id: booking_id } });
-    } else {
-      // Use the new, correct logic for recurring edits
-      const result = await updateRecurringBookingWithEditMode(
-        booking_id,
-        updatePayload,
-        editMode,
-        createRecurringBookings,
-      );
-      // Handle success/error as needed
-      return result;
+    if (bookingDoc.recurrence_id && editMode !== "this") {
+      return await updateRecurringBookingWithEditMode(booking_id, updatePayload, editMode, createRecurringBookings);
     }
 
+    await Booking.update(updatePayload, { where: { id: booking_id } });
     await Booking.update(updateData, { where: { id: booking_id } });
 
     if (google_map_link) {
-      const coordinates = await getCoordinatesFromGoogleMapLink(
-        google_map_link,
-        config.GOOGLE_API_KEY,
-      );
-      if (coordinates) {
-        await UserAddress.update(
-          {
-            address_lat: coordinates.latitude,
-            address_long: coordinates.longitude,
-            google_map_link: google_map_link,
-          },
-          { where: { id: bookingDoc.address_id } },
-        );
-      }
+      await saveMapLocation(bookingDoc, google_map_link);
     }
 
     if (booking_status === bookingTypes.REJECTED) {
@@ -702,125 +832,9 @@ const updateBookingStatus = async (reqBody) => {
       });
     }
 
-    if (
-      booking_status === bookingTypes.ACCEPTED ||
-      bookingDoc.booking_status === bookingTypes.ACCEPTED
-    ) {
-      const assignments = [];
-
-      if (Array.isArray(cleaners) && cleaners.length > 0) {
-        cleaners.forEach((id) =>
-          assignments.push({ booking_id, employee_id: id, role_id: ROLE.CLEANER }),
-        );
-      }
-      if (Array.isArray(supervisors) && supervisors.length > 0) {
-        supervisors.forEach((id) =>
-          assignments.push({ booking_id, employee_id: id, role_id: ROLE.SUPERVISOR }),
-        );
-      }
-      if (Array.isArray(quality_inspectors) && quality_inspectors.length > 0) {
-
-        quality_inspectors.forEach((id) =>
-          assignments.push({ booking_id, employee_id: id, role_id: ROLE.QUALITY_INSPECTOR }),
-        );
-      }
-
-      if (assignments.length > 0) {
-
-        // Remove duplicates inside the same request
-        const uniqueAssignments = assignments.filter(
-          (obj, index, self) =>
-            index ===
-            self.findIndex(
-              (t) =>
-                t.booking_id === obj.booking_id &&
-                t.employee_id === obj.employee_id &&
-                t.role_id === obj.role_id,
-            ),
-        );
-
-        // Fetch existing assignments from DB
-        const existingAssignments = await BookingAssignment.findAll({
-          where: { booking_id },
-          attributes: ["employee_id", "role_id"],
-          raw: true,
-        });
-
-        const existingSet = new Set(
-          existingAssignments.map((a) => `${a.employee_id}-${a.role_id}`),
-        );
-
-        // Filter out already existing
-        const newAssignments = uniqueAssignments.filter(
-          (a) => !existingSet.has(`${a.employee_id}-${a.role_id}`),
-        );
-
-        if (newAssignments.length > 0) {
-          await BookingAssignment.bulkCreate(newAssignments);
-          logger.debug("Saved new assignments:", newAssignments.length);
-        }
-      }
-
-      // Firebase group chat creation
-      const allMembers = new Set([
-        ...(cleaners || []).map((id) => `employee_${id}`),
-        ...(supervisors || []).map((id) => `employee_${id}`),
-        ...(quality_inspectors || []).map((id) => `employee_${id}`),
-      ]);
-
-      const admins = await Admin.findAll({
-        where: { role_id: [1], is_active: true },
-      });
-      admins.forEach((admin) => allMembers.add(`admin_${admin.id}`));
-      if (bookingDoc.bdm_id) {
-        allMembers.add(`bdm_${bookingDoc.bdm_id}`);
-      }
-
-      const groupName = `${bookingDoc.booking_name || "Booking"} - ${effectiveDate || formatDate(bookingDoc.date)}`;
-
-      const groupRef = getDatabase().ref(`GroupChats/booking_${booking_id}`);
-      const snapshot = await groupRef.once("value");
-
-      if (snapshot.exists()) {
-        // Update members
-        let existingMembers = snapshot.val().members || {};
-
-        // Add new
-        [...allMembers].forEach((id) => {
-          if (!existingMembers[id]) existingMembers[id] = true;
-        });
-
-        // Remove
-        if (Array.isArray(remove_employees) && remove_employees.length > 0) {
-          remove_employees.forEach((empId) => {
-            const empKey = `employee_${empId}`;
-            if (existingMembers[empKey]) delete existingMembers[empKey];
-          });
-        }
-
-        await groupRef.update({ members: existingMembers });
-      } else {
-        // Create new group
-        await groupRef.set({
-          name: groupName,
-          created_at: ServerValue.TIMESTAMP,
-          members: Object.fromEntries([...allMembers].map((id) => [id, true])),
-          messages: {},
-        });
-        await groupRef.child("messages").push({
-          sender: "System",
-          message: "Welcome to the group for this booking!",
-          timestamp: ServerValue.TIMESTAMP,
-        });
-      }
-
-      const isRecurringBooking =
-        is_recurring === true && bookingDoc.type === "Recurring Booking";
-
-
-      if (typeof is_recurring === "string") {
-        is_recurring = toBoolean(is_recurring);
-      }
+    if (booking_status === bookingTypes.ACCEPTED || bookingDoc.booking_status === bookingTypes.ACCEPTED) {
+      await assignEmployees(booking_id, { cleaners, supervisors, quality_inspectors });
+      await syncBookingGroupChat(bookingDoc, booking_id, { cleaners, supervisors, quality_inspectors, remove_employees }, effectiveDate);
 
       if (typeof is_recurring !== "boolean") {
         return {
@@ -829,80 +843,11 @@ const updateBookingStatus = async (reqBody) => {
         };
       }
 
-      if (isRecurringBooking) {
-
-        const isRecurrenceInputMissing =
-          recurring_every === undefined &&
-          recurring_type === undefined &&
-          (repeat_on_days === undefined || repeat_on_days.length === 0) &&
-          recurrence_end_type === undefined &&
-          recurrence_end_value === undefined;
-
-        if (isRecurrenceInputMissing) {
-          // Skip everything
-        } else {
-          const recurrence_id = uuidv4();
-
-
-          await Booking.update(
-            {
-              is_recurring: true,
-              recurring_every,
-              recurring_type,
-              repeat_on_days: Array.isArray(repeat_on_days)
-                ? repeat_on_days
-                : null,
-              recurrence_end_type,
-              recurrence_end_value,
-              recurrence_id,
-              client_name,
-            },
-            { where: { id: booking_id } },
-          );
-
-          if (bookingDoc.user_id === null) {
-            await createRecurringGuestBookings({
-              baseBooking: bookingDoc,
-              recurring_every,
-              recurring_type,
-              repeat_on_days: repeat_on_days || [],
-              recurrence_end_type,
-              recurrence_end_value,
-              recurrence_id,
-            });
-          } else {
-            await createRecurringBookings({
-              baseBooking: bookingDoc,
-              user_id: bookingDoc.user_id,
-              recurring_every,
-              recurring_type,
-              repeat_on_days: repeat_on_days || [],
-              recurrence_end_type,
-              recurrence_end_value,
-              recurrence_id,
-            });
-          }
-        }
-      } else {
-        // Not a recurring booking anymore – clear fields
-        await Booking.update(
-          {
-            is_recurring: false,
-            recurring_every: null,
-            recurring_type: null,
-            repeat_on_days: null,
-            recurrence_end_type: null,
-            recurrence_end_value: null,
-            recurrence_id: null,
-          },
-          { where: { id: booking_id } },
-        );
-      }
+      await applyRecurrence(bookingDoc, booking_id, { ...reqBody, is_recurring, client_name });
 
       return {
         success: true,
-        message:
-          "Booking status updated to accepted, employees assigned/removed successfully",
+        message: "Booking status updated to accepted, employees assigned/removed successfully",
       };
     }
   } catch (error) {
