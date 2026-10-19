@@ -21,7 +21,7 @@ const {
   recurringInvoiceStatusTypes,
 } = require("../../../config/types");
 const { getNextInvoiceRef } = require("./invoices");
-const { timezone } = require("./shared");
+const { timezone, nextBillingAfter } = require("./shared");
 
 //   try {
 
@@ -209,6 +209,253 @@ const sendInvoiceCron = async () => {
   }
 };
 
+// ----- recurring invoices
+
+// The dates of the next invoice in a series, from its billing date: the due date and the service
+// period keep the template's distance from (and length after) its own billing date
+const nextOccurrenceDates = (invoice, billingMoment) => {
+  const originalBillingMoment = dayjs(invoice.billing_date, DATE_FORMAT, true);
+  const originalDueMoment = dayjs(invoice.due_date, DATE_FORMAT, true);
+
+  let dueGap = 0;
+  if (originalBillingMoment.isValid() && originalDueMoment.isValid()) {
+    dueGap = originalDueMoment.diff(originalBillingMoment, "days");
+  }
+
+  const serviceParts = invoice.service_dates ? invoice.service_dates.split(" - ") : ["", ""];
+  const originalServiceStart = dayjs(serviceParts[0], DATE_FORMAT, true);
+  const originalServiceEnd = dayjs(serviceParts[1], DATE_FORMAT, true);
+
+  let serviceDuration = 0;
+  if (originalServiceStart.isValid() && originalServiceEnd.isValid()) {
+    serviceDuration = Math.max(0, originalServiceEnd.diff(originalServiceStart, "days"));
+  }
+
+  return {
+    originalBillingMoment,
+    invoiceDate: billingMoment.format(DATE_FORMAT),
+    dueDate: billingMoment.clone().add(dueGap, "days").format(DATE_FORMAT),
+    serviceDates: `${billingMoment.format(DATE_FORMAT)} - ${billingMoment.clone().add(serviceDuration, "days").format(DATE_FORMAT)}`,
+  };
+};
+
+// The template's deposit terms for the next invoice; its balance date keeps the template's gap after
+// the billing date. null (and logged) when a deposit's dates can't be carried over.
+const recurringDepositTerms = (invoice, totalDue, originalBillingMoment, billingMoment) => {
+  // Handles Sequelize booleans and common DB representations.
+  const required = toBoolean(invoice.deposit_required);
+
+  const rawDepositPercentage = Number(invoice.deposit_percentage);
+
+  const percentage = required
+    ? Number.isFinite(rawDepositPercentage) && rawDepositPercentage > 0 && rawDepositPercentage <= 100
+      ? rawDepositPercentage
+      : INVOICE.DEFAULT_DEPOSIT_PERCENT
+    : 0;
+
+  const { deposit, balance } = required ? splitDeposit(totalDue, percentage) : { deposit: null, balance: null };
+
+  let balanceDueDate = null;
+
+  if (required) {
+    const originalBalanceDueMoment = dayjs(invoice.balance_due_date, DATE_FORMAT, true);
+
+    if (!originalBillingMoment.isValid()) {
+      logger.error(`Cannot generate deposit invoice from template ${invoice.id}: invalid billing_date.`);
+      return null;
+    }
+
+    if (!originalBalanceDueMoment.isValid()) {
+      logger.error(`Cannot generate deposit invoice from template ${invoice.id}: balance_due_date is missing or invalid.`);
+      return null;
+    }
+
+    const balanceGap = originalBalanceDueMoment.diff(originalBillingMoment, "days");
+
+    if (balanceGap <= 0) {
+      logger.error(`Cannot generate deposit invoice from template ${invoice.id}: balance_due_date must be after billing_date.`);
+      return null;
+    }
+
+    balanceDueDate = billingMoment.clone().add(balanceGap, "days").format(DATE_FORMAT);
+  }
+
+  return { required, percentage, deposit, balance, balanceDueDate };
+};
+
+// Counts the new invoice and moves the schedule to its next billing date; the schedule completes at
+// its maximum or once the next date is past its end date
+const advanceRecurringSchedule = async (recurring, nextBillingMoment) => {
+  const finalCount = Number(recurring.occurrences_generated || 0) + 1;
+
+  const updateData = {
+    occurrences_generated: finalCount,
+    next_billing_date: nextBillingMoment.format(DATE_FORMAT),
+  };
+
+  if (recurring.max_occurrences && finalCount >= Number(recurring.max_occurrences)) {
+    updateData.status = recurringInvoiceStatusTypes.COMPLETED;
+  }
+
+  if (recurring.end_date && nextBillingMoment.isAfter(parseDateInZone(recurring.end_date, timezone), "day")) {
+    updateData.status = recurringInvoiceStatusTypes.COMPLETED;
+  }
+
+  await recurring.update(updateData);
+
+  logger.info(`Recurring schedule ${recurring.id} updated. Next billing date: ${nextBillingMoment.format(DATE_FORMAT)}`);
+};
+
+// The next invoice of one schedule due today: a copy of its template invoice (items, client, total,
+// deposit terms) with the next dates and a fresh payment lifecycle. Skips, and logs why, when the
+// template is gone or inactive, the schedule is over, or the invoice already exists.
+const generateNextRecurringInvoice = async (recurring) => {
+  const invoice = await Invoice.findByPk(recurring.invoice_id, {
+    include: [
+      {
+        model: InvoiceItem,
+        as: "service_invoice_item",
+        separate: true,
+        order: [["sort_order", "ASC"]],
+      },
+    ],
+  });
+
+  if (!invoice) {
+    logger.warn(`Invoice not found for recurring schedule ${recurring.id}.`);
+    return;
+  }
+
+  if (recurring.max_occurrences && Number(recurring.occurrences_generated || 0) >= Number(recurring.max_occurrences)) {
+    logger.info(`Recurring schedule ${recurring.id} reached its maximum occurrences.`);
+    await recurring.update({ status: recurringInvoiceStatusTypes.COMPLETED });
+    return;
+  }
+
+  if (invoice.status !== invoiceStatusTypes.ACTIVE || !invoice.is_active) {
+    logger.info(`Recurring schedule ${recurring.id}: template invoice ${invoice.id} is inactive.`);
+    return;
+  }
+
+  const billingMoment = parseDateInZone(recurring.next_billing_date, timezone);
+
+  if (!billingMoment.isValid()) {
+    logger.error(`Invalid next billing date for recurring schedule ${recurring.id}:`, recurring.next_billing_date);
+    return;
+  }
+
+  if (recurring.end_date) {
+    const endMoment = parseDateInZone(recurring.end_date, timezone);
+
+    if (endMoment.isValid() && billingMoment.isAfter(endMoment, "day")) {
+      logger.info(`Recurring schedule ${recurring.id} completed.`);
+      await recurring.update({ status: recurringInvoiceStatusTypes.COMPLETED });
+      return;
+    }
+  }
+
+  const nextBillingMoment = nextBillingAfter(billingMoment, recurring.frequency);
+  const dates = nextOccurrenceDates(invoice, billingMoment);
+
+  const totalDue = Number(invoice.total_due || 0);
+
+  if (!Number.isFinite(totalDue) || totalDue < 0) {
+    logger.error(`Invalid total_due on recurring template invoice ${invoice.id}.`);
+    return;
+  }
+
+  const deposit = recurringDepositTerms(invoice, totalDue, dates.originalBillingMoment, billingMoment);
+  if (!deposit) return;
+
+  const { ref_no: newRef } = await getNextInvoiceRef(invoice.ref_type);
+
+  const existingInvoice = await Invoice.findOne({
+    where: {
+      user_id: invoice.user_id,
+      billing_date: billingMoment.format(DATE_FORMAT),
+      ref_type: invoice.ref_type,
+      status: invoiceStatusTypes.ACTIVE,
+      is_active: true,
+    },
+  });
+
+  if (existingInvoice) {
+    logger.info(`Invoice already exists for billing date ${dates.invoiceDate}.`);
+    return;
+  }
+
+  const newInvoice = await Invoice.create({
+    user_id: invoice.user_id,
+    quote_id: invoice.quote_id,
+
+    ref_type: invoice.ref_type,
+    ref_no: newRef,
+    event_name: invoice.event_name,
+
+    scheduled_send_at: billingMoment.clone().hour(9).minute(0).second(0).millisecond(0).toDate(),
+
+    custom_ref_no: null,
+
+    service_dates: dates.serviceDates,
+
+    billing_date: dates.invoiceDate,
+    date: dates.invoiceDate,
+    due_date: dates.dueDate,
+
+    to_company_name: invoice.to_company_name,
+    address_1: invoice.address_1,
+    address_2: invoice.address_2,
+
+    // The invoice's total remains the full invoice amount.
+    total_due: totalDue,
+
+    signature: invoice.signature,
+
+    // Deposit configuration is copied to each future invoice.
+    deposit_required: deposit.required,
+    deposit_percentage: deposit.required ? deposit.percentage : invoice.deposit_percentage ?? INVOICE.DEFAULT_DEPOSIT_PERCENT,
+    deposit_amount: deposit.deposit,
+    balance_amount: deposit.balance,
+    balance_due_date: deposit.balanceDueDate,
+
+    // Every generated invoice starts with a fresh payment lifecycle.
+    payment_stage: deposit.required ? invoicePaymentStageTypes.DEPOSIT_PENDING : invoicePaymentStageTypes.FULL,
+    deposit_paid_at: null,
+    balance_sent_at: null,
+    balance_paid_at: null,
+
+    status: invoiceStatusTypes.ACTIVE,
+    is_active: true,
+  });
+
+  logger.info(`Created recurring invoice ${newInvoice.ref_no}. Deposit required: ${deposit.required}.`);
+
+  const newItems = (invoice.service_invoice_item || []).map((item) => ({
+    invoice_id: newInvoice.id,
+
+    description: item.description,
+    frequency: item.frequency,
+
+    quantity: item.quantity,
+
+    calculation_type: item.calculation_type,
+    sqft: item.sqft,
+    hour: item.hour,
+
+    unit_price: item.unit_price,
+    amount: item.amount,
+    sort_order: item.sort_order,
+  }));
+
+  if (newItems.length > 0) {
+    await InvoiceItem.bulkCreate(newItems);
+  }
+
+  await advanceRecurringSchedule(recurring, nextBillingMoment);
+};
+
+// Daily job: the next invoice of every active schedule whose next billing date is today. A failing
+// schedule is logged and the others go on.
 const generateRecurringInvoicesCron = async () => {
   try {
     const today = dateInTz();
@@ -220,406 +467,13 @@ const generateRecurringInvoicesCron = async () => {
       },
     });
 
-    logger.info(
-      `Recurring invoices to generate: ${recurringInvoices.length}`,
-    );
+    logger.info(`Recurring invoices to generate: ${recurringInvoices.length}`);
 
     for (const recurring of recurringInvoices) {
       try {
-
-        const invoice = await Invoice.findByPk(recurring.invoice_id, {
-          include: [
-            {
-              model: InvoiceItem,
-              as: "service_invoice_item",
-              separate: true,
-              order: [["sort_order", "ASC"]],
-            },
-          ],
-        });
-
-        if (!invoice) {
-          logger.warn(
-            `Invoice not found for recurring schedule ${recurring.id}.`,
-          );
-          continue;
-        }
-
-        // ---------- CHECK OCCURRENCE LIMIT ----------
-
-        if (
-          recurring.max_occurrences &&
-          Number(recurring.occurrences_generated || 0) >=
-            Number(recurring.max_occurrences)
-        ) {
-          logger.info(`Recurring schedule ${recurring.id} reached its maximum occurrences.`);
-
-          await recurring.update({
-            status: recurringInvoiceStatusTypes.COMPLETED,
-          });
-
-          continue;
-        }
-
-        // ---------- CHECK TEMPLATE STATUS ----------
-
-        if (invoice.status !== invoiceStatusTypes.ACTIVE || !invoice.is_active) {
-          logger.info(`Recurring schedule ${recurring.id}: template invoice ${invoice.id} is inactive.`);
-          continue;
-        }
-
-        // ---------- CHECK RECURRING END DATE ----------
-
-        const billingMoment = parseDateInZone(recurring.next_billing_date, timezone);
-
-        if (!billingMoment.isValid()) {
-          logger.error(
-            `Invalid next billing date for recurring schedule ${recurring.id}:`,
-            recurring.next_billing_date,
-          );
-          continue;
-        }
-
-        if (recurring.end_date) {
-          const endMoment = parseDateInZone(recurring.end_date, timezone);
-
-          if (
-            endMoment.isValid() &&
-            billingMoment.isAfter(endMoment, "day")
-          ) {
-            logger.info(
-              `Recurring schedule ${recurring.id} completed.`,
-            );
-
-            await recurring.update({
-              status: recurringInvoiceStatusTypes.COMPLETED,
-            });
-
-            continue;
-          }
-        }
-
-        // ---------- CALCULATE NEXT BILLING DATE ----------
-
-        let nextBillingMoment = billingMoment.clone();
-
-        switch (recurring.frequency) {
-          case "WEEKLY":
-            nextBillingMoment = nextBillingMoment.add(1, "week");
-            break;
-
-          case "BIWEEKLY":
-            nextBillingMoment = nextBillingMoment.add(2, "weeks");
-            break;
-
-          case "MONTHLY":
-            nextBillingMoment = nextBillingMoment.add(1, "month");
-            break;
-
-          case "QUARTERLY":
-            nextBillingMoment = nextBillingMoment.add(3, "months");
-            break;
-
-          case "YEARLY":
-            nextBillingMoment = nextBillingMoment.add(1, "year");
-            break;
-
-          default:
-            nextBillingMoment = nextBillingMoment.add(1, "month");
-        }
-
-        // ---------- CALCULATE NEXT DUE DATE ----------
-
-        const originalBillingMoment = dayjs(
-          invoice.billing_date,
-          DATE_FORMAT,
-          true,
-        );
-
-        const originalDueMoment = dayjs(
-          invoice.due_date,
-          DATE_FORMAT,
-          true,
-        );
-
-        let dueGap = 0;
-
-        if (
-          originalBillingMoment.isValid() &&
-          originalDueMoment.isValid()
-        ) {
-          dueGap = originalDueMoment.diff(
-            originalBillingMoment,
-            "days",
-          );
-        }
-
-        const nextDueDate = billingMoment
-          .clone()
-          .add(dueGap, "days")
-          .format(DATE_FORMAT);
-
-        const nextInvoiceDate = billingMoment.format(DATE_FORMAT);
-
-        // ---------- CALCULATE SERVICE DATES ----------
-
-        const serviceParts = invoice.service_dates
-          ? invoice.service_dates.split(" - ")
-          : ["", ""];
-
-        const originalServiceStart = dayjs(
-          serviceParts[0],
-          DATE_FORMAT,
-          true,
-        );
-
-        const originalServiceEnd = dayjs(
-          serviceParts[1],
-          DATE_FORMAT,
-          true,
-        );
-
-        let serviceDuration = 0;
-
-        if (
-          originalServiceStart.isValid() &&
-          originalServiceEnd.isValid()
-        ) {
-          serviceDuration = Math.max(
-            0,
-            originalServiceEnd.diff(originalServiceStart, "days"),
-          );
-        }
-
-        const nextServiceStart = billingMoment.format(DATE_FORMAT);
-
-        const nextServiceEnd = billingMoment
-          .clone()
-          .add(serviceDuration, "days")
-          .format(DATE_FORMAT);
-
-        // ---------- PRESERVE DEPOSIT SETTINGS ----------
-
-        // Handles Sequelize booleans and common DB representations.
-        const recurringDepositRequired =
-          toBoolean(invoice.deposit_required);
-
-        const rawDepositPercentage = Number(
-          invoice.deposit_percentage,
-        );
-
-        const recurringDepositPercentage = recurringDepositRequired
-          ? Number.isFinite(rawDepositPercentage) &&
-            rawDepositPercentage > 0 &&
-            rawDepositPercentage <= 100
-            ? rawDepositPercentage
-            : INVOICE.DEFAULT_DEPOSIT_PERCENT
-          : 0;
-
-        const totalDue = Number(invoice.total_due || 0);
-
-        if (!Number.isFinite(totalDue) || totalDue < 0) {
-          logger.error(
-            `Invalid total_due on recurring template invoice ${invoice.id}.`,
-          );
-          continue;
-        }
-
-        const { deposit: recurringDepositAmount, balance: recurringBalanceAmount } = recurringDepositRequired
-          ? splitDeposit(totalDue, recurringDepositPercentage)
-          : { deposit: null, balance: null };
-
-        // Shift the balance due date by the same number of days
-        // as the gap between the template billing date and balance date.
-        let nextBalanceDueDate = null;
-
-        if (recurringDepositRequired) {
-          const originalBalanceDueMoment = dayjs(
-            invoice.balance_due_date,
-            DATE_FORMAT,
-            true,
-          );
-
-          if (!originalBillingMoment.isValid()) {
-            logger.error(
-              `Cannot generate deposit invoice from template ${invoice.id}: invalid billing_date.`,
-            );
-            continue;
-          }
-
-          if (!originalBalanceDueMoment.isValid()) {
-            logger.error(
-              `Cannot generate deposit invoice from template ${invoice.id}: balance_due_date is missing or invalid.`,
-            );
-            continue;
-          }
-
-          const balanceGap = originalBalanceDueMoment.diff(
-            originalBillingMoment,
-            "days",
-          );
-
-          if (balanceGap <= 0) {
-            logger.error(
-              `Cannot generate deposit invoice from template ${invoice.id}: balance_due_date must be after billing_date.`,
-            );
-            continue;
-          }
-
-          nextBalanceDueDate = billingMoment
-            .clone()
-            .add(balanceGap, "days")
-            .format(DATE_FORMAT);
-        }
-
-        // ---------- GENERATE NEXT INVOICE REFERENCE ----------
-
-        const newRefData = await getNextInvoiceRef(invoice.ref_type);
-        const newRef = newRefData.ref_no;
-
-        // ---------- CHECK FOR DUPLICATE ----------
-
-        const existingInvoice = await Invoice.findOne({
-          where: {
-            user_id: invoice.user_id,
-            billing_date: billingMoment.format(DATE_FORMAT),
-            ref_type: invoice.ref_type,
-            status: invoiceStatusTypes.ACTIVE,
-            is_active: true,
-          },
-        });
-
-        if (existingInvoice) {
-          logger.info(
-            `Invoice already exists for billing date ${nextInvoiceDate}.`,
-          );
-          continue;
-        }
-
-        // ---------- CREATE NEXT INVOICE ----------
-
-        const newInvoice = await Invoice.create({
-          user_id: invoice.user_id,
-          quote_id: invoice.quote_id,
-
-          ref_type: invoice.ref_type,
-          ref_no: newRef,
-          event_name: invoice.event_name,
-
-          scheduled_send_at: billingMoment
-            .clone()
-            .hour(9)
-            .minute(0)
-            .second(0)
-            .millisecond(0)
-            .toDate(),
-
-          custom_ref_no: null,
-
-          service_dates: `${nextServiceStart} - ${nextServiceEnd}`,
-
-          billing_date: nextInvoiceDate,
-          date: nextInvoiceDate,
-          due_date: nextDueDate,
-
-          to_company_name: invoice.to_company_name,
-          address_1: invoice.address_1,
-          address_2: invoice.address_2,
-
-          // The invoice's total remains the full invoice amount.
-          total_due: totalDue,
-
-          signature: invoice.signature,
-
-          // Deposit configuration is copied to each future invoice.
-          deposit_required: recurringDepositRequired,
-          deposit_percentage: recurringDepositRequired
-            ? recurringDepositPercentage
-            : invoice.deposit_percentage ?? INVOICE.DEFAULT_DEPOSIT_PERCENT,
-          deposit_amount: recurringDepositAmount,
-          balance_amount: recurringBalanceAmount,
-          balance_due_date: nextBalanceDueDate,
-
-          // Every generated invoice starts with a fresh payment lifecycle.
-          payment_stage: recurringDepositRequired
-            ? invoicePaymentStageTypes.DEPOSIT_PENDING
-            : invoicePaymentStageTypes.FULL,
-          deposit_paid_at: null,
-          balance_sent_at: null,
-          balance_paid_at: null,
-
-          status: invoiceStatusTypes.ACTIVE,
-          is_active: true,
-        });
-
-        logger.info(
-          `Created recurring invoice ${newInvoice.ref_no}. Deposit required: ${recurringDepositRequired}.`,
-        );
-
-        // ---------- COPY INVOICE ITEMS ----------
-
-        const newItems = (
-          invoice.service_invoice_item || []
-        ).map((item) => ({
-          invoice_id: newInvoice.id,
-
-          description: item.description,
-          frequency: item.frequency,
-
-          quantity: item.quantity,
-
-          calculation_type: item.calculation_type,
-          sqft: item.sqft,
-          hour: item.hour,
-
-          unit_price: item.unit_price,
-          amount: item.amount,
-          sort_order: item.sort_order,
-        }));
-
-        if (newItems.length > 0) {
-          await InvoiceItem.bulkCreate(newItems);
-        }
-
-
-        // ---------- UPDATE RECURRING SCHEDULE ----------
-
-        const finalCount =
-          Number(recurring.occurrences_generated || 0) + 1;
-
-        const updateData = {
-          occurrences_generated: finalCount,
-          next_billing_date: nextBillingMoment.format(DATE_FORMAT),
-        };
-
-        if (
-          recurring.max_occurrences &&
-          finalCount >= Number(recurring.max_occurrences)
-        ) {
-          updateData.status = recurringInvoiceStatusTypes.COMPLETED;
-        }
-
-        if (
-          recurring.end_date &&
-          nextBillingMoment.isAfter(
-            parseDateInZone(recurring.end_date, timezone),
-            "day",
-          )
-        ) {
-          updateData.status = recurringInvoiceStatusTypes.COMPLETED;
-        }
-
-        await recurring.update(updateData);
-
-        logger.info(
-          `Recurring schedule ${recurring.id} updated. Next billing date: ${nextBillingMoment.format(DATE_FORMAT)}`,
-        );
+        await generateNextRecurringInvoice(recurring);
       } catch (invoiceError) {
-        logger.error(
-          `Failed processing recurring schedule ${recurring.id}:`,
-          invoiceError,
-        );
-        // Continue processing other recurring invoices.
+        logger.error(`Failed processing recurring schedule ${recurring.id}:`, invoiceError);
       }
     }
   } catch (error) {
